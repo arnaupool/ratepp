@@ -1,0 +1,578 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics><meta name="design_doc_mode" content="canvas"><link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Nunito:wght@700;800;900&display=swap" rel="stylesheet"><style>
+body{margin:0;background:#efe9de;font-family:system-ui,sans-serif}
+a{color:inherit}a:hover{color:inherit}
+.dv-turn{padding:40px 44px 60px;scroll-margin-top:16px}
+.dv-thd{display:flex;align-items:baseline;gap:10px;margin:0 0 22px}
+.dv-tid{font:600 10px ui-monospace,Menlo,monospace;padding:3px 7px;background:#1a1a1a;color:#fff;border-radius:4px;text-decoration:none}
+.dv-tname{font:600 14px/1.2 system-ui,sans-serif;color:#1a1a1a}
+.dv-opts{display:flex;flex-wrap:wrap;gap:36px;align-items:flex-start}
+.dv-opt{flex:none;display:flex;flex-direction:column;gap:12px;scroll-margin-top:16px}
+.dv-next{margin:26px 0 0;font:12px/1.5 system-ui,sans-serif;color:rgba(0,0,0,.5);max-width:620px}
+.phone-col{display:flex;flex-direction:column;gap:10px;align-items:center}
+.phone-label{font:700 11px/1 'Nunito',system-ui;letter-spacing:.02em;color:rgba(0,0,0,.4);text-transform:uppercase}
+
+/* ---------- screen shell ---------- */
+.scr{height:100%;display:flex;flex-direction:column;font-family:'Nunito',-apple-system,system-ui,sans-serif}
+.scr-body{flex:1;overflow:auto;padding:78px 0 30px}
+.scr-head{padding:6px 18px 14px}
+.scr-title{font:900 26px/1.1 'Nunito',sans-serif;letter-spacing:-.01em}
+
+/* ---------- theme: vibrante colorida ---------- */
+.theme{--bg:oklch(97% .014 75);--surface:oklch(99% .006 65);--ink:oklch(22% .02 40);--sub:oklch(48% .02 40);--accent:oklch(62% .17 42);--accent2:oklch(66% .15 85);--accent-ink:#fff;--line:oklch(88% .02 50)}
+.theme .scr{background:var(--bg);color:var(--ink)}
+.theme .search{background:var(--surface);border:1px solid var(--line)}
+.theme .chip{background:var(--surface);color:var(--sub);border:1px solid var(--line)}
+.theme .chip.on{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.theme .card{border-radius:20px;box-shadow:0 1px 2px rgba(40,20,10,.05),0 10px 24px -12px rgba(40,20,10,.22)}
+.theme .card.tag-Restaurantes{background:oklch(92% .045 40)}
+.theme .card.tag-Películas{background:oklch(92% .035 265)}
+.theme .card.tag-Recuerdos{background:oklch(92% .045 160)}
+.theme .fab{background:var(--accent);color:#fff;box-shadow:0 10px 24px -6px oklch(62% .17 42 / .55)}
+.theme .field-row{background:var(--surface);border:1px solid var(--line);border-radius:14px}
+.theme .ficon-wrap{background:var(--accent2);color:#fff}
+.theme .ficon-wrap-sm{background:var(--accent2);color:#fff}
+.theme .detail-fields{background:var(--surface)}
+.theme .quick-chip{background:var(--surface);border:1.5px solid var(--accent);color:var(--accent)}
+.theme .num-pill{border:1.5px solid var(--line);color:var(--ink);border-radius:10px}
+.theme .num-pill.on{background:var(--accent);border-color:var(--accent);color:#fff}
+.theme .sheet{background:var(--surface)}
+.theme .sheet-item{border:1px solid var(--line);border-radius:12px}
+.theme .tag-chip{background:#fff;color:var(--sub);border:1px solid var(--line)}
+.theme .detail-hero{background:repeating-linear-gradient(115deg,oklch(86% .05 40) 0 16px,oklch(90% .04 40) 16px 32px);aspect-ratio:4/3;width:100%;flex-shrink:0}
+.theme .thumb{background:repeating-linear-gradient(115deg,oklch(86% .05 40) 0 10px,oklch(90% .04 40) 10px 20px)}
+.theme .nav-back{background:rgba(0,0,0,.06);color:var(--ink)}
+.theme .login-logo{background:var(--accent)}
+.theme .login-input{background:var(--surface);border:1px solid var(--line);color:var(--ink)}
+.theme .login-btn{background:var(--accent);color:#fff}
+.theme .login-switch b{color:var(--accent)}
+
+/* ---------- shared bits ---------- */
+.search{border-radius:14px;padding:11px 14px;font:600 14px 'Nunito',sans-serif;display:flex;align-items:center;gap:8px}
+.search input{border:none;background:transparent;outline:none;font:600 14px 'Nunito',sans-serif;color:inherit;width:100%}
+.chip{border-radius:999px;padding:7px 14px;font:700 12.5px 'Nunito',sans-serif;white-space:nowrap;cursor:pointer}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:14px 16px 0}
+.card{overflow:hidden;cursor:pointer}
+.ph-photo{aspect-ratio:4/3;width:100%}
+.card-body{padding:11px 12px 13px;display:flex;flex-direction:column;gap:6px}
+.card-title{font:800 13.5px/1.25 'Nunito',sans-serif}
+.score-badge{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font:900 13px 'Nunito',sans-serif;color:#fff;flex-shrink:0}
+.score-stack{display:flex;flex-shrink:0}
+.score-badge.mini{width:24px;height:24px;font-size:11px;border:2px solid var(--surface);margin-left:-9px}
+.score-badge.mini:first-child{margin-left:0}
+.score-badge.mini.extra{background:rgba(0,0,0,.55)}
+.tag-chip{border-radius:999px;padding:3px 9px;font:700 10px 'Nunito',sans-serif;align-self:flex-start}
+.fab{position:absolute;right:18px;bottom:26px;width:56px;height:56px;border-radius:50%;display:flex;align-items:center;justify-content:center;font:800 26px sans-serif;z-index:5;border:none;cursor:pointer}
+.create-body{padding:0 18px;display:flex;flex-direction:column;gap:16px}
+.title-input{border:none;background:transparent;outline:none;font:900 24px 'Nunito',sans-serif;width:100%;color:inherit}
+.title-input::placeholder{color:var(--sub);opacity:.6}
+.score-row{display:flex;flex-direction:column;gap:8px}
+.score-label{font:800 11px 'Nunito',sans-serif;text-transform:uppercase;letter-spacing:.06em;color:var(--sub)}
+.num-pills{display:flex;gap:5px;flex-wrap:nowrap}
+.num-pill{flex:1;min-width:0;aspect-ratio:1;border-radius:50%;display:flex;align-items:center;justify-content:center;font:800 12.5px 'Nunito',sans-serif;cursor:pointer;background:transparent}
+.detail-fields{border-radius:20px;overflow:hidden}
+.detail-field{padding:13px 16px;display:flex;flex-direction:column;gap:5px;border-bottom:1px solid var(--line)}
+.detail-field:last-child{border-bottom:none}
+.detail-field-head{display:flex;align-items:center;gap:8px}
+.detail-field-label{font:800 11px 'Nunito',sans-serif;text-transform:uppercase;letter-spacing:.05em;color:var(--sub)}
+.detail-field-value{padding-left:32px}
+.ficon-wrap-sm{width:24px;height:24px;border-radius:7px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.ficon-wrap-sm .ficon{width:13px;height:13px;font-size:10px}
+.ficon-wrap-sm .ficon.t-text,.ficon-wrap-sm .ficon.t-date,.ficon-wrap-sm .ficon.t-location{width:11px;height:11px}
+.ficon-wrap-sm .ficon.t-photo{width:12px;height:10px}
+.ficon-wrap-sm .ficon.t-gallery{width:9px;height:9px}
+.ficon-wrap-sm .ficon.t-tag{width:9px;height:9px}
+.score-badge.editable{cursor:pointer}
+.detail-edit-row{display:flex;gap:5px;flex-wrap:nowrap;margin-top:10px}
+.scores-row{display:flex;gap:16px;margin-top:14px;flex-wrap:wrap}
+.score-person{display:flex;flex-direction:column;align-items:center;gap:5px;position:relative}
+.score-person .score-badge{width:40px;height:40px;font-size:16px;cursor:pointer}
+.score-person-name{font:700 10.5px 'Nunito',sans-serif;color:var(--sub)}
+.score-person-input{border:none;background:transparent;outline:none;font:700 10.5px 'Nunito',sans-serif;color:var(--sub);text-align:center;width:44px}
+.person-name-row{display:flex;align-items:center;gap:2px}
+.person-remove{width:14px;height:14px;border-radius:50%;background:rgba(0,0,0,.1);border:none;font:700 8px sans-serif;color:var(--sub);cursor:pointer;padding:0;flex-shrink:0;line-height:1}
+.add-person{width:40px;height:40px;border-radius:50%;border:1.5px dashed var(--line);display:flex;align-items:center;justify-content:center;font:800 18px sans-serif;color:var(--sub);cursor:pointer;background:transparent}
+.edit-context{font:700 11px 'Nunito',sans-serif;color:var(--sub);margin-top:12px}
+.add-field-btn{border:1.5px dashed var(--line);border-radius:16px;padding:13px;display:flex;align-items:center;justify-content:center;gap:8px;font:800 13.5px 'Nunito',sans-serif;color:var(--sub);cursor:pointer;background:transparent}
+.field-row{padding:12px 14px;display:flex;flex-direction:column;gap:8px}
+.field-head{display:flex;align-items:center;gap:9px}
+.field-label{font:800 11.5px 'Nunito',sans-serif;text-transform:uppercase;letter-spacing:.05em;color:var(--sub);flex:1}
+.field-remove{width:20px;height:20px;border-radius:50%;background:rgba(0,0,0,.06);color:var(--sub);border:none;font:700 12px sans-serif;cursor:pointer;flex-shrink:0}
+.field-input{border:none;background:transparent;outline:none;font:600 14.5px 'Nunito',sans-serif;color:inherit;width:100%}
+.field-input::placeholder{color:var(--sub);opacity:.55}
+.list-item-row{display:flex;align-items:center;gap:6px}
+.list-add{font:700 12px 'Nunito',sans-serif;color:var(--accent);cursor:pointer;align-self:flex-start;background:none;border:none;padding:2px 0}
+.ph-mini{width:100%;aspect-ratio:1;border-radius:10px}
+.ph-mini.add-photo{border:1.5px dashed var(--line);display:flex;align-items:center;justify-content:center;font:800 20px sans-serif;color:var(--sub);cursor:pointer}
+.ph-mini-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.quick-row{display:flex;gap:8px;flex-wrap:wrap}
+.quick-chip{border-radius:12px;padding:9px 12px;font:800 12.5px 'Nunito',sans-serif;display:flex;align-items:center;gap:6px;cursor:pointer}
+.sheet-backdrop{position:absolute;inset:0;background:rgba(0,0,0,.35);z-index:30;display:flex;align-items:flex-end}
+.sheet{width:100%;border-radius:26px 26px 0 0;padding:10px 18px 26px;display:flex;flex-direction:column;gap:14px;max-height:70%;overflow:auto}
+.sheet-grab{width:36px;height:5px;border-radius:3px;background:rgba(0,0,0,.15);align-self:center}
+.sheet-title{font:900 17px 'Nunito',sans-serif}
+.sheet-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.sheet-item{padding:12px;display:flex;align-items:center;gap:10px;cursor:pointer;background:transparent}
+.sheet-item-label{font:700 13px 'Nunito',sans-serif}
+
+/* ---------- field type icons (pure css, no illustration) ---------- */
+.ficon-wrap{width:34px;height:34px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.ficon{width:18px;height:18px;position:relative;display:flex;align-items:center;justify-content:center;font:800 13px 'Nunito',sans-serif;color:currentColor}
+.ficon.t-text{background:repeating-linear-gradient(to bottom,currentColor 0 2.5px,transparent 2.5px 6.5px);border-radius:1px;width:15px;height:15px}
+.ficon.t-date{width:15px;height:15px;border:2px solid currentColor;border-radius:3px}
+.ficon.t-date::after{content:'';position:absolute;top:-2px;right:-2px;width:6px;height:6px;border-radius:50%;background:currentColor}
+.ficon.t-location{width:15px;height:15px;border:2px solid currentColor;border-radius:50%}
+.ficon.t-location::after{content:'';position:absolute;width:5px;height:5px;border-radius:50%;background:currentColor}
+.ficon.t-photo{width:16px;height:13px;border:2px solid currentColor;border-radius:3px}
+.ficon.t-photo::after{content:'';position:absolute;bottom:-2px;left:-2px;width:6px;height:6px;border-radius:50%;background:currentColor}
+.ficon.t-gallery{width:13px;height:13px}
+.ficon.t-gallery::before{content:'';position:absolute;left:-3px;top:-3px;width:13px;height:13px;border:2px solid currentColor;border-radius:3px}
+.ficon.t-gallery::after{content:'';position:absolute;right:-3px;bottom:-3px;width:13px;height:13px;border:2px solid currentColor;border-radius:3px}
+.ficon.t-tag{width:12px;height:12px;border:2px solid currentColor;transform:rotate(45deg)}
+
+/* ---------- navigation / filmstrip ---------- */
+.filmstrip-viewport{width:100%;height:100%;overflow:hidden;position:relative}
+.filmstrip{display:flex;height:100%;transition:transform .42s cubic-bezier(.32,.72,0,1)}
+.filmstrip>.scr{width:372px;flex-shrink:0;height:100%;overflow:hidden;position:relative}
+.nav-back{width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;border:none;cursor:pointer;flex-shrink:0}
+.nav-back-arrow{width:8px;height:8px;border-left:2.5px solid currentColor;border-bottom:2.5px solid currentColor;transform:rotate(45deg);margin-left:3px}
+.create-head{display:flex;align-items:center;padding:70px 14px 4px}
+.hero-wrap{position:relative}
+.hero-wrap .nav-back{position:absolute;top:64px;left:14px;background:rgba(255,255,255,.85);z-index:15}
+
+/* ---------- login ---------- */
+.login-wrap{height:100%;display:flex;flex-direction:column;justify-content:center;padding:0 30px;gap:20px;box-sizing:border-box}
+.login-logo{width:60px;height:60px;border-radius:18px;display:flex;align-items:center;justify-content:center;color:#fff;font:900 26px 'Nunito',sans-serif}
+.login-title{font:900 25px 'Nunito',sans-serif}
+.login-sub{font:600 13px 'Nunito',sans-serif;color:var(--sub);margin-top:-12px}
+.login-field{display:flex;flex-direction:column;gap:6px}
+.login-label{font:800 11px 'Nunito',sans-serif;text-transform:uppercase;letter-spacing:.05em;color:var(--sub)}
+.login-input{border-radius:14px;padding:13px 14px;font:600 15px 'Nunito',sans-serif;outline:none;width:100%;box-sizing:border-box}
+.login-btn{border:none;border-radius:14px;padding:15px;font:800 15px 'Nunito',sans-serif;cursor:pointer;margin-top:4px}
+.login-switch{text-align:center;font:600 13px 'Nunito',sans-serif;color:var(--sub)}
+.login-switch b{font-weight:800;cursor:pointer}
+</style></helmet><section class="dv-turn" id="t1"><div class="dv-thd"><a class="dv-tid" href="#t1">1</a><span class="dv-tname">Flujo de creación de puntuación</span></div><div class="dv-opts">
+
+<div class="dv-opt theme"><div class="phone-col"><span class="phone-label">{{screenLabel}}</span><x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" width="{{372}}" height="{{780}}" hint-size="372,780"><div class="filmstrip-viewport"><div class="filmstrip" style="{{filmstripStyle}}">
+
+<div class="scr"><div class="login-wrap">
+<div class="login-logo">P</div>
+<div><div class="login-title">{{loginTitle}}</div><div class="login-sub">{{loginSub}}</div></div>
+<div class="login-field"><span class="login-label">Email</span><input class="login-input" type="email" placeholder="tucorreo@email.com" value="{{loginEmail}}" onChange="{{onLoginEmail}}"></div>
+<div class="login-field"><span class="login-label">Contraseña</span><input class="login-input" type="password" placeholder="••••••••" value="{{loginPassword}}" onChange="{{onLoginPassword}}"></div>
+<sc-if value="{{isRegister}}" hint-placeholder-val="{{false}}"><div class="login-field"><span class="login-label">Confirmar contraseña</span><input class="login-input" type="password" placeholder="••••••••" value="{{loginConfirm}}" onChange="{{onLoginConfirm}}"></div></sc-if>
+<button class="login-btn" onClick="{{doLogin}}">{{loginBtnLabel}}</button>
+<div class="login-switch">{{loginSwitchLead}} <b onClick="{{toggleLoginMode}}">{{loginSwitchAction}}</b></div>
+</div></div>
+
+<div class="scr"><div class="scr-body">
+<div class="scr-head"><div class="scr-title">Tus puntuaciones</div></div>
+<div style="padding:0 18px 12px"><div class="search"><span>⌕</span><input placeholder="Buscar por título..." value="{{search}}" onChange="{{onSearch}}"></div></div>
+<div style="display:flex;gap:8px;padding:0 18px 4px;overflow:auto"><sc-for list="{{tags}}" as="tg" hint-placeholder-count="4"><div class="chip {{tg.on}}" onClick="{{tg.select}}">{{tg}}</div></sc-for></div>
+<div class="grid2"><sc-for list="{{items}}" as="it" hint-placeholder-count="6">
+<div class="card {{it.tagClass}}" onClick="{{openDetail}}"><div class="ph-photo" style="{{it.photoStyle}}"></div><div class="card-body"><div class="fx ac jb gap8"><div class="card-title f1">{{it.title}}</div>
+<sc-if value="{{it.multi}}" hint-placeholder-val="{{false}}"><div class="score-stack"><sc-for list="{{it.scoresList}}" as="sp" hint-placeholder-count="2"><div class="score-badge mini" style="{{sp.style}}">{{sp.n}}</div></sc-for><sc-if value="{{it.hasExtra}}" hint-placeholder-val="{{false}}"><div class="score-badge mini extra">+{{it.extraCount}}</div></sc-if></div></sc-if>
+<sc-if value="{{it.singleScore}}" hint-placeholder-val="{{true}}"><div class="score-badge" style="{{it.badgeStyle}}">{{it.score}}</div></sc-if>
+</div><div class="tag-chip">{{it.tag}}</div></div></div>
+</sc-for></div>
+</div><button class="fab" onClick="{{openCreate}}">+</button></div>
+
+<div class="scr"><div class="create-head"><button class="nav-back" onClick="{{goHome}}"><span class="nav-back-arrow"></span></button></div><div class="scr-body" style="padding-top:8px"><div class="create-body">
+<input class="title-input" placeholder="Título de tu puntuación" value="{{title}}" onChange="{{onTitle}}">
+<div class="score-row"><span class="score-label">Puntuación (obligatoria)</span><div class="num-pills"><sc-for list="{{numbers}}" as="n" hint-placeholder-count="10"><div class="num-pill {{n.on}}" style="{{n.style}}" onClick="{{n.select}}">{{n}}</div></sc-for></div></div>
+<div class="score-row"><span class="score-label">Puntuaciones de otras personas (opcional)</span><div class="scores-row"><sc-for list="{{createOthers}}" as="p" hint-placeholder-count="0"><div class="score-person"><div class="person-name-row"><input class="score-person-input" value="{{p.name}}" onChange="{{p.onNameChange}}"><button class="person-remove" onClick="{{p.onRemove}}">✕</button></div><div class="{{p.badgeClass}}" style="{{p.style}}" onClick="{{p.onClick}}">{{p.score}}</div></div></sc-for><div class="score-person"><div class="add-person" onClick="{{addCreateOther}}">+</div><span class="score-person-name">Añadir</span></div></div>
+<sc-if value="{{createEditing}}" hint-placeholder-val="{{false}}"><div class="edit-context">Editando puntuación de {{createEditingName}}</div><div class="detail-edit-row"><sc-for list="{{createNumbers}}" as="n" hint-placeholder-count="10"><div class="num-pill {{n.on}}" style="{{n.style}}" onClick="{{n.select}}">{{n}}</div></sc-for></div></sc-if></div>
+<sc-for list="{{fields}}" as="f" hint-placeholder-count="0">
+<div class="field-row"><div class="field-head"><div class="ficon-wrap"><div class="ficon {{f.icon}}">{{f.glyph}}</div></div><span class="field-label f1">{{f.label}}</span><button class="field-remove" onClick="{{f.remove}}">✕</button></div>
+<sc-if value="{{f.isSimple}}" hint-placeholder-val="{{true}}"><input class="field-input" placeholder="{{f.placeholder}}" value="{{f.value}}" onChange="{{f.onChange}}"></sc-if>
+<sc-if value="{{f.isList}}" hint-placeholder-val="{{false}}"><sc-for list="{{f.items}}" as="li" hint-placeholder-count="1"><div class="list-item-row"><input class="field-input" placeholder="Añade un ítem..." value="{{li.value}}" onChange="{{li.onChange}}"></div></sc-for><button class="list-add" onClick="{{f.addItem}}">+ Añadir ítem</button></sc-if>
+<sc-if value="{{f.isPhoto}}" hint-placeholder-val="{{false}}"><div class="ph-mini" style="{{f.photoStyle}}"></div></sc-if>
+<sc-if value="{{f.isGallery}}" hint-placeholder-val="{{false}}"><div class="ph-mini-grid"><sc-for list="{{f.photos}}" as="ph" hint-placeholder-count="3"><div class="ph-mini" style="{{ph}}"></div></sc-for><div class="ph-mini add-photo" onClick="{{f.addPhoto}}">+</div></div></sc-if>
+</div></sc-for>
+<span class="score-label">Añadir campo rápido</span>
+<div class="quick-row"><sc-for list="{{quickTypes}}" as="qt" hint-placeholder-count="4"><div class="quick-chip" onClick="{{qt.addTo}}"><div class="ficon {{qt.icon}}">{{qt.glyph}}</div><span>{{qt.label}}</span></div></sc-for><div class="quick-chip" onClick="{{openSheet}}"><span>···</span><span>Más campos</span></div></div>
+</div></div>
+<sc-if value="{{sheetOpen}}" hint-placeholder-val="{{false}}"><div class="sheet-backdrop" onClick="{{closeSheet}}"><div class="sheet" onClick="{{stop}}"><div class="sheet-grab"></div><div class="sheet-title">Más campos</div><div class="sheet-grid"><sc-for list="{{restTypes}}" as="ft" hint-placeholder-count="4"><div class="sheet-item" onClick="{{ft.addTo}}"><div class="ficon-wrap"><div class="ficon {{ft.icon}}">{{ft.glyph}}</div></div><span class="sheet-item-label">{{ft.label}}</span></div></sc-for></div></div></div></sc-if>
+</div>
+
+<div class="scr"><div class="scr-body" style="padding-top:0">
+<div class="hero-wrap"><div class="detail-hero" style="{{detailPhoto}}"></div><button class="nav-back" onClick="{{goHome}}"><span class="nav-back-arrow"></span></button></div>
+<div style="padding:14px 18px 0"><div class="ph-mini-grid"><sc-for list="{{detailThumbs}}" as="th" hint-placeholder-count="3"><div class="thumb" style="{{th.style}}" onClick="{{th.select}}"></div></sc-for></div></div>
+<div style="padding:16px 18px 0"><div class="fs20 fw8" style="font-family:'Nunito',sans-serif;font-weight:900">{{detail.title}}</div><div class="tag-chip" style="margin-top:8px">{{detail.tag}}</div>
+<div class="scores-row"><sc-for list="{{detailScores}}" as="p" hint-placeholder-count="2"><div class="score-person"><span class="score-person-name" style="{{p.nameSpanStyle}}">{{p.name}}</span><div class="person-name-row" style="{{p.nameRowStyle}}"><input class="score-person-input" value="{{p.name}}" onChange="{{p.onNameChange}}"><button class="person-remove" onClick="{{p.onRemove}}">✕</button></div><div class="{{p.badgeClass}}" style="{{p.style}}" onClick="{{p.onClick}}">{{p.score}}</div></div></sc-for><div class="score-person"><div class="add-person" onClick="{{addPerson}}">+</div><span class="score-person-name">Añadir</span></div></div>
+<sc-if value="{{detailEditing}}" hint-placeholder-val="{{false}}"><div class="edit-context">Editando puntuación de {{editingName}}</div><div class="detail-edit-row"><sc-for list="{{detailNumbers}}" as="n" hint-placeholder-count="10"><div class="num-pill {{n.on}}" style="{{n.style}}" onClick="{{n.select}}">{{n}}</div></sc-for></div></sc-if>
+</div>
+<div class="detail-fields" style="margin:18px 18px 0"><sc-for list="{{detail.fields}}" as="f" hint-placeholder-count="6">
+<div class="detail-field"><div class="detail-field-head"><div class="ficon-wrap-sm"><div class="ficon {{f.icon}}">{{f.glyph}}</div></div><span class="detail-field-label">{{f.label}}</span></div>
+<sc-if value="{{f.isList}}" hint-placeholder-val="{{false}}"><div class="detail-field-value"><sc-for list="{{f.value}}" as="li" hint-placeholder-count="3"><div class="fs14 fw6">— {{li}}</div></sc-for></div></sc-if>
+<sc-if value="{{f.isText}}" hint-placeholder-val="{{true}}"><div class="detail-field-value fs14 fw6">{{f.value}}</div></sc-if>
+</div></sc-for></div>
+</div>
+
+</div></div></x-import></div></div>
+
+<div class="dv-olabel" style="margin-top:8px">Todas las pantallas, para referencia</div>
+<div class="dv-card" style="flex-wrap:wrap">
+
+<div class="phone-col"><span class="phone-label">Acceder</span><x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" width="{{372}}" height="{{780}}" hint-size="372,780"><div class="scr"><div class="login-wrap">
+<div class="login-logo">P</div>
+<div><div class="login-title">{{loginTitle}}</div><div class="login-sub">{{loginSub}}</div></div>
+<div class="login-field"><span class="login-label">Email</span><input class="login-input" type="email" placeholder="tucorreo@email.com" value="{{loginEmail}}" onChange="{{onLoginEmail}}"></div>
+<div class="login-field"><span class="login-label">Contraseña</span><input class="login-input" type="password" placeholder="••••••••" value="{{loginPassword}}" onChange="{{onLoginPassword}}"></div>
+<sc-if value="{{isRegister}}" hint-placeholder-val="{{false}}"><div class="login-field"><span class="login-label">Confirmar contraseña</span><input class="login-input" type="password" placeholder="••••••••" value="{{loginConfirm}}" onChange="{{onLoginConfirm}}"></div></sc-if>
+<button class="login-btn" onClick="{{doLogin}}">{{loginBtnLabel}}</button>
+<div class="login-switch">{{loginSwitchLead}} <b onClick="{{toggleLoginMode}}">{{loginSwitchAction}}</b></div>
+</div></div></x-import></div>
+
+<div class="phone-col"><span class="phone-label">Principal</span><x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" width="{{372}}" height="{{780}}" hint-size="372,780"><div class="scr"><div class="scr-body">
+<div class="scr-head"><div class="scr-title">Tus puntuaciones</div></div>
+<div style="padding:0 18px 12px"><div class="search"><span>⌕</span><input placeholder="Buscar por título..." value="{{search}}" onChange="{{onSearch}}"></div></div>
+<div style="display:flex;gap:8px;padding:0 18px 4px;overflow:auto"><sc-for list="{{tags}}" as="tg" hint-placeholder-count="4"><div class="chip {{tg.on}}" onClick="{{tg.select}}">{{tg}}</div></sc-for></div>
+<div class="grid2"><sc-for list="{{items}}" as="it" hint-placeholder-count="6">
+<div class="card {{it.tagClass}}" onClick="{{openDetail}}"><div class="ph-photo" style="{{it.photoStyle}}"></div><div class="card-body"><div class="fx ac jb gap8"><div class="card-title f1">{{it.title}}</div>
+<sc-if value="{{it.multi}}" hint-placeholder-val="{{false}}"><div class="score-stack"><sc-for list="{{it.scoresList}}" as="sp" hint-placeholder-count="2"><div class="score-badge mini" style="{{sp.style}}">{{sp.n}}</div></sc-for><sc-if value="{{it.hasExtra}}" hint-placeholder-val="{{false}}"><div class="score-badge mini extra">+{{it.extraCount}}</div></sc-if></div></sc-if>
+<sc-if value="{{it.singleScore}}" hint-placeholder-val="{{true}}"><div class="score-badge" style="{{it.badgeStyle}}">{{it.score}}</div></sc-if>
+</div><div class="tag-chip">{{it.tag}}</div></div></div>
+</sc-for></div>
+</div><button class="fab" onClick="{{openCreate}}">+</button></div></x-import></div>
+
+<div class="phone-col"><span class="phone-label">Crear puntuación</span><x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" width="{{372}}" height="{{780}}" hint-size="372,780"><div class="scr"><div class="create-head"><button class="nav-back" onClick="{{goHome}}"><span class="nav-back-arrow"></span></button></div><div class="scr-body" style="padding-top:8px"><div class="create-body">
+<input class="title-input" placeholder="Título de tu puntuación" value="{{title}}" onChange="{{onTitle}}">
+<div class="score-row"><span class="score-label">Puntuación (obligatoria)</span><div class="num-pills"><sc-for list="{{numbers}}" as="n" hint-placeholder-count="10"><div class="num-pill {{n.on}}" style="{{n.style}}" onClick="{{n.select}}">{{n}}</div></sc-for></div></div>
+<div class="score-row"><span class="score-label">Puntuaciones de otras personas (opcional)</span><div class="scores-row"><sc-for list="{{createOthers}}" as="p" hint-placeholder-count="0"><div class="score-person"><div class="person-name-row"><input class="score-person-input" value="{{p.name}}" onChange="{{p.onNameChange}}"><button class="person-remove" onClick="{{p.onRemove}}">✕</button></div><div class="{{p.badgeClass}}" style="{{p.style}}" onClick="{{p.onClick}}">{{p.score}}</div></div></sc-for><div class="score-person"><div class="add-person" onClick="{{addCreateOther}}">+</div><span class="score-person-name">Añadir</span></div></div>
+<sc-if value="{{createEditing}}" hint-placeholder-val="{{false}}"><div class="edit-context">Editando puntuación de {{createEditingName}}</div><div class="detail-edit-row"><sc-for list="{{createNumbers}}" as="n" hint-placeholder-count="10"><div class="num-pill {{n.on}}" style="{{n.style}}" onClick="{{n.select}}">{{n}}</div></sc-for></div></sc-if></div>
+<sc-for list="{{fields}}" as="f" hint-placeholder-count="0">
+<div class="field-row"><div class="field-head"><div class="ficon-wrap"><div class="ficon {{f.icon}}">{{f.glyph}}</div></div><span class="field-label f1">{{f.label}}</span><button class="field-remove" onClick="{{f.remove}}">✕</button></div>
+<sc-if value="{{f.isSimple}}" hint-placeholder-val="{{true}}"><input class="field-input" placeholder="{{f.placeholder}}" value="{{f.value}}" onChange="{{f.onChange}}"></sc-if>
+<sc-if value="{{f.isList}}" hint-placeholder-val="{{false}}"><sc-for list="{{f.items}}" as="li" hint-placeholder-count="1"><div class="list-item-row"><input class="field-input" placeholder="Añade un ítem..." value="{{li.value}}" onChange="{{li.onChange}}"></div></sc-for><button class="list-add" onClick="{{f.addItem}}">+ Añadir ítem</button></sc-if>
+<sc-if value="{{f.isPhoto}}" hint-placeholder-val="{{false}}"><div class="ph-mini" style="{{f.photoStyle}}"></div></sc-if>
+<sc-if value="{{f.isGallery}}" hint-placeholder-val="{{false}}"><div class="ph-mini-grid"><sc-for list="{{f.photos}}" as="ph" hint-placeholder-count="3"><div class="ph-mini" style="{{ph}}"></div></sc-for><div class="ph-mini add-photo" onClick="{{f.addPhoto}}">+</div></div></sc-if>
+</div></sc-for>
+<span class="score-label">Añadir campo rápido</span>
+<div class="quick-row"><sc-for list="{{quickTypes}}" as="qt" hint-placeholder-count="4"><div class="quick-chip" onClick="{{qt.addTo}}"><div class="ficon {{qt.icon}}">{{qt.glyph}}</div><span>{{qt.label}}</span></div></sc-for><div class="quick-chip" onClick="{{openSheet}}"><span>···</span><span>Más campos</span></div></div>
+</div></div>
+<sc-if value="{{sheetOpen}}" hint-placeholder-val="{{false}}"><div class="sheet-backdrop" onClick="{{closeSheet}}"><div class="sheet" onClick="{{stop}}"><div class="sheet-grab"></div><div class="sheet-title">Más campos</div><div class="sheet-grid"><sc-for list="{{restTypes}}" as="ft" hint-placeholder-count="4"><div class="sheet-item" onClick="{{ft.addTo}}"><div class="ficon-wrap"><div class="ficon {{ft.icon}}">{{ft.glyph}}</div></div><span class="sheet-item-label">{{ft.label}}</span></div></sc-for></div></div></div></sc-if>
+</div></x-import></div>
+
+<div class="phone-col"><span class="phone-label">Detalle</span><x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" width="{{372}}" height="{{780}}" hint-size="372,780"><div class="scr"><div class="scr-body" style="padding-top:0">
+<div class="hero-wrap"><div class="detail-hero" style="{{detailPhoto}}"></div><button class="nav-back" onClick="{{goHome}}"><span class="nav-back-arrow"></span></button></div>
+<div style="padding:14px 18px 0"><div class="ph-mini-grid"><sc-for list="{{detailThumbs}}" as="th" hint-placeholder-count="3"><div class="thumb" style="{{th.style}}" onClick="{{th.select}}"></div></sc-for></div></div>
+<div style="padding:16px 18px 0"><div class="fs20 fw8" style="font-family:'Nunito',sans-serif;font-weight:900">{{detail.title}}</div><div class="tag-chip" style="margin-top:8px">{{detail.tag}}</div>
+<div class="scores-row"><sc-for list="{{detailScores}}" as="p" hint-placeholder-count="2"><div class="score-person"><span class="score-person-name" style="{{p.nameSpanStyle}}">{{p.name}}</span><div class="person-name-row" style="{{p.nameRowStyle}}"><input class="score-person-input" value="{{p.name}}" onChange="{{p.onNameChange}}"><button class="person-remove" onClick="{{p.onRemove}}">✕</button></div><div class="{{p.badgeClass}}" style="{{p.style}}" onClick="{{p.onClick}}">{{p.score}}</div></div></sc-for><div class="score-person"><div class="add-person" onClick="{{addPerson}}">+</div><span class="score-person-name">Añadir</span></div></div>
+<sc-if value="{{detailEditing}}" hint-placeholder-val="{{false}}"><div class="edit-context">Editando puntuación de {{editingName}}</div><div class="detail-edit-row"><sc-for list="{{detailNumbers}}" as="n" hint-placeholder-count="10"><div class="num-pill {{n.on}}" style="{{n.style}}" onClick="{{n.select}}">{{n}}</div></sc-for></div></sc-if>
+</div>
+<div class="detail-fields" style="margin:18px 18px 0"><sc-for list="{{detail.fields}}" as="f" hint-placeholder-count="6">
+<div class="detail-field"><div class="detail-field-head"><div class="ficon-wrap-sm"><div class="ficon {{f.icon}}">{{f.glyph}}</div></div><span class="detail-field-label">{{f.label}}</span></div>
+<sc-if value="{{f.isList}}" hint-placeholder-val="{{false}}"><div class="detail-field-value"><sc-for list="{{f.value}}" as="li" hint-placeholder-count="3"><div class="fs14 fw6">— {{li}}</div></sc-for></div></sc-if>
+<sc-if value="{{f.isText}}" hint-placeholder-val="{{true}}"><div class="detail-field-value fs14 fw6">{{f.value}}</div></sc-if>
+</div></sc-for></div>
+</div></div></x-import></div>
+
+</div>
+
+</div><p class="dv-next">Siguiente: pantalla de equipos/invitación (crear/unirse con código), estados vacíos, y refinar la persistencia de la sesión tras el login.</p></section>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+const FIELD_DEFS = [
+  {id:'text_long', label:'Texto largo', icon:'t-text', glyph:'', kind:'simple', placeholder:'Escribe tus notas...'},
+  {id:'number', label:'Número', icon:'', glyph:'#', kind:'simple', placeholder:'Ej. 24.50'},
+  {id:'date', label:'Fecha', icon:'t-date', glyph:'', kind:'simple', placeholder:'Ej. 14 junio 2026'},
+  {id:'location', label:'Ubicación', icon:'t-location', glyph:'', kind:'simple', placeholder:'Ej. Calle Mayor 12, Madrid'},
+  {id:'photo', label:'Foto', icon:'t-photo', glyph:'', kind:'photo', placeholder:''},
+  {id:'gallery', label:'Galería', icon:'t-gallery', glyph:'', kind:'gallery', placeholder:''},
+  {id:'list', label:'Lista de ítems', icon:'', glyph:'☰', kind:'list', placeholder:''},
+  {id:'tag', label:'Selector / etiqueta', icon:'t-tag', glyph:'', kind:'simple', placeholder:'Ej. Mediterránea'},
+];
+
+const ITEMS = [
+  {id:1, title:'Casa Pepa', score:9, tag:'Restaurantes', photo:true, linkToDetail:true},
+  {id:2, title:'Dune: Part Two', score:8, tag:'Películas', photo:true},
+  {id:3, title:'Viaje a Lisboa', score:10, tag:'Recuerdos', photo:true},
+  {id:4, title:'Sushi Nakamura', score:7, tag:'Restaurantes', photo:true},
+  {id:5, title:'Oppenheimer', score:6, tag:'Películas', photo:false},
+  {id:6, title:'Café de la esquina', score:5, tag:'Restaurantes', photo:false},
+  {id:7, title:'Cumpleaños de Marta', score:9, tag:'Recuerdos', photo:true, scores:[{i:'Tú', n:9},{i:'Ana', n:8},{i:'Luis', n:10},{i:'Fam', n:9}]},
+  {id:8, title:'The Bear (temp. 3)', score:7, tag:'Películas', photo:false},
+];
+
+const TAGS = ['Todas','Restaurantes','Películas','Recuerdos'];
+const NUMBERS = [1,2,3,4,5,6,7,8,9,10];
+const SCREEN_LABELS = ['Acceder', 'Principal', 'Crear puntuación', 'Detalle'];
+const SCREEN_W = 372;
+
+function scoreColor(n){
+  if(!n) return 'oklch(78% .01 70)';
+  const t = (n-1)/9;
+  const hue = 18 + t*125;
+  return `oklch(52% .15 ${hue})`;
+}
+
+function photoStripe(seed){
+  const hue = 30 + (seed*47)%330;
+  return `background:repeating-linear-gradient(115deg,oklch(88% .05 ${hue}) 0 14px,oklch(92% .03 ${hue}) 14px 28px)`;
+}
+
+let fidSeq = 1;
+
+function defaultFieldValue(kind){
+  if(kind==='list') return [''];
+  if(kind==='gallery') return [1,2,3];
+  if(kind==='photo') return null;
+  return '';
+}
+
+class Component extends DCLogic {
+  state = {
+    screen: 0,
+    loginMode:'login', loginEmail:'', loginPassword:'', loginConfirm:'',
+    search:'', filter:'Todas',
+    title:'', score:0, sheetOpen:false, fields:[],
+    activePhoto:0, detailScore:9, detailOthers:[{name:'Marta', score:6}], createOthers:[],
+    editingWho:null, editingScope:null,
+  };
+
+  patch(obj){ this.setState(s => ({...s, ...obj})); }
+
+  goTo(idx){ this.patch({screen: idx}); }
+
+  setSearch(v){ this.patch({search:v}); }
+  setFilter(tag){ this.patch({filter:tag}); }
+  setTitle(v){ this.patch({title:v}); }
+  setScore(n){ this.patch({score:n}); }
+  openSheet(){ this.patch({sheetOpen:true}); }
+  closeSheet(){ this.patch({sheetOpen:false}); }
+
+  setLoginEmail(v){ this.patch({loginEmail:v}); }
+  setLoginPassword(v){ this.patch({loginPassword:v}); }
+  setLoginConfirm(v){ this.patch({loginConfirm:v}); }
+  toggleLoginMode(){ this.patch({loginMode: this.state.loginMode === 'login' ? 'register' : 'login'}); }
+
+  addField(def){
+    const s = this.state;
+    const field = {id: fidSeq++, typeId: def.id, value: defaultFieldValue(def.kind)};
+    this.patch({fields:[...s.fields, field], sheetOpen:false});
+  }
+
+  removeField(id){
+    this.patch({fields: this.state.fields.filter(f => f.id !== id)});
+  }
+
+  updateFieldValue(id, val){
+    this.patch({fields: this.state.fields.map(f => f.id === id ? {...f, value: val} : f)});
+  }
+
+  addListItem(id){
+    this.patch({fields: this.state.fields.map(f => f.id === id ? {...f, value: [...f.value, '']} : f)});
+  }
+
+  addGalleryPhoto(id){
+    this.patch({fields: this.state.fields.map(f => f.id === id ? {...f, value: [...f.value, (f.value[f.value.length-1]||0) + 1]} : f)});
+  }
+
+  updateListItem(id, idx, val){
+    this.patch({fields: this.state.fields.map(f => {
+      if (f.id !== id) return f;
+      const value = f.value.slice(); value[idx] = val;
+      return {...f, value};
+    })});
+  }
+
+  setActivePhoto(idx){ this.patch({activePhoto: idx}); }
+
+  othersKey(scope){ return scope === 'detail' ? 'detailOthers' : 'createOthers'; }
+
+  toggleEdit(scope, who){
+    const s = this.state;
+    const same = s.editingScope === scope && s.editingWho === who;
+    this.patch(same ? {editingWho:null, editingScope:null} : {editingWho: who, editingScope: scope});
+  }
+
+  setPersonScore(scope, who, n){
+    const s = this.state;
+    if (who === 'me') { this.patch({detailScore: n, editingWho:null, editingScope:null}); return; }
+    const key = this.othersKey(scope);
+    const others = s[key].map((o, i) => i === who ? {...o, score:n} : o);
+    this.patch({[key]: others, editingWho:null, editingScope:null});
+  }
+
+  addPerson(scope){
+    const s = this.state;
+    const key = this.othersKey(scope);
+    const others = [...s[key], {name:'Nuevo', score:5}];
+    this.patch({[key]: others, editingWho: others.length - 1, editingScope: scope});
+  }
+
+  renamePerson(scope, idx, name){
+    const key = this.othersKey(scope);
+    this.patch({[key]: this.state[key].map((o,i) => i === idx ? {...o, name} : o)});
+  }
+
+  removePerson(scope, idx){
+    const key = this.othersKey(scope);
+    this.patch({[key]: this.state[key].filter((o,i) => i !== idx), editingWho:null, editingScope:null});
+  }
+
+  buildFields(){
+    return this.state.fields.map(f => {
+      const def = FIELD_DEFS.find(d => d.id === f.typeId);
+      const common = {id:f.id, label:def.label, icon:def.icon, glyph:def.glyph, remove:() => this.removeField(f.id)};
+      if (def.kind === 'simple') return {...common, isSimple:true, placeholder:def.placeholder, value:f.value, onChange:e => this.updateFieldValue(f.id, e.target.value)};
+      if (def.kind === 'photo') return {...common, isPhoto:true, photoStyle: photoStripe(f.id)};
+      if (def.kind === 'gallery') return {...common, isGallery:true, photos: f.value.map(v => photoStripe(f.id + v)), addPhoto:() => this.addGalleryPhoto(f.id)};
+      if (def.kind === 'list') return {...common, isList:true, items: f.value.map((v, idx) => ({value:v, onChange:e => this.updateListItem(f.id, idx, e.target.value)})), addItem:() => this.addListItem(f.id)};
+      return common;
+    });
+  }
+
+  buildItems(){
+    const s = this.state;
+    return ITEMS
+      .filter(it => s.filter === 'Todas' || it.tag === s.filter)
+      .filter(it => it.title.toLowerCase().includes(s.search.toLowerCase()))
+      .map(it => {
+        const scores = it.linkToDetail
+          ? [{i:'Tú', n:s.detailScore}, ...s.detailOthers.map(o => ({i:o.name, n:o.score}))]
+          : it.scores;
+        const multi = !!scores;
+        const visible = multi ? scores.slice(0,2).map(p => ({...p, style:`background:${scoreColor(p.n)}`})) : null;
+        const extraCount = multi && scores.length > 2 ? scores.length - 2 : 0;
+        return {
+          ...it,
+          photoStyle: it.photo ? photoStripe(it.id) : 'background:rgba(0,0,0,.05)',
+          badgeStyle: `background:${scoreColor(it.score)}`,
+          tagClass: 'tag-' + it.tag,
+          multi, singleScore: !multi,
+          scoresList: visible,
+          extraCount, hasExtra: extraCount > 0,
+        };
+      });
+  }
+
+  detailData(){
+    return {
+      title:'Casa Pepa', tag:'Restaurantes',
+      fields:[
+        {label:'Ubicación', icon:'t-location', glyph:'', isText:true, value:'Calle Mayor 12, Madrid'},
+        {label:'Precio medio', icon:'', glyph:'#', isText:true, value:'32€ por persona'},
+        {label:'Fecha de la visita', icon:'t-date', glyph:'', isText:true, value:'14 junio 2026'},
+        {label:'Tipo de cocina', icon:'t-tag', glyph:'', isText:true, value:'Mediterránea'},
+        {label:'Platos pedidos', icon:'', glyph:'☰', isList:true, value:['Paella de marisco','Croquetas de jamón','Gazpacho andaluz']},
+        {label:'Notas', icon:'t-text', glyph:'', isText:true, value:'Sitio pequeño y con encanto. El arroz estaba en su punto y el servicio fue muy atento. Repetiríamos sin duda para una ocasión especial.'},
+      ],
+    };
+  }
+
+  renderVals(){
+    const s = this.state;
+    const detail = this.detailData();
+    const detailPhotos = [11, 23, 37];
+
+    const tags = TAGS.map(tg => ({
+      toString: () => tg,
+      on: s.filter === tg ? 'on' : '',
+      select: () => this.setFilter(tg),
+    }));
+
+    const numbers = NUMBERS.map(n => ({
+      toString: () => n,
+      on: s.score === n ? 'on' : '',
+      style: s.score === n ? `background:${scoreColor(n)};border-color:${scoreColor(n)}` : '',
+      select: () => this.setScore(n),
+    }));
+
+    const fieldTypes = FIELD_DEFS.map(d => ({...d, addTo: () => this.addField(d)}));
+    const quickTypes = fieldTypes.slice(0, 4);
+    const restTypes = fieldTypes.slice(4);
+
+    const detailThumbs = detailPhotos.map((seed, idx) => ({
+      style: photoStripe(seed + s.activePhoto*3),
+      select: () => this.setActivePhoto(idx),
+    }));
+
+    const otherPeople = scope => s[this.othersKey(scope)].map((o, idx) => ({
+      who: idx, name:o.name, isMe:false, isOther:true, score:o.score, badgeClass:'score-badge editable', style:`background:${scoreColor(o.score)}`,
+      nameSpanStyle:'display:none', nameRowStyle:'',
+      onClick:() => this.toggleEdit(scope, idx),
+      onNameChange: e => this.renamePerson(scope, idx, e.target.value),
+      onRemove: e => { e.stopPropagation(); this.removePerson(scope, idx); },
+    }));
+
+    const detailScores = [
+      {who:'me', name:'Tú', isMe:true, score: s.detailScore, badgeClass:'score-badge editable', style:`background:${scoreColor(s.detailScore)}`, onClick:() => this.toggleEdit('detail', 'me'), nameSpanStyle:'', nameRowStyle:'display:none', onNameChange:()=>{}, onRemove:()=>{}},
+      ...otherPeople('detail'),
+    ];
+
+    const editingFor = scope => {
+      if (s.editingScope !== scope) return null;
+      const who = s.editingWho;
+      if (who === null || who === undefined) return null;
+      if (who === 'me') return {score: s.detailScore, name:'Tú'};
+      const key = this.othersKey(scope);
+      const o = s[key][who];
+      return o ? {score:o.score, name:o.name} : null;
+    };
+
+    const numbersFor = scope => {
+      const cur = editingFor(scope);
+      const current = cur ? cur.score : -1;
+      return NUMBERS.map(n => ({
+        toString: () => n,
+        on: current === n ? 'on' : '',
+        style: current === n ? `background:${scoreColor(n)};border-color:${scoreColor(n)}` : '',
+        select: () => this.setPersonScore(scope, s.editingWho, n),
+      }));
+    };
+
+    const isRegister = s.loginMode === 'register';
+
+    return {
+      screenLabel: SCREEN_LABELS[s.screen],
+      filmstripStyle: `transform:translateX(-${s.screen*SCREEN_W}px)`,
+      isRegister,
+      loginTitle: isRegister ? 'Crea tu cuenta' : 'Bienvenido de nuevo',
+      loginSub: isRegister ? 'Empieza a puntuar lo que quieras' : 'Accede para ver tus puntuaciones',
+      loginBtnLabel: isRegister ? 'Crear cuenta' : 'Iniciar sesión',
+      loginSwitchLead: isRegister ? '¿Ya tienes cuenta?' : '¿No tienes cuenta?',
+      loginSwitchAction: isRegister ? 'Inicia sesión' : 'Regístrate',
+      toggleLoginMode: () => this.toggleLoginMode(),
+      loginEmail: s.loginEmail, onLoginEmail: e => this.setLoginEmail(e.target.value),
+      loginPassword: s.loginPassword, onLoginPassword: e => this.setLoginPassword(e.target.value),
+      loginConfirm: s.loginConfirm, onLoginConfirm: e => this.setLoginConfirm(e.target.value),
+      doLogin: () => this.goTo(1),
+      goHome: () => this.goTo(1),
+      openCreate: () => this.goTo(2),
+      openDetail: () => this.goTo(3),
+      tags, numbers, fieldTypes, quickTypes, restTypes,
+      search: s.search, onSearch: e => this.setSearch(e.target.value),
+      items: this.buildItems(),
+      title: s.title, onTitle: e => this.setTitle(e.target.value),
+      fields: this.buildFields(),
+      sheetOpen: s.sheetOpen, openSheet: () => this.openSheet(), closeSheet: () => this.closeSheet(),
+      stop: e => e.stopPropagation(),
+      detail,
+      detailPhoto: photoStripe(11 + s.activePhoto*3),
+      detailThumbs,
+      detailEditing: s.editingScope === 'detail',
+      addPerson: () => this.addPerson('detail'),
+      editingName: (editingFor('detail')||{}).name || '',
+      detailNumbers: numbersFor('detail'),
+      detailScores,
+      createOthers: otherPeople('create'),
+      addCreateOther: () => this.addPerson('create'),
+      createEditing: s.editingScope === 'create',
+      createEditingName: (editingFor('create')||{}).name || '',
+      createNumbers: numbersFor('create'),
+    };
+  }
+}
+</script>
+</body>
+</html>
