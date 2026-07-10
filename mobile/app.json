@@ -1,0 +1,30 @@
+{
+  "expo": {
+    "name": "Puntuaciones",
+    "slug": "puntuaciones",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "backgroundColor": "#fbf4eb"
+    },
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.puntuaciones.app"
+    },
+    "android": {
+      "package": "com.puntuaciones.app",
+      "adaptiveIcon": {
+        "backgroundColor": "#fbf4eb"
+      }
+    },
+    "plugins": [
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Puntuaciones necesita acceso a tus fotos para añadirlas a una puntuación."
+        }
+      ]
+    ]
+  }
+}
