@@ -85,14 +85,14 @@ const styles = StyleSheet.create({
   },
   removeBtnText: { fontSize: 8, fontWeight: '700', lineHeight: 9 },
   addPerson: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     borderWidth: 1.5,
     borderStyle: 'dashed',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  addPersonPlus: { fontSize: 18, fontWeight: '800' },
+  addPersonPlus: { fontSize: 19, fontWeight: '800' },
   editContext: { marginTop: 12 },
 });

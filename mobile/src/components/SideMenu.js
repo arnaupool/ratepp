@@ -67,6 +67,9 @@ export default function SideMenu({ visible, onClose, onNavigate }) {
           <Pressable style={styles.item} onPress={() => go('ManageLabels')}>
             <Text style={[type.cardTitle, { color: colors.ink }]}>🏷️  Categorías y etiquetas</Text>
           </Pressable>
+          <Pressable style={styles.item} onPress={() => go('LocationsMap')}>
+            <Text style={[type.cardTitle, { color: colors.ink }]}>🗺️  Mapa de ubicaciones</Text>
+          </Pressable>
           <Pressable
             style={styles.item}
             onPress={() => {

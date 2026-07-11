@@ -63,7 +63,7 @@ export default function PhotoGalleryEditor({ photos, onChange, onError, onOpenCo
   return (
     <View style={{ gap: 10 }}>
       <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-        <View style={{ flexDirection: 'row', gap: 8 }}>
+        <View style={{ flexDirection: 'row', gap: 8, alignItems: 'flex-start' }}>
           {photos.map((url, idx) => (
             <View key={`${url}-${idx}`} style={styles.thumbWrap}>
               <Image source={{ uri: url }} style={[styles.thumb, { backgroundColor: colors.surface }]} />

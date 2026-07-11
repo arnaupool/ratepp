@@ -52,8 +52,15 @@ async function inputWithValue(page, val) {
   const browser = await chromium.launch(
     process.env.CHROMIUM_PATH ? { executablePath: process.env.CHROMIUM_PATH } : {}
   );
-  // iPhone-ish viewport so the layout matches the mobile design
-  const ctx = await browser.newContext({ viewport: { width: 390, height: 844 } });
+  // iPhone-ish viewport so the layout matches the mobile design. Geolocation
+  // is granted so the location picker's "usar mi ubicación actual" button
+  // can produce real lat/lng (the web fallback's typed-address path leaves
+  // them null, which the locations-map endpoint deliberately excludes).
+  const ctx = await browser.newContext({
+    viewport: { width: 390, height: 844 },
+    permissions: ['geolocation'],
+    geolocation: { latitude: 40.4155, longitude: -3.7074 },
+  });
   const page = await ctx.newPage();
   debugPage = page;
 
@@ -164,14 +171,18 @@ async function inputWithValue(page, val) {
   await page.locator('input[type="date"]').fill('2026-06-14');
   log('Date field added via native date input');
 
-  // quick field: ubicación (map picker; web fallback is a plain address form)
+  // quick field: ubicación (map picker; web fallback is a plain address form).
+  // Also grab real coordinates via "usar mi ubicación actual" so this score
+  // shows up on the locations-map screen tested later.
   await page.getByText('Ubicación', { exact: true }).click();
   await page.getByText('📍 Elegir ubicación en el mapa').click();
   await page.getByText('Elegir ubicación', { exact: true }).waitFor();
   await page.getByPlaceholder('Ej. Calle Mayor 12, Madrid').fill('Calle Mayor 12, Madrid');
+  await page.getByText('Usar mi ubicación actual', { exact: false }).click();
+  await page.waitForTimeout(500);
   await page.getByText('Confirmar ubicación').click();
   await page.getByText('Calle Mayor 12, Madrid').waitFor();
-  log('Location field set through the picker overlay');
+  log('Location field set through the picker overlay (with real coordinates)');
 
   // quick field: etiqueta (multi-select tag autocomplete, commit via enter)
   await page.getByText('Etiqueta', { exact: true }).click();
@@ -354,6 +365,25 @@ async function inputWithValue(page, val) {
   await page.getByLabel('Eliminar categoría Películas').waitFor({ state: 'detached' });
   log('Category "Películas" deleted globally from Manage Labels screen');
   await page.getByLabel('Volver').click();
+  await page.getByText('Tus puntuaciones').waitFor();
+
+  // ---------- side menu: locations map ----------
+  await page.getByLabel('Abrir menú').click();
+  await page.getByText('Mapa de ubicaciones', { exact: false }).click();
+  await page.getByText('Mapa de ubicaciones', { exact: true }).waitFor(); // screen header
+  await page.getByText('Casa Pepa', { exact: true }).last().waitFor({ timeout: 10000 });
+  await shot(page, '14-locations-map');
+  await page.getByText('Casa Pepa', { exact: true }).last().click();
+  await page.getByText('Calle Mayor 12, Madrid').last().waitFor({ timeout: 10000 });
+  log('Locations map lists the saved location and navigates to its Detail screen on tap');
+  // Tapping a pin pushed Detail on top of LocationsMapScreen (not Home), so
+  // going back lands on the map screen first, then Home — and Detail's own
+  // back button plus the map screen's hidden-behind one both share the
+  // "Volver" label, with the topmost (Detail's) last in DOM order since it
+  // was pushed most recently.
+  await page.getByLabel('Volver').last().click();
+  await page.getByText('Mapa de ubicaciones', { exact: true }).waitFor();
+  await page.getByLabel('Volver').last().click();
   await page.getByText('Tus puntuaciones').waitFor();
 
   // ---------- delete note with confirmation ----------

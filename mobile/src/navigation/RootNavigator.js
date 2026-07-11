@@ -10,6 +10,7 @@ import CreateScoreScreen from '../screens/CreateScoreScreen';
 import DetailScreen from '../screens/DetailScreen';
 import SettingsScreen from '../screens/SettingsScreen';
 import ManageLabelsScreen from '../screens/ManageLabelsScreen';
+import LocationsMapScreen from '../screens/LocationsMapScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -45,6 +46,7 @@ export default function RootNavigator() {
             <Stack.Screen name="Detail" component={DetailScreen} />
             <Stack.Screen name="Settings" component={SettingsScreen} />
             <Stack.Screen name="ManageLabels" component={ManageLabelsScreen} />
+            <Stack.Screen name="LocationsMap" component={LocationsMapScreen} />
           </>
         )}
       </Stack.Navigator>

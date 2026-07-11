@@ -96,6 +96,31 @@ router.get('/', asyncHandler(async (req, res) => {
   res.json({ items });
 }));
 
+// Flattened list of every location-type field value across all of the
+// user's scores, for the "map of all notes" screen — one row per location
+// (a score can have more than one location field).
+router.get('/locations', asyncHandler(async (req, res) => {
+  const result = await pool.query(
+    `SELECT s.id AS score_id, s.title, sf.value
+     FROM score_fields sf
+     JOIN scores s ON s.id = sf.score_id
+     WHERE s.owner_id = $1
+       AND sf.type = 'location'
+       AND sf.value IS NOT NULL
+       AND sf.value->>'lat' IS NOT NULL
+       AND sf.value->>'lng' IS NOT NULL`,
+    [req.userId]
+  );
+  const locations = result.rows.map((r) => ({
+    scoreId: r.score_id,
+    title: r.title,
+    label: r.value.label || null,
+    lat: Number(r.value.lat),
+    lng: Number(r.value.lng),
+  }));
+  res.json({ locations });
+}));
+
 router.get('/:id', asyncHandler(async (req, res) => {
   const score = await loadScore(req.params.id, req.userId, { withFields: true });
   if (!score) return res.status(404).json({ error: 'Puntuación no encontrada' });

@@ -9,6 +9,7 @@ export const scoresApi = {
     return api.get(`/api/scores${suffix}`);
   },
   get: (id) => api.get(`/api/scores/${id}`),
+  locations: () => api.get('/api/scores/locations'),
   create: (payload) => api.post('/api/scores', payload),
   update: (id, payload) => api.patch(`/api/scores/${id}`, payload),
   remove: (id) => api.del(`/api/scores/${id}`),
