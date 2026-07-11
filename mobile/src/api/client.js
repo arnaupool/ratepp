@@ -1,6 +1,18 @@
 import { Platform } from 'react-native';
 
-export const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:4000';
+export const DEFAULT_API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:4000';
+
+// Mutable rather than a fixed constant: the server address is configurable
+// at runtime from Settings (this app is meant to be pointed at a
+// self-hosted backend on the user's own network, which isn't known at
+// build time).
+let apiUrl = DEFAULT_API_URL;
+export function getApiUrl() {
+  return apiUrl;
+}
+export function setApiUrl(url) {
+  apiUrl = url;
+}
 
 let authToken = null;
 export function setAuthToken(token) {
@@ -12,7 +24,7 @@ async function request(path, { method = 'GET', body, isMultipart = false } = {})
   if (authToken) headers.Authorization = `Bearer ${authToken}`;
   if (!isMultipart && body !== undefined) headers['Content-Type'] = 'application/json';
 
-  const res = await fetch(`${API_URL}${path}`, {
+  const res = await fetch(`${apiUrl}${path}`, {
     method,
     headers,
     body: isMultipart ? body : body !== undefined ? JSON.stringify(body) : undefined,

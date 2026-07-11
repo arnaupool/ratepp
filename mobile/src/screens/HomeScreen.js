@@ -11,7 +11,6 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useFocusEffect } from '@react-navigation/native';
 import { scoresApi } from '../api/scores';
 import { categoriesApi } from '../api/categories';
@@ -161,28 +160,20 @@ export default function HomeScreen({ navigation }) {
           grid below and stretch the chips vertically. alignItems: 'flex-start'
           stops the row from stretching its chips to match the tallest one
           (the default 'stretch' made every chip as tall as its container). */}
-      <View style={styles.chipsWrap}>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          style={styles.chipsScroll}
-          contentContainerStyle={styles.chipsRow}
-        >
-          {categories.map((c) => (
-            <FilterChip key={c} label={c} active={filter === c} onPress={() => setFilter(c)} />
-          ))}
-        </ScrollView>
-        {/* Softens the last chip's hard cut at the screen edge into a fade,
-            reading as "scroll for more" instead of looking like clipped/
-            broken layout. */}
-        <LinearGradient
-          colors={['transparent', colors.bg]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 0 }}
-          style={styles.chipsFade}
-          pointerEvents="none"
-        />
-      </View>
+      {/* A gradient fade was tried here to soften the last chip's hard cut
+          at the screen edge, but it rendered as a solid grey/dark block on
+          a real device instead of a fade — worse than the plain cutoff it
+          was meant to fix, so it's gone rather than chasing a fix blind. */}
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        style={styles.chipsScroll}
+        contentContainerStyle={styles.chipsRow}
+      >
+        {categories.map((c) => (
+          <FilterChip key={c} label={c} active={filter === c} onPress={() => setFilter(c)} />
+        ))}
+      </ScrollView>
 
         {loading ? (
           <View style={styles.center}>
@@ -361,10 +352,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: 2,
   },
-  chipsWrap: { position: 'relative', marginBottom: 14 },
-  chipsScroll: { flexGrow: 0 },
+  chipsScroll: { flexGrow: 0, marginBottom: 14 },
   chipsRow: { gap: 8, paddingHorizontal: 18, alignItems: 'flex-start' },
-  chipsFade: { position: 'absolute', right: 0, top: 0, bottom: 0, width: 28 },
   grid: { paddingHorizontal: 16, paddingBottom: 100, gap: 12 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 40 },
   card: { flex: 1, borderRadius: 20, overflow: 'hidden' },

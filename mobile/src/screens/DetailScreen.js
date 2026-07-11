@@ -422,9 +422,14 @@ export default function DetailScreen({ route, navigation }) {
 
   const heroUri = photos[activeIndex] || photos[0];
   const editingLocationField = score.fields.find((f) => f.id === locationFieldId);
+  // Picking a color in the "Color de la card" picker updates score.cardColor
+  // locally straight away (see onCardColorChange), so this reflects it as
+  // soon as a swatch is tapped rather than only after the API commit
+  // resolves or after navigating back to Home.
+  const pageBg = score.cardColor || colors.bg;
 
   return (
-    <View style={[styles.screen, { backgroundColor: colors.bg }]}>
+    <View style={[styles.screen, { backgroundColor: pageBg }]}>
       {/* Without this, editing a field near the bottom of the screen (in
           edit mode) let the keyboard cover it with no way to see what was
           being typed — CreateScoreScreen already had this, Detail didn't. */}

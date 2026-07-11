@@ -1,19 +1,9 @@
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
-import { Platform } from 'react-native';
-import * as SecureStore from 'expo-secure-store';
 import { api, setAuthToken } from '../api/client';
+import { storage } from '../utils/storage';
 
 const TOKEN_KEY = 'puntuaciones_token';
 
-// expo-secure-store has no web implementation; fall back to localStorage
-// there so the app also runs as a web build.
-const storage = Platform.OS === 'web'
-  ? {
-      getItemAsync: async (k) => window.localStorage.getItem(k),
-      setItemAsync: async (k, v) => window.localStorage.setItem(k, v),
-      deleteItemAsync: async (k) => window.localStorage.removeItem(k),
-    }
-  : SecureStore;
 const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {

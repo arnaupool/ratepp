@@ -1,4 +1,4 @@
-import React, { useCallback } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import * as SplashScreen from 'expo-splash-screen';
@@ -13,6 +13,7 @@ import {
 import { AuthProvider } from './src/context/AuthContext';
 import { ThemeProvider, useTheme } from './src/theme/ThemeContext';
 import RootNavigator from './src/navigation/RootNavigator';
+import { loadServerUrlOverride } from './src/utils/serverConfig';
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
@@ -35,12 +36,22 @@ export default function App() {
     Poppins_800ExtraBold,
     Poppins_900Black,
   });
+  // Must resolve before AuthProvider's own effect fires its first API call
+  // (the session check), or that request would go out against the
+  // build-time default server instead of a saved override.
+  const [serverConfigReady, setServerConfigReady] = useState(false);
+
+  useEffect(() => {
+    loadServerUrlOverride().finally(() => setServerConfigReady(true));
+  }, []);
+
+  const ready = fontsLoaded && serverConfigReady;
 
   const onLayoutRootView = useCallback(async () => {
-    if (fontsLoaded) await SplashScreen.hideAsync();
-  }, [fontsLoaded]);
+    if (ready) await SplashScreen.hideAsync();
+  }, [ready]);
 
-  if (!fontsLoaded) return null;
+  if (!ready) return null;
 
   return (
     <SafeAreaProvider>
