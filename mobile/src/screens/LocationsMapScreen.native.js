@@ -1,10 +1,11 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, Pressable, StyleSheet, ActivityIndicator } from 'react-native';
-import MapView, { Marker } from 'react-native-maps';
+import { View, Text, Image, Pressable, StyleSheet, ActivityIndicator } from 'react-native';
+import MapView, { Marker, Callout } from 'react-native-maps';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { scoresApi } from '../api/scores';
 import { useTheme } from '../theme/ThemeContext';
 import { type } from '../theme/typography';
+import ScoreBadge from '../components/ScoreBadge';
 
 const DEFAULT_REGION = { latitude: 40.4168, longitude: -3.7038, latitudeDelta: 8, longitudeDelta: 8 };
 
@@ -53,13 +54,28 @@ export default function LocationsMapScreen({ navigation }) {
       ) : (
         <MapView ref={mapRef} style={{ flex: 1 }} initialRegion={DEFAULT_REGION}>
           {locations.map((loc, idx) => (
-            <Marker
-              key={`${loc.scoreId}-${idx}`}
-              coordinate={{ latitude: loc.lat, longitude: loc.lng }}
-              title={loc.title}
-              description={loc.label || undefined}
-              onPress={() => navigation.navigate('Detail', { scoreId: loc.scoreId })}
-            />
+            <Marker key={`${loc.scoreId}-${idx}`} coordinate={{ latitude: loc.lat, longitude: loc.lng }}>
+              {/* tapping the pin opens this callout (native default); tapping
+                  the callout itself is what actually navigates to Detail */}
+              <Callout tooltip onPress={() => navigation.navigate('Detail', { scoreId: loc.scoreId })}>
+                <View style={[styles.callout, { backgroundColor: colors.surface, borderColor: colors.line }]}>
+                  {loc.coverUrl ? (
+                    <Image source={{ uri: loc.coverUrl }} style={[styles.calloutPhoto, { backgroundColor: colors.bg }]} />
+                  ) : (
+                    <View style={[styles.calloutPhoto, styles.calloutPhotoPlaceholder, { backgroundColor: colors.bg }]}>
+                      <Text style={{ fontSize: 18 }}>📍</Text>
+                    </View>
+                  )}
+                  <View style={styles.calloutBody}>
+                    <Text style={[type.cardTitle, { color: colors.ink }]} numberOfLines={2}>{loc.title}</Text>
+                    {!!loc.label && (
+                      <Text style={[type.editContext, { color: colors.sub, marginTop: 1 }]} numberOfLines={1}>{loc.label}</Text>
+                    )}
+                  </View>
+                  {loc.avgScore != null && <ScoreBadge value={loc.avgScore} size={32} />}
+                </View>
+              </Callout>
+            </Marker>
           ))}
         </MapView>
       )}
@@ -79,4 +95,16 @@ const styles = StyleSheet.create({
     borderBottomWidth: 2.5,
     transform: [{ rotate: '45deg' }],
   },
+  callout: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    width: 240,
+    borderRadius: 14,
+    borderWidth: 1,
+    padding: 10,
+  },
+  calloutPhoto: { width: 44, height: 44, borderRadius: 10 },
+  calloutPhotoPlaceholder: { alignItems: 'center', justifyContent: 'center' },
+  calloutBody: { flex: 1 },
 });

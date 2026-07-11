@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, Pressable, StyleSheet, ActivityIndicator, ScrollView } from 'react-native';
+import { View, Text, Image, Pressable, StyleSheet, ActivityIndicator, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { scoresApi } from '../api/scores';
 import { useTheme } from '../theme/ThemeContext';
 import { type } from '../theme/typography';
+import ScoreBadge from '../components/ScoreBadge';
 
 // react-native-maps has no web target; the web build (local dev preview /
 // e2e suite) falls back to a plain tappable list instead of pins on a map.
@@ -46,13 +47,20 @@ export default function LocationsMapScreen({ navigation }) {
               style={[styles.item, { backgroundColor: colors.surface, borderColor: colors.line }]}
               onPress={() => navigation.navigate('Detail', { scoreId: loc.scoreId })}
             >
-              <Text style={{ fontSize: 18 }}>📍</Text>
+              {loc.coverUrl ? (
+                <Image source={{ uri: loc.coverUrl }} style={[styles.thumb, { backgroundColor: colors.bg }]} />
+              ) : (
+                <View style={[styles.thumb, styles.thumbPlaceholder, { backgroundColor: colors.bg }]}>
+                  <Text style={{ fontSize: 18 }}>📍</Text>
+                </View>
+              )}
               <View style={{ flex: 1 }}>
                 <Text style={[type.detailFieldValue, { color: colors.ink }]} numberOfLines={1}>{loc.title}</Text>
                 {!!loc.label && (
                   <Text style={[type.editContext, { color: colors.sub, marginTop: 2 }]} numberOfLines={1}>{loc.label}</Text>
                 )}
               </View>
+              {loc.avgScore != null && <ScoreBadge value={loc.avgScore} size={32} />}
             </Pressable>
           ))}
         </ScrollView>
@@ -74,6 +82,8 @@ const styles = StyleSheet.create({
     transform: [{ rotate: '45deg' }],
   },
   list: { paddingHorizontal: 18, gap: 8, paddingBottom: 30 },
+  thumb: { width: 44, height: 44, borderRadius: 10 },
+  thumbPlaceholder: { alignItems: 'center', justifyContent: 'center' },
   item: {
     flexDirection: 'row',
     alignItems: 'center',

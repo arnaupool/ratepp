@@ -1,10 +1,19 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, Pressable, StyleSheet, Image, ScrollView, ActivityIndicator } from 'react-native';
+import { View, Text, TextInput, Pressable, StyleSheet, Image, ScrollView, ActivityIndicator, Dimensions } from 'react-native';
 import { coversApi } from '../api/covers';
 import { COVER_TYPES } from '../constants/fieldDefs';
 import { useTheme } from '../theme/ThemeContext';
 import { type } from '../theme/typography';
 import AnimatedSheet from './AnimatedSheet';
+
+// A literal pixel cap instead of a '%'-based maxHeight: percentage heights
+// need a definite-height ancestor to resolve against, and this sheet's
+// direct parents (the KeyboardAvoidingView/Animated.View in AnimatedSheet)
+// are both content-sized (no explicit height) — so on native, Yoga has
+// nothing to resolve the percentage against and the sheet was rendering
+// with an effectively-uncapped or wrongly-capped height, appearing to end
+// abruptly partway down the screen.
+const MAX_SHEET_HEIGHT = Math.round(Dimensions.get('window').height * 0.85);
 
 export default function CoverPickerOverlay({ visible, onClose, onConfirm }) {
   const { colors } = useTheme();
@@ -108,7 +117,8 @@ const styles = StyleSheet.create({
     paddingTop: 10,
     paddingBottom: 20,
     gap: 12,
-    maxHeight: '85%',
+    maxHeight: MAX_SHEET_HEIGHT,
+    overflow: 'hidden',
   },
   sheetGrab: { width: 36, height: 5, borderRadius: 3, backgroundColor: 'rgba(0,0,0,0.15)', alignSelf: 'center' },
   typeRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
@@ -136,7 +146,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderWidth: 1,
   },
-  resultsWrap: { minHeight: 120 },
+  resultsWrap: { minHeight: 120, flexShrink: 1 },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, paddingBottom: 8 },
   card: { width: '31%', gap: 3 },
   poster: { width: '100%', aspectRatio: 2 / 3, borderRadius: 10 },

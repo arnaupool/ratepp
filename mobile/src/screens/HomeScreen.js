@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -13,6 +13,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { scoresApi } from '../api/scores';
+import { categoriesApi } from '../api/categories';
 import { categoryTint, hashSeed } from '../theme/palettes';
 import { useTheme } from '../theme/ThemeContext';
 import { type } from '../theme/typography';
@@ -29,14 +30,24 @@ export default function HomeScreen({ navigation }) {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [searchInput, setSearchInput] = useState('');
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState('Todas');
+  const [categories, setCategories] = useState(['Todas']);
   const [menuOpen, setMenuOpen] = useState(false);
+
+  // Debounce the search box so we're not firing a request per keystroke —
+  // matching now happens server-side (title, categories, and field values)
+  // since the client only ever has the summary list, not each score's fields.
+  useEffect(() => {
+    const t = setTimeout(() => setSearch(searchInput), 300);
+    return () => clearTimeout(t);
+  }, [searchInput]);
 
   const load = useCallback(async () => {
     try {
       setError('');
-      const { items: fetched } = await scoresApi.list();
+      const { items: fetched } = await scoresApi.list({ search, category: filter });
       animateNext();
       setItems(fetched);
     } catch (e) {
@@ -44,7 +55,7 @@ export default function HomeScreen({ navigation }) {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [search, filter]);
 
   useFocusEffect(
     useCallback(() => {
@@ -52,20 +63,22 @@ export default function HomeScreen({ navigation }) {
     }, [load])
   );
 
-  const categories = useMemo(() => {
-    const set = new Set();
-    items.forEach((it) => (it.categories || []).forEach((c) => set.add(c)));
-    return ['Todas', ...Array.from(set).sort()];
-  }, [items]);
+  // The category chip row reflects ALL of the user's categories, not just
+  // the ones present in the current (possibly filtered) results.
+  useFocusEffect(
+    useCallback(() => {
+      categoriesApi
+        .list()
+        .then(({ categories: fetched }) => setCategories(['Todas', ...fetched]))
+        .catch(() => {});
+    }, [])
+  );
 
   const filtered = useMemo(() => {
-    const visible = items
-      .filter((it) => filter === 'Todas' || (it.categories || []).includes(filter))
-      .filter((it) => it.title.toLowerCase().includes(search.toLowerCase()));
     // Pad odd counts with an invisible spacer so the last card keeps its
     // half-width column instead of stretching across the whole row.
-    return visible.length % 2 === 1 ? [...visible, { id: '__spacer__', spacer: true }] : visible;
-  }, [items, filter, search]);
+    return items.length % 2 === 1 ? [...items, { id: '__spacer__', spacer: true }] : items;
+  }, [items]);
 
   return (
     <SafeAreaView style={[styles.screen, { backgroundColor: colors.bg }]} edges={['top']}>
@@ -83,10 +96,10 @@ export default function HomeScreen({ navigation }) {
           <Text style={{ fontSize: 15, color: colors.sub }}>⌕</Text>
           <TextInput
             style={[styles.searchInput, { color: colors.ink }]}
-            placeholder="Buscar por título..."
+            placeholder="Buscar por título, texto, fecha, categoría o etiqueta..."
             placeholderTextColor={colors.sub}
-            value={search}
-            onChangeText={setSearch}
+            value={searchInput}
+            onChangeText={setSearchInput}
           />
         </View>
       </View>

@@ -304,13 +304,31 @@ async function inputWithValue(page, val) {
   }
   log(`Filter chips render at consistent height (Todas=${todasBox.height}px, Películas=${pelisBox.height}px)`);
 
-  // search filtering
-  await page.getByPlaceholder('Buscar por título...').fill('zzz');
+  // search filtering — the search box is now server-side and debounced
+  // (300ms) and matches title, categories, and field values, not just title.
+  const searchBox = page.getByPlaceholder('Buscar por título, texto, fecha, categoría o etiqueta...');
+  await searchBox.fill('zzz');
+  await page.waitForTimeout(500);
   await page.getByText('Todavía no hay puntuaciones').waitFor();
-  await page.getByPlaceholder('Buscar por título...').fill('casa');
+  await searchBox.fill('casa');
+  await page.waitForTimeout(500);
   await page.getByText('Casa Pepa').waitFor();
-  await page.getByPlaceholder('Buscar por título...').fill('');
-  log('Search filters and clears correctly');
+  await searchBox.fill('');
+  await page.waitForTimeout(500);
+  log('Search filters and clears correctly by title');
+
+  // broadened search: should also match a tag value and a list-item value
+  // buried inside the score's fields, not just the title.
+  await searchBox.fill('Mediterránea');
+  await page.waitForTimeout(500);
+  await page.getByText('Casa Pepa').waitFor();
+  await searchBox.fill('paella');
+  await page.waitForTimeout(500);
+  await page.getByText('Casa Pepa').waitFor();
+  await searchBox.fill('');
+  await page.waitForTimeout(500);
+  await page.getByText('Casa Pepa').waitFor();
+  log('Search also matches tag and list-item text inside the score\'s fields');
 
   // category chips (first match = filter chip row, rendered above the grid)
   // "Restaurantes" was untoggled in edit mode, so filter on one that's still set
@@ -372,6 +390,8 @@ async function inputWithValue(page, val) {
   await page.getByText('Mapa de ubicaciones', { exact: false }).click();
   await page.getByText('Mapa de ubicaciones', { exact: true }).waitFor(); // screen header
   await page.getByText('Casa Pepa', { exact: true }).last().waitFor({ timeout: 10000 });
+  // avg of ratings 10 (owner), 6 (Marta), 8 (Ana) = 8, shown as a score badge
+  await page.getByText('8', { exact: true }).last().waitFor({ timeout: 10000 });
   await shot(page, '14-locations-map');
   await page.getByText('Casa Pepa', { exact: true }).last().click();
   await page.getByText('Calle Mayor 12, Madrid').last().waitFor({ timeout: 10000 });

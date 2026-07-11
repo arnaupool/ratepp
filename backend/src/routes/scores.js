@@ -63,7 +63,15 @@ router.get('/', asyncHandler(async (req, res) => {
   let where = 'owner_id = $1';
   if (search) {
     params.push(`%${search}%`);
-    where += ` AND title ILIKE $${params.length}`;
+    const idx = params.length;
+    // Matches title, any category, or any field's value (covers free text,
+    // list items, tags, and dates — jsonb cast to text so the raw stored
+    // representation is searched, e.g. "2026-06-14" or ["Croquetas"]).
+    where += ` AND (
+      title ILIKE $${idx}
+      OR EXISTS (SELECT 1 FROM unnest(categories) c WHERE c ILIKE $${idx})
+      OR EXISTS (SELECT 1 FROM score_fields sf WHERE sf.score_id = scores.id AND sf.value::text ILIKE $${idx})
+    )`;
   }
   if (category && category !== 'Todas') {
     params.push(category);
@@ -101,7 +109,12 @@ router.get('/', asyncHandler(async (req, res) => {
 // (a score can have more than one location field).
 router.get('/locations', asyncHandler(async (req, res) => {
   const result = await pool.query(
-    `SELECT s.id AS score_id, s.title, sf.value
+    `SELECT
+       s.id AS score_id,
+       s.title,
+       s.photo_urls[1] AS cover_url,
+       sf.value,
+       (SELECT AVG(sr.value) FROM score_ratings sr WHERE sr.score_id = s.id) AS avg_score
      FROM score_fields sf
      JOIN scores s ON s.id = sf.score_id
      WHERE s.owner_id = $1
@@ -114,6 +127,8 @@ router.get('/locations', asyncHandler(async (req, res) => {
   const locations = result.rows.map((r) => ({
     scoreId: r.score_id,
     title: r.title,
+    coverUrl: r.cover_url || null,
+    avgScore: r.avg_score != null ? Math.round(Number(r.avg_score) * 10) / 10 : null,
     label: r.value.label || null,
     lat: Number(r.value.lat),
     lng: Number(r.value.lng),
