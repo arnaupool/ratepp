@@ -101,7 +101,7 @@ const styles = StyleSheet.create({
   },
   selectedChipRemove: { fontSize: 9, fontWeight: '700', color: colors.white },
   input: {
-    fontFamily: 'Nunito_600SemiBold',
+    fontFamily: 'Poppins_600SemiBold',
     fontSize: 14.5,
     color: colors.ink,
     padding: 0,

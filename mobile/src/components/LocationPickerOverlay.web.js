@@ -77,7 +77,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.bg,
     borderWidth: 1,
     borderColor: colors.line,
-    fontFamily: 'Nunito_600SemiBold',
+    fontFamily: 'Poppins_600SemiBold',
     fontSize: 14,
     color: colors.ink,
   },

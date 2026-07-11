@@ -4,7 +4,6 @@ export const FIELD_DEFS = [
   { id: 'number', label: 'Número', icon: 'number', kind: 'simple', placeholder: 'Ej. 24.50', keyboardType: 'decimal-pad' },
   { id: 'date', label: 'Fecha', icon: 'date', kind: 'date', placeholder: '' },
   { id: 'location', label: 'Ubicación', icon: 'location', kind: 'location', placeholder: '' },
-  { id: 'photo', label: 'Foto', icon: 'photo', kind: 'photo', placeholder: '' },
   { id: 'gallery', label: 'Galería', icon: 'gallery', kind: 'gallery', placeholder: '' },
   { id: 'list', label: 'Lista de ítems', icon: 'list', kind: 'list', placeholder: '' },
   { id: 'tag', label: 'Etiqueta', icon: 'tag', kind: 'tag', placeholder: 'Ej. Mediterránea' },
@@ -20,7 +19,6 @@ export function fieldDef(typeId) {
 export function defaultFieldValue(kind) {
   if (kind === 'list') return [''];
   if (kind === 'gallery') return [];
-  if (kind === 'photo') return null;
   if (kind === 'date') return null;
   if (kind === 'location') return null;
   if (kind === 'tag') return [];

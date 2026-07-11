@@ -1,5 +1,5 @@
-import React, { useRef } from 'react';
-import { View, Text, Pressable, StyleSheet, Animated, PanResponder, Dimensions } from 'react-native';
+import React, { useEffect, useRef, useState } from 'react';
+import { View, Text, Pressable, StyleSheet, Animated, PanResponder, Dimensions, Easing } from 'react-native';
 
 const MAX_SCALE = 5;
 const DOUBLE_TAP_MS = 280;
@@ -10,6 +10,9 @@ const DOUBLE_TAP_MS = 280;
 // app that needs multi-touch gestures.
 export default function PhotoLightbox({ visible, uri, onClose }) {
   const { width, height } = Dimensions.get('window');
+  const [mounted, setMounted] = useState(visible);
+  const opacity = useRef(new Animated.Value(0)).current;
+  const entrance = useRef(new Animated.Value(0.92)).current;
   const scale = useRef(new Animated.Value(1)).current;
   const translateX = useRef(new Animated.Value(0)).current;
   const translateY = useRef(new Animated.Value(0)).current;
@@ -18,6 +21,26 @@ export default function PhotoLightbox({ visible, uri, onClose }) {
   const lastTranslate = useRef({ x: 0, y: 0 });
   const lastDistance = useRef(null);
   const lastTapAt = useRef(0);
+
+  useEffect(() => {
+    if (visible) {
+      setMounted(true);
+      opacity.setValue(0);
+      entrance.setValue(0.92);
+      Animated.parallel([
+        Animated.timing(opacity, { toValue: 1, duration: 180, useNativeDriver: true }),
+        Animated.timing(entrance, { toValue: 1, duration: 220, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
+      ]).start();
+    } else if (mounted) {
+      lastScale.current = 1;
+      lastTranslate.current = { x: 0, y: 0 };
+      scale.setValue(1);
+      translateX.setValue(0);
+      translateY.setValue(0);
+      Animated.timing(opacity, { toValue: 0, duration: 150, useNativeDriver: true }).start(() => setMounted(false));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [visible]);
 
   const resetZoom = () => {
     lastScale.current = 1;
@@ -39,34 +62,36 @@ export default function PhotoLightbox({ visible, uri, onClose }) {
       onStartShouldSetPanResponder: () => true,
       onMoveShouldSetPanResponder: (evt, gestureState) =>
         evt.nativeEvent.touches.length === 2 || Math.abs(gestureState.dx) > 4 || Math.abs(gestureState.dy) > 4,
-      onPanResponderGrant: (evt) => {
-        if (evt.nativeEvent.touches.length === 2) {
-          const [a, b] = evt.nativeEvent.touches;
-          lastDistance.current = Math.hypot(a.pageX - b.pageX, a.pageY - b.pageY);
-        }
-      },
       onPanResponderMove: (evt, gestureState) => {
         const touches = evt.nativeEvent.touches;
         if (touches.length === 2) {
           const [a, b] = touches;
           const dist = Math.hypot(a.pageX - b.pageX, a.pageY - b.pageY);
-          if (lastDistance.current) {
+          if (lastDistance.current == null) {
+            // just transitioned to two fingers — record the baseline now,
+            // don't wait for onPanResponderGrant (which only fires once,
+            // typically on the very first finger before the second lands)
+            lastDistance.current = dist;
+          } else {
             const next = Math.min(Math.max((lastScale.current * dist) / lastDistance.current, 1), MAX_SCALE);
             scale.setValue(next);
           }
-        } else if (lastScale.current > 1) {
-          translateX.setValue(lastTranslate.current.x + gestureState.dx);
-          translateY.setValue(lastTranslate.current.y + gestureState.dy);
+        } else {
+          lastDistance.current = null;
+          if (lastScale.current > 1) {
+            translateX.setValue(lastTranslate.current.x + gestureState.dx);
+            translateY.setValue(lastTranslate.current.y + gestureState.dy);
+          }
         }
       },
       onPanResponderRelease: (evt, gestureState) => {
-        if (lastDistance.current) {
+        if (lastDistance.current != null) {
+          lastDistance.current = null;
           scale.stopAnimation((v) => {
             lastScale.current = Math.max(1, Math.min(v, MAX_SCALE));
             scale.setValue(lastScale.current);
             if (lastScale.current === 1) resetZoom();
           });
-          lastDistance.current = null;
           return;
         }
         if (lastScale.current > 1) {
@@ -89,10 +114,10 @@ export default function PhotoLightbox({ visible, uri, onClose }) {
     })
   ).current;
 
-  if (!visible) return null;
+  if (!mounted) return null;
 
   return (
-    <View style={styles.overlay}>
+    <Animated.View style={[styles.overlay, { opacity }]}>
       <Pressable style={styles.closeBtn} onPress={onClose} accessibilityLabel="Cerrar foto">
         <Text style={styles.closeBtnText}>✕</Text>
       </Pressable>
@@ -100,10 +125,13 @@ export default function PhotoLightbox({ visible, uri, onClose }) {
         <Animated.Image
           source={{ uri }}
           resizeMode="contain"
-          style={[styles.image, { width, height, transform: [{ translateX }, { translateY }, { scale }] }]}
+          style={[
+            styles.image,
+            { width, height, transform: [{ translateX }, { translateY }, { scale: Animated.multiply(scale, entrance) }] },
+          ]}
         />
       </View>
-    </View>
+    </Animated.View>
   );
 }
 

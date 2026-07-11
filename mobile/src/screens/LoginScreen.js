@@ -125,7 +125,7 @@ export default function LoginScreen() {
           <Text style={[type.loginSwitch, styles.switchText, { color: colors.sub }]}>
             {isRegister ? '¿Ya tienes cuenta? ' : '¿No tienes cuenta? '}
             <Text
-              style={{ fontFamily: 'Nunito_800ExtraBold', color: colors.accent }}
+              style={{ fontFamily: 'Poppins_800ExtraBold', color: colors.accent }}
               onPress={() => setMode(isRegister ? 'login' : 'register')}
             >
               {isRegister ? 'Inicia sesión' : 'Regístrate'}
@@ -153,7 +153,7 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     paddingHorizontal: 14,
     paddingVertical: 13,
-    fontFamily: 'Nunito_600SemiBold',
+    fontFamily: 'Poppins_600SemiBold',
     fontSize: 15,
     backgroundColor: colors.surface,
     borderWidth: 1,
@@ -169,5 +169,5 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   switchText: { textAlign: 'center' },
-  error: { fontFamily: 'Nunito_700Bold', fontSize: 12.5, color: '#c0392b', textAlign: 'center' },
+  error: { fontFamily: 'Poppins_700Bold', fontSize: 12.5, color: '#c0392b', textAlign: 'center' },
 });

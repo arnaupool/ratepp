@@ -14,7 +14,7 @@ export default function ScoreStack({ ratings }) {
     const r = ratings[0];
     return (
       <View style={[styles.mini, { width: 30, height: 30, borderRadius: 15, backgroundColor: scoreColor(r.value) }]}>
-        <Text style={[{ fontFamily: 'Nunito_900Black', fontSize: 13 }, styles.text]}>{r.value}</Text>
+        <Text style={[{ fontFamily: 'Poppins_900Black', fontSize: 13 }, styles.text]}>{r.value}</Text>
       </View>
     );
   }

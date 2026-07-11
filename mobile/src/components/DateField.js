@@ -70,7 +70,7 @@ export default function DateField({ value, onChange }) {
 }
 
 const webInputStyle = {
-  fontFamily: 'Nunito_600SemiBold',
+  fontFamily: 'Poppins_600SemiBold',
   fontSize: 14.5,
   color: colors.ink,
   border: 'none',

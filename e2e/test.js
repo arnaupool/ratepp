@@ -108,9 +108,9 @@ async function inputWithValue(page, val) {
   await page.getByText('Cerrar', { exact: true }).click();
   log('Cover search sheet opens and closes');
 
-  // multi-category: collapsed by default — expand, toggle two chips, add a
-  // custom one via Enter (no "+" button anymore)
-  await page.getByText('Ver todas').click();
+  // multi-category: collapsed by default — expand via the small chevron,
+  // toggle two chips, add a custom one via Enter (no "+" button anymore)
+  await page.getByLabel('Ver todas las categorías').click();
   await page.getByText('Restaurantes', { exact: true }).click();
   await page.getByText('Películas', { exact: true }).click();
   const catInput = page.getByPlaceholder('Escribe y pulsa enter para añadir...');
@@ -187,7 +187,7 @@ async function inputWithValue(page, val) {
   // save
   await page.getByText('Guardar puntuación').click();
 
-  // ---------- detail ----------
+  // ---------- detail (view mode: everything read-only) ----------
   await page.getByText('Casa Pepa').waitFor({ timeout: 30000 });
   await page.getByText('TEXTO LARGO').waitFor();
   await page.getByText('— Paella de marisco').waitFor();
@@ -196,8 +196,8 @@ async function inputWithValue(page, val) {
   await page.getByText('14 de junio de 2026').waitFor();
   await page.getByText('Calle Mayor 12, Madrid').waitFor();
   await page.getByText('Mediterránea').waitFor();
-  await inputWithValue(page, 'Marta'); // extra people render as editable name inputs
-  log('Detail shows title, fields (date/location/tag included) and both people');
+  await page.getByText('Marta', { exact: true }).waitFor(); // read-only: plain text, not an input
+  log('Detail (view mode) shows title, fields (date/location/tag included) and both people');
 
   // categories: both toggled chips + the custom one, and no owner ("Tú")
   // bubble mixed into "Puntuaciones de otras personas"
@@ -209,11 +209,10 @@ async function inputWithValue(page, val) {
   log('Detail shows all 3 categories and no owner bubble in the other-people list');
   await shot(page, '06-detail');
 
-  // edit own score 9 -> 10 (owner's pill row is always visible now, no tap-to-reveal)
-  await page.getByText('Tu puntuación', { exact: true }).waitFor();
-  await page.getByText('10', { exact: true }).first().click();
-  await page.getByText('10', { exact: true }).first().waitFor();
-  log('Own score edited 9 -> 10 in Detail');
+  // score pills should NOT be present outside edit mode
+  const pillsInViewMode = await page.getByText('10', { exact: true }).count();
+  if (pillsInViewMode !== 0) throw new Error('score pill row visible outside edit mode');
+  log('Score is read-only outside edit mode (no pill row rendered)');
 
   // photo lightbox: tap the hero photo, expect a full-screen viewer, close it
   await page.locator('img[src*="/uploads/"]').first().click();
@@ -223,23 +222,31 @@ async function inputWithValue(page, val) {
   await page.getByLabel('Cerrar foto').waitFor({ state: 'detached' });
   log('Photo lightbox opens on tap and closes');
 
-  // edit mode: gallery editor visible, remove a field, add a new one
+  // ---------- detail (edit mode: everything unlocked) ----------
   await page.getByLabel('Editar puntuación').click();
   await page.getByText('Listo', { exact: true }).waitFor();
   await page.getByLabel('Añadir foto a la galería').waitFor();
+  log('Entered edit mode');
+
+  // score 9 -> 10, now editable via the pill row
+  await page.getByText('Tu puntuación', { exact: true }).waitFor();
+  await page.getByText('10', { exact: true }).first().click();
+  await page.getByText('10', { exact: true }).first().waitFor();
+  log('Own score edited 9 -> 10 in edit mode');
+
+  // categories: untoggle "Restaurantes"
+  await page.getByText('Restaurantes', { exact: true }).click();
+  await page.getByText('Restaurantes', { exact: true }).waitFor({ state: 'detached' });
+  log('Edit mode: category removed');
+
+  // fields: remove one, add another
   await page.getByLabel('Quitar campo Texto largo').click();
   await page.getByText('El arroz estaba en su punto.').waitFor({ state: 'detached' });
-  log('Edit mode: removed the long-text field');
-
   await page.getByText('Número', { exact: true }).click();
   await page.getByLabel('Quitar campo Número', { exact: true }).waitFor();
-  log('Edit mode: added a new field (Número)');
+  log('Edit mode: removed a field and added a new one (Número)');
 
-  await page.getByText('Listo', { exact: true }).click();
-  await page.getByLabel('Añadir foto a la galería').waitFor({ state: 'detached' });
-  log('Exited edit mode');
-
-  // add + rename person in detail (the focus-loss bug from the design chat)
+  // people: add + rename to Ana (the focus-loss bug from the design chat), score 8
   await page.getByLabel('Añadir persona').click();
   await page.getByText('Editando puntuación de Nuevo').waitFor();
   const nameInput = await inputWithValue(page, 'Nuevo');
@@ -251,8 +258,8 @@ async function inputWithValue(page, val) {
   await page.getByText('Editando puntuación de Ana').waitFor();
   await page.keyboard.press('Tab'); // blur -> PATCH rename
   await page.getByText('8', { exact: true }).last().click();
-  log('Ana added in Detail, renamed while typing (focus kept), scored 8');
-  await shot(page, '07-detail-three-people');
+  log('Ana added in edit mode, renamed while typing (focus kept), scored 8');
+  await shot(page, '07-detail-edit-mode');
 
   // remove a person: add one more then remove it
   await page.getByLabel('Añadir persona').click();
@@ -260,6 +267,11 @@ async function inputWithValue(page, val) {
   await page.getByLabel('Quitar persona').last().click();
   await page.getByText('Editando puntuación de Nuevo').waitFor({ state: 'detached' });
   log('Fourth person added then removed');
+
+  // exit edit mode
+  await page.getByText('Listo', { exact: true }).click();
+  await page.getByLabel('Añadir foto a la galería').waitFor({ state: 'detached' });
+  log('Exited edit mode, back to read-only view');
 
   // ---------- back to home: card reflects state ----------
   await page.getByLabel('Volver').click();
@@ -279,7 +291,8 @@ async function inputWithValue(page, val) {
   log('Search filters and clears correctly');
 
   // category chips (first match = filter chip row, rendered above the grid)
-  await page.getByText('Restaurantes', { exact: true }).first().click();
+  // "Restaurantes" was untoggled in edit mode, so filter on one that's still set
+  await page.getByText('Películas', { exact: true }).first().click();
   await page.getByText('Casa Pepa').waitFor();
   log('Category filter chip works');
 

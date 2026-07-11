@@ -1,11 +1,9 @@
-// Font weights ported from the design's Google Fonts import:
-// `Nunito:wght@700;800;900` — plus 600 (Nunito SemiBold) which the CSS
-// requests via `font:600 ...` for body/input text.
+// Same four weights as the design's original Nunito import, on Poppins.
 export const fonts = {
-  semibold: 'Nunito_600SemiBold',
-  bold: 'Nunito_700Bold',
-  extrabold: 'Nunito_800ExtraBold',
-  black: 'Nunito_900Black',
+  semibold: 'Poppins_600SemiBold',
+  bold: 'Poppins_700Bold',
+  extrabold: 'Poppins_800ExtraBold',
+  black: 'Poppins_900Black',
 };
 
 export const type = {

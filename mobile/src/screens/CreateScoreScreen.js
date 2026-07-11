@@ -6,7 +6,6 @@ import {
   Pressable,
   StyleSheet,
   ScrollView,
-  Image,
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
@@ -15,18 +14,17 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { scoresApi } from '../api/scores';
 import { api } from '../api/client';
-import { colors, hashSeed } from '../theme/colors';
+import { colors } from '../theme/colors';
 import { type } from '../theme/typography';
-import { FIELD_DEFS, QUICK_FIELD_DEFS, MORE_FIELD_DEFS, defaultFieldValue, DEFAULT_CATEGORIES } from '../constants/fieldDefs';
+import { QUICK_FIELD_DEFS, MORE_FIELD_DEFS, defaultFieldValue, DEFAULT_CATEGORIES } from '../constants/fieldDefs';
 import NumberPillRow from '../components/NumberPillRow';
 import PeopleScoresEditor from '../components/PeopleScoresEditor';
+import CategoryEditor from '../components/CategoryEditor';
 import FieldIcon from '../components/FieldIcon';
-import PhotoStripe from '../components/PhotoStripe';
-import DateField from '../components/DateField';
-import TagAutocomplete from '../components/TagAutocomplete';
-import MapPreview from '../components/MapPreview';
+import EditableFieldRow from '../components/EditableFieldRow';
 import LocationPickerOverlay from '../components/LocationPickerOverlay';
 import PhotoGalleryEditor from '../components/PhotoGalleryEditor';
+import CoverPickerOverlay from '../components/CoverPickerOverlay';
 import AnimatedSheet from '../components/AnimatedSheet';
 import { animateNext } from '../utils/animate';
 import { pickImage } from '../utils/pickImage';
@@ -38,14 +36,13 @@ export default function CreateScoreScreen({ navigation }) {
   const [title, setTitle] = useState('');
   const [ownerValue, setOwnerValue] = useState(null);
   const [categories, setCategories] = useState([]);
-  const [categoryInput, setCategoryInput] = useState('');
   const [categorySuggestions, setCategorySuggestions] = useState(DEFAULT_CATEGORIES);
-  const [categoriesExpanded, setCategoriesExpanded] = useState(false);
   const [others, setOthers] = useState([]);
   const [editingId, setEditingId] = useState(null);
   const [fields, setFields] = useState([]);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [photos, setPhotos] = useState([]);
+  const [coverPickerOpen, setCoverPickerOpen] = useState(false);
   const [locationFieldId, setLocationFieldId] = useState(null);
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
@@ -66,20 +63,12 @@ export default function CreateScoreScreen({ navigation }) {
     setCategories((prev) => (prev.includes(c) ? prev.filter((x) => x !== c) : [...prev, c]));
   };
 
-  const addCustomCategory = () => {
-    const c = categoryInput.trim();
-    if (!c) return;
+  const addCustomCategory = (c) => {
     if (!categories.includes(c)) {
       animateNext();
       setCategories((prev) => [...prev, c]);
     }
     if (!categorySuggestions.includes(c)) setCategorySuggestions((prev) => [...prev, c]);
-    setCategoryInput('');
-  };
-
-  const toggleCategoriesExpanded = () => {
-    animateNext();
-    setCategoriesExpanded((v) => !v);
   };
 
   const onSelectNumber = (personId, n) => {
@@ -112,7 +101,7 @@ export default function CreateScoreScreen({ navigation }) {
     animateNext();
     setFields((prev) => [
       ...prev,
-      { id: tempId(), typeId: def.id, label: def.label, value: defaultFieldValue(def.kind) },
+      { id: tempId(), type: def.id, label: def.label, value: defaultFieldValue(def.kind) },
     ]);
     setSheetOpen(false);
   };
@@ -120,6 +109,18 @@ export default function CreateScoreScreen({ navigation }) {
   const removeField = (id) => {
     animateNext();
     setFields((prev) => prev.filter((f) => f.id !== id));
+  };
+
+  const moveField = (id, dir) => {
+    setFields((prev) => {
+      const idx = prev.findIndex((f) => f.id === id);
+      const target = idx + dir;
+      if (target < 0 || target >= prev.length) return prev;
+      const next = prev.slice();
+      [next[target], next[idx]] = [next[idx], next[target]];
+      return next;
+    });
+    animateNext();
   };
 
   const updateField = (id, patch) =>
@@ -141,19 +142,6 @@ export default function CreateScoreScreen({ navigation }) {
     setFields((prev) => prev.map((f) => (f.id === fieldId ? { ...f, value: [...f.value, ''] } : f)));
   };
 
-  const pickForPhoto = async (fieldId) => {
-    try {
-      const uri = await pickImage();
-      if (!uri) return;
-      updateField(fieldId, { uploading: true });
-      const url = await api.uploadPhoto(uri);
-      updateField(fieldId, { value: url, uploading: false });
-    } catch (e) {
-      updateField(fieldId, { uploading: false });
-      setError(e.message || 'No se pudo subir la foto');
-    }
-  };
-
   const pickForGallery = async (fieldId) => {
     try {
       const uri = await pickImage();
@@ -170,6 +158,13 @@ export default function CreateScoreScreen({ navigation }) {
     }
   };
 
+  const removeGalleryPhoto = (fieldId, idx) => {
+    animateNext();
+    setFields((prev) =>
+      prev.map((f) => (f.id === fieldId ? { ...f, value: f.value.filter((_, i) => i !== idx) } : f))
+    );
+  };
+
   const openMoreFields = () => {
     Keyboard.dismiss();
     setSheetOpen(true);
@@ -178,6 +173,11 @@ export default function CreateScoreScreen({ navigation }) {
   const openLocationPicker = (fieldId) => {
     Keyboard.dismiss();
     setLocationFieldId(fieldId);
+  };
+
+  const openCoverSearch = () => {
+    Keyboard.dismiss();
+    setCoverPickerOpen(true);
   };
 
   const save = async () => {
@@ -202,7 +202,7 @@ export default function CreateScoreScreen({ navigation }) {
         photoUrls: photos,
         ownerValue,
         ratings: others.map((o) => ({ personName: o.name.trim() || 'Invitado', value: o.value })),
-        fields: fields.map((f) => ({ type: f.typeId, label: f.label, value: f.value })),
+        fields: fields.map((f) => ({ type: f.type, label: f.label, value: f.value })),
       });
       navigation.replace('Detail', { scoreId: score.id });
     } catch (e) {
@@ -213,9 +213,6 @@ export default function CreateScoreScreen({ navigation }) {
   };
 
   const editingLocationField = fields.find((f) => f.id === locationFieldId);
-  const visibleCategoryChips = categoriesExpanded
-    ? categorySuggestions
-    : categorySuggestions.filter((c) => categories.includes(c));
 
   return (
     <SafeAreaView style={styles.screen} edges={['top']}>
@@ -237,43 +234,17 @@ export default function CreateScoreScreen({ navigation }) {
 
           <View style={styles.section}>
             <Text style={[type.scoreLabel, { color: colors.sub }]}>Fotos</Text>
-            <PhotoGalleryEditor photos={photos} onChange={setPhotos} onError={setError} />
+            <PhotoGalleryEditor photos={photos} onChange={setPhotos} onError={setError} onOpenCoverSearch={openCoverSearch} />
           </View>
 
           <View style={styles.section}>
-            <View style={styles.categoryHeadRow}>
-              <Text style={[type.scoreLabel, { color: colors.sub }]}>Categorías</Text>
-              <Pressable onPress={toggleCategoriesExpanded}>
-                <Text style={[type.listAdd, { color: colors.accent }]}>
-                  {categoriesExpanded ? 'Ocultar' : 'Ver todas'} {categoriesExpanded ? '▴' : '▾'}
-                </Text>
-              </Pressable>
-            </View>
-            <TextInput
-              style={styles.categoryInput}
-              placeholder="Escribe y pulsa enter para añadir..."
-              placeholderTextColor={colors.sub}
-              value={categoryInput}
-              onChangeText={setCategoryInput}
-              onSubmitEditing={addCustomCategory}
-              returnKeyType="done"
+            <Text style={[type.scoreLabel, { color: colors.sub }]}>Categorías</Text>
+            <CategoryEditor
+              categories={categories}
+              suggestions={categorySuggestions}
+              onToggle={toggleCategory}
+              onAddCustom={addCustomCategory}
             />
-            {visibleCategoryChips.length > 0 && (
-              <View style={styles.categoryChips}>
-                {visibleCategoryChips.map((c) => {
-                  const on = categories.includes(c);
-                  return (
-                    <Pressable
-                      key={c}
-                      onPress={() => toggleCategory(c)}
-                      style={[styles.categoryChip, on && styles.categoryChipOn]}
-                    >
-                      <Text style={[type.chip, { color: on ? colors.accentInk : colors.sub }]}>{c}</Text>
-                    </Pressable>
-                  );
-                })}
-              </View>
-            )}
           </View>
 
           <View style={styles.section}>
@@ -294,17 +265,23 @@ export default function CreateScoreScreen({ navigation }) {
             />
           </View>
 
-          {fields.map((f) => (
-            <FieldRow
+          {fields.map((f, idx) => (
+            <EditableFieldRow
               key={f.id}
               field={f}
+              isFirst={idx === 0}
+              isLast={idx === fields.length - 1}
               onRemove={() => removeField(f.id)}
+              onMoveUp={() => moveField(f.id, -1)}
+              onMoveDown={() => moveField(f.id, 1)}
               onLabelChange={(label) => updateField(f.id, { label })}
+              onLabelCommit={() => {}}
               onValueChange={(value) => updateField(f.id, { value })}
-              onListItemChange={(idx, v) => updateListItem(f.id, idx, v)}
+              onValueCommit={() => {}}
+              onListItemChange={(idx2, v) => updateListItem(f.id, idx2, v)}
               onAddListItem={() => addListItem(f.id)}
-              onPickPhoto={() => pickForPhoto(f.id)}
               onPickGalleryPhoto={() => pickForGallery(f.id)}
+              onRemoveGalleryPhoto={(idx2) => removeGalleryPhoto(f.id, idx2)}
               onPickLocation={() => openLocationPicker(f.id)}
             />
           ))}
@@ -359,96 +336,16 @@ export default function CreateScoreScreen({ navigation }) {
           setLocationFieldId(null);
         }}
       />
+
+      <CoverPickerOverlay
+        visible={coverPickerOpen}
+        onClose={() => setCoverPickerOpen(false)}
+        onConfirm={(url) => {
+          setPhotos((prev) => [...prev, url]);
+          setCoverPickerOpen(false);
+        }}
+      />
     </SafeAreaView>
-  );
-}
-
-function FieldRow({ field, onRemove, onLabelChange, onValueChange, onListItemChange, onAddListItem, onPickPhoto, onPickGalleryPhoto, onPickLocation }) {
-  const def = FIELD_DEFS.find((d) => d.id === field.typeId);
-  return (
-    <View style={styles.fieldRow}>
-      <View style={styles.fieldHead}>
-        <View style={styles.ficonWrap}>
-          <FieldIcon type={def.icon} size={18} color={colors.white} />
-        </View>
-        <TextInput
-          style={[type.fieldLabel, styles.fieldLabelInput, { color: colors.sub }]}
-          value={field.label}
-          onChangeText={onLabelChange}
-        />
-        <Pressable style={styles.fieldRemove} onPress={onRemove} accessibilityLabel="Quitar campo">
-          <Text style={styles.fieldRemoveText}>✕</Text>
-        </Pressable>
-      </View>
-
-      {def.kind === 'simple' && (
-        <TextInput
-          style={styles.fieldInput}
-          placeholder={def.placeholder}
-          placeholderTextColor={colors.sub}
-          value={field.value}
-          onChangeText={onValueChange}
-          keyboardType={def.keyboardType || 'default'}
-        />
-      )}
-
-      {def.kind === 'date' && <DateField value={field.value} onChange={onValueChange} />}
-
-      {def.kind === 'tag' && <TagAutocomplete value={field.value} onChange={onValueChange} />}
-
-      {def.kind === 'location' && (
-        field.value ? (
-          <Pressable onPress={onPickLocation}>
-            <MapPreview value={field.value} height={120} />
-          </Pressable>
-        ) : (
-          <Pressable style={styles.locationBtn} onPress={onPickLocation}>
-            <Text style={[type.quickChip, { color: colors.accent }]}>📍 Elegir ubicación en el mapa</Text>
-          </Pressable>
-        )
-      )}
-
-      {def.kind === 'list' && (
-        <View style={{ gap: 8 }}>
-          {field.value.map((v, idx) => (
-            <TextInput
-              key={idx}
-              style={styles.fieldInput}
-              placeholder="Añade un ítem..."
-              placeholderTextColor={colors.sub}
-              value={v}
-              onChangeText={(text) => onListItemChange(idx, text)}
-            />
-          ))}
-          <Pressable onPress={onAddListItem}>
-            <Text style={[type.listAdd, { color: colors.accent }]}>+ Añadir ítem</Text>
-          </Pressable>
-        </View>
-      )}
-
-      {def.kind === 'photo' && (
-        <Pressable style={styles.phMini} onPress={onPickPhoto}>
-          {field.uploading ? (
-            <ActivityIndicator color={colors.accent} />
-          ) : field.value ? (
-            <Image source={{ uri: field.value }} style={StyleSheet.absoluteFill} />
-          ) : (
-            <PhotoStripe seed={hashSeed(field.id)} style={StyleSheet.absoluteFill} />
-          )}
-        </Pressable>
-      )}
-
-      {def.kind === 'gallery' && (
-        <View style={styles.phGrid}>
-          {field.value.map((url, idx) => (
-            <Image key={idx} source={{ uri: url }} style={styles.phMiniGridItem} />
-          ))}
-          <Pressable style={[styles.phMiniGridItem, styles.addPhotoTile]} onPress={onPickGalleryPhoto} accessibilityLabel="Añadir foto">
-            {field.uploading ? <ActivityIndicator color={colors.sub} /> : <Text style={styles.addPhotoPlus}>+</Text>}
-          </Pressable>
-        </View>
-      )}
-    </View>
   );
 }
 
@@ -473,84 +370,8 @@ const styles = StyleSheet.create({
     transform: [{ rotate: '45deg' }],
   },
   body: { paddingHorizontal: 18, paddingTop: 8, paddingBottom: 60, gap: 16 },
-  titleInput: { fontFamily: 'Nunito_900Black', fontSize: 24, color: colors.ink, padding: 0 },
+  titleInput: { fontFamily: 'Poppins_900Black', fontSize: 24, color: colors.ink, padding: 0 },
   section: { gap: 8 },
-  categoryHeadRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  categoryInput: {
-    borderRadius: 14,
-    paddingHorizontal: 14,
-    paddingVertical: 11,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.line,
-    fontFamily: 'Nunito_600SemiBold',
-    fontSize: 14,
-    color: colors.ink,
-  },
-  categoryChips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  categoryChip: {
-    borderRadius: 999,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.line,
-  },
-  categoryChipOn: { backgroundColor: colors.accent, borderColor: colors.accent },
-  fieldRow: {
-    borderRadius: 14,
-    padding: 12,
-    gap: 8,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.line,
-  },
-  fieldHead: { flexDirection: 'row', alignItems: 'center', gap: 9 },
-  ficonWrap: {
-    width: 34,
-    height: 34,
-    borderRadius: 10,
-    backgroundColor: colors.accent2,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  fieldLabelInput: { flex: 1, padding: 0 },
-  fieldRemove: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    backgroundColor: 'rgba(0,0,0,0.06)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  fieldRemoveText: { fontSize: 11, fontWeight: '700', color: colors.sub },
-  fieldInput: {
-    fontFamily: 'Nunito_600SemiBold',
-    fontSize: 14.5,
-    color: colors.ink,
-    padding: 0,
-  },
-  locationBtn: {
-    borderRadius: 10,
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-    backgroundColor: colors.bg,
-    borderWidth: 1,
-    borderColor: colors.line,
-    borderStyle: 'dashed',
-    alignItems: 'center',
-  },
-  phMini: { width: '100%', aspectRatio: 1, borderRadius: 10, overflow: 'hidden', alignItems: 'center', justifyContent: 'center', backgroundColor: colors.surface },
-  phGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
-  phMiniGridItem: { width: '31.5%', aspectRatio: 1, borderRadius: 10, overflow: 'hidden' },
-  addPhotoTile: {
-    borderWidth: 1.5,
-    borderColor: colors.line,
-    borderStyle: 'dashed',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  addPhotoPlus: { fontSize: 20, fontWeight: '800', color: colors.sub, lineHeight: 22, marginTop: -1 },
   quickRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   quickChip: {
     flexDirection: 'row',
@@ -563,6 +384,14 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.line,
   },
+  ficonWrap: {
+    width: 34,
+    height: 34,
+    borderRadius: 10,
+    backgroundColor: colors.accent2,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   saveBtn: {
     borderRadius: 14,
     paddingVertical: 15,
@@ -571,7 +400,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  error: { fontFamily: 'Nunito_700Bold', fontSize: 12.5, color: '#c0392b', textAlign: 'center' },
+  error: { fontFamily: 'Poppins_700Bold', fontSize: 12.5, color: '#c0392b', textAlign: 'center' },
   sheet: {
     borderTopLeftRadius: 26,
     borderTopRightRadius: 26,

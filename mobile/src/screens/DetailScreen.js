@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -16,16 +16,22 @@ import { type } from '../theme/typography';
 import PhotoStripe from '../components/PhotoStripe';
 import TagChip from '../components/TagChip';
 import PeopleScoresEditor from '../components/PeopleScoresEditor';
+import CategoryEditor from '../components/CategoryEditor';
 import ScoreBadge from '../components/ScoreBadge';
 import NumberPillRow from '../components/NumberPillRow';
 import FieldIcon from '../components/FieldIcon';
 import MapPreview from '../components/MapPreview';
 import PhotoGalleryEditor from '../components/PhotoGalleryEditor';
+import CoverPickerOverlay from '../components/CoverPickerOverlay';
 import PhotoLightbox from '../components/PhotoLightbox';
+import EditableFieldRow from '../components/EditableFieldRow';
+import LocationPickerOverlay from '../components/LocationPickerOverlay';
 import AnimatedSheet from '../components/AnimatedSheet';
 import { formatDate } from '../components/DateField';
-import { FIELD_DEFS, QUICK_FIELD_DEFS, MORE_FIELD_DEFS, defaultFieldValue } from '../constants/fieldDefs';
+import { FIELD_DEFS, QUICK_FIELD_DEFS, MORE_FIELD_DEFS, defaultFieldValue, DEFAULT_CATEGORIES } from '../constants/fieldDefs';
 import { animateNext } from '../utils/animate';
+import { pickImage } from '../utils/pickImage';
+import { api } from '../api/client';
 
 export default function DetailScreen({ route, navigation }) {
   const { scoreId } = route.params;
@@ -38,6 +44,9 @@ export default function DetailScreen({ route, navigation }) {
   const [editMode, setEditMode] = useState(false);
   const [fieldSheetOpen, setFieldSheetOpen] = useState(false);
   const [lightboxUri, setLightboxUri] = useState(null);
+  const [coverPickerOpen, setCoverPickerOpen] = useState(false);
+  const [locationFieldId, setLocationFieldId] = useState(null);
+  const [categorySuggestions, setCategorySuggestions] = useState(DEFAULT_CATEGORIES);
 
   const load = useCallback(async () => {
     try {
@@ -56,6 +65,17 @@ export default function DetailScreen({ route, navigation }) {
       load();
     }, [load])
   );
+
+  useEffect(() => {
+    scoresApi
+      .list()
+      .then(({ items }) => {
+        const set = new Set(DEFAULT_CATEGORIES);
+        items.forEach((it) => (it.categories || []).forEach((c) => set.add(c)));
+        setCategorySuggestions(Array.from(set));
+      })
+      .catch(() => {});
+  }, []);
 
   const photos = score?.photoUrls || [];
 
@@ -139,6 +159,24 @@ export default function DetailScreen({ route, navigation }) {
     }
   };
 
+  const toggleCategory = async (c) => {
+    const prev = score.categories;
+    const next = prev.includes(c) ? prev.filter((x) => x !== c) : [...prev, c];
+    animateNext();
+    setScore((s) => ({ ...s, categories: next }));
+    try {
+      await scoresApi.update(scoreId, { categories: next });
+    } catch (e) {
+      setError(e.message || 'No se pudo actualizar las categorías');
+      setScore((s) => ({ ...s, categories: prev }));
+    }
+  };
+
+  const addCustomCategory = (c) => {
+    if (!categorySuggestions.includes(c)) setCategorySuggestions((prev) => [...prev, c]);
+    if (!score.categories.includes(c)) toggleCategory(c);
+  };
+
   const onAddField = async (def) => {
     try {
       const { field } = await scoresApi.addField(scoreId, {
@@ -167,20 +205,97 @@ export default function DetailScreen({ route, navigation }) {
     }
   };
 
+  const moveField = async (fieldId, dir) => {
+    const prev = score.fields;
+    const idx = prev.findIndex((f) => f.id === fieldId);
+    const target = idx + dir;
+    if (target < 0 || target >= prev.length) return;
+    const next = prev.slice();
+    [next[target], next[idx]] = [next[idx], next[target]];
+    animateNext();
+    setScore((s) => ({ ...s, fields: next }));
+    try {
+      await scoresApi.reorderFields(scoreId, next.map((f) => f.id));
+    } catch (e) {
+      setError(e.message || 'No se pudo reordenar');
+      setScore((s) => ({ ...s, fields: prev }));
+    }
+  };
+
+  const updateFieldLocally = (fieldId, patch) => {
+    setScore((s) => ({ ...s, fields: s.fields.map((f) => (f.id === fieldId ? { ...f, ...patch } : f)) }));
+  };
+
+  const commitFieldLabel = async (fieldId, label) => {
+    try {
+      await scoresApi.updateField(scoreId, fieldId, { label });
+    } catch (e) {
+      setError(e.message || 'No se pudo renombrar el campo');
+    }
+  };
+
+  const commitFieldValue = async (fieldId, value) => {
+    try {
+      await scoresApi.updateField(scoreId, fieldId, { value });
+    } catch (e) {
+      setError(e.message || 'No se pudo guardar el campo');
+    }
+  };
+
+  const updateListItem = (fieldId, idx, value) => {
+    setScore((s) => ({
+      ...s,
+      fields: s.fields.map((f) => {
+        if (f.id !== fieldId) return f;
+        const next = f.value.slice();
+        next[idx] = value;
+        return { ...f, value: next };
+      }),
+    }));
+  };
+
+  const addListItem = async (fieldId) => {
+    const field = score.fields.find((f) => f.id === fieldId);
+    if (!field) return;
+    const next = [...field.value, ''];
+    animateNext();
+    updateFieldLocally(fieldId, { value: next });
+  };
+
+  const pickForGallery = async (fieldId) => {
+    try {
+      const uri = await pickImage();
+      if (!uri) return;
+      updateFieldLocally(fieldId, { uploading: true });
+      const url = await api.uploadPhoto(uri);
+      const field = score.fields.find((f) => f.id === fieldId);
+      const next = [...field.value, url];
+      animateNext();
+      updateFieldLocally(fieldId, { value: next, uploading: false });
+      await commitFieldValue(fieldId, next);
+    } catch (e) {
+      updateFieldLocally(fieldId, { uploading: false });
+      setError(e.message || 'No se pudo subir la foto');
+    }
+  };
+
   const onRemoveGalleryPhoto = async (fieldId, idx) => {
     const field = score.fields.find((f) => f.id === fieldId);
     if (!field) return;
     const prevValue = field.value;
     const nextValue = field.value.filter((_, i) => i !== idx);
     animateNext();
-    setScore((s) => ({ ...s, fields: s.fields.map((f) => (f.id === fieldId ? { ...f, value: nextValue } : f)) }));
+    updateFieldLocally(fieldId, { value: nextValue });
     try {
       await scoresApi.updateField(scoreId, fieldId, { value: nextValue });
     } catch (e) {
       setError(e.message || 'No se pudo quitar la foto');
-      setScore((s) => ({ ...s, fields: s.fields.map((f) => (f.id === fieldId ? { ...f, value: prevValue } : f)) }));
+      updateFieldLocally(fieldId, { value: prevValue });
     }
   };
+
+  const openCoverSearch = () => setCoverPickerOpen(true);
+  const openLocationPicker = (fieldId) => setLocationFieldId(fieldId);
 
   if (loading) {
     return (
@@ -193,7 +308,7 @@ export default function DetailScreen({ route, navigation }) {
   if (error && !score) {
     return (
       <View style={[styles.screen, styles.center]}>
-        <Text style={{ fontFamily: 'Nunito_700Bold', color: colors.sub }}>{error}</Text>
+        <Text style={{ fontFamily: 'Poppins_700Bold', color: colors.sub }}>{error}</Text>
       </View>
     );
   }
@@ -201,6 +316,7 @@ export default function DetailScreen({ route, navigation }) {
   if (!score) return null;
 
   const heroUri = photos[activeIndex] || photos[0];
+  const editingLocationField = score.fields.find((f) => f.id === locationFieldId);
 
   return (
     <View style={styles.screen}>
@@ -216,7 +332,7 @@ export default function DetailScreen({ route, navigation }) {
               </Pressable>
             </View>
             <Text style={[type.scoreLabel, { color: colors.sub, marginTop: 10 }]}>Fotos</Text>
-            <PhotoGalleryEditor photos={photos} onChange={onPhotosChange} onError={setError} />
+            <PhotoGalleryEditor photos={photos} onChange={onPhotosChange} onError={setError} onOpenCoverSearch={openCoverSearch} />
           </View>
         ) : (
           <View style={styles.heroWrap}>
@@ -261,55 +377,102 @@ export default function DetailScreen({ route, navigation }) {
 
         <View style={styles.content}>
           <Text style={[type.detailTitle, { color: colors.ink }]}>{score.title}</Text>
-          {score.categories?.length > 0 && (
-            <View style={styles.categoryRow}>
-              {score.categories.map((c) => (
-                <TagChip key={c} label={c} />
-              ))}
+
+          {editMode ? (
+            <View style={{ marginTop: 8 }}>
+              <CategoryEditor
+                categories={score.categories}
+                suggestions={categorySuggestions}
+                onToggle={toggleCategory}
+                onAddCustom={addCustomCategory}
+              />
             </View>
+          ) : (
+            score.categories?.length > 0 && (
+              <View style={styles.categoryRow}>
+                {score.categories.map((c) => (
+                  <TagChip key={c} label={c} />
+                ))}
+              </View>
+            )
           )}
           {!!error && <Text style={styles.errorBanner}>{error}</Text>}
 
           <View style={styles.ownerRow}>
             <Text style={[type.scoreLabel, { color: colors.sub }]}>Tu puntuación</Text>
             {ownerRating && (
-              <View style={styles.ownerScoreRow}>
-                <ScoreBadge value={ownerRating.value} size={40} />
-                <View style={{ flex: 1 }}>
-                  <NumberPillRow value={ownerRating.value} onSelect={(n) => onSelectNumber(ownerRating.id, n)} />
+              editMode ? (
+                <View style={styles.ownerScoreRow}>
+                  <ScoreBadge value={ownerRating.value} size={40} />
+                  <View style={{ flex: 1 }}>
+                    <NumberPillRow value={ownerRating.value} onSelect={(n) => onSelectNumber(ownerRating.id, n)} />
+                  </View>
                 </View>
-              </View>
+              ) : (
+                <ScoreBadge value={ownerRating.value} size={40} />
+              )
             )}
           </View>
 
           <View style={{ marginTop: 16 }}>
             <Text style={[type.scoreLabel, { color: colors.sub }]}>Puntuaciones de otras personas</Text>
-            <PeopleScoresEditor
-              people={otherPeople}
-              editingId={editingId}
-              onStartEdit={(id) => setEditingId((cur) => (cur === id ? null : id))}
-              onSelectNumber={onSelectNumber}
-              onRename={onRename}
-              onRenameCommit={onRenameCommit}
-              onRemove={onRemove}
-              onAdd={onAddPerson}
-            />
+            {editMode ? (
+              <PeopleScoresEditor
+                people={otherPeople}
+                editingId={editingId}
+                onStartEdit={(id) => setEditingId((cur) => (cur === id ? null : id))}
+                onSelectNumber={onSelectNumber}
+                onRename={onRename}
+                onRenameCommit={onRenameCommit}
+                onRemove={onRemove}
+                onAdd={onAddPerson}
+              />
+            ) : otherPeople.length > 0 ? (
+              <View style={styles.readOnlyPeopleRow}>
+                {otherPeople.map((p) => (
+                  <View key={p.id} style={styles.readOnlyPerson}>
+                    <Text style={[type.personName, { color: colors.sub }]}>{p.name}</Text>
+                    <ScoreBadge value={p.value} size={40} />
+                  </View>
+                ))}
+              </View>
+            ) : (
+              <Text style={[type.editContext, { color: colors.sub, marginTop: 8 }]}>Nadie más ha puntuado esto todavía.</Text>
+            )}
           </View>
         </View>
 
         {(score.fields.length > 0 || editMode) && (
           <View style={styles.fieldsCard}>
-            {score.fields.map((f, idx) => (
-              <DetailFieldRow
-                key={f.id}
-                field={f}
-                isLast={idx === score.fields.length - 1 && !editMode}
-                editMode={editMode}
-                onRemove={() => onRemoveField(f.id)}
-                onRemoveGalleryPhoto={(idx2) => onRemoveGalleryPhoto(f.id, idx2)}
-                onPhotoPress={setLightboxUri}
-              />
-            ))}
+            {score.fields.map((f, idx) =>
+              editMode ? (
+                <EditableFieldRow
+                  key={f.id}
+                  field={f}
+                  isFirst={idx === 0}
+                  isLast={idx === score.fields.length - 1}
+                  onRemove={() => onRemoveField(f.id)}
+                  onMoveUp={() => moveField(f.id, -1)}
+                  onMoveDown={() => moveField(f.id, 1)}
+                  onLabelChange={(label) => updateFieldLocally(f.id, { label })}
+                  onLabelCommit={(label) => commitFieldLabel(f.id, label)}
+                  onValueChange={(value) => updateFieldLocally(f.id, { value })}
+                  onValueCommit={(value) => commitFieldValue(f.id, value)}
+                  onListItemChange={(idx2, v) => updateListItem(f.id, idx2, v)}
+                  onAddListItem={() => addListItem(f.id)}
+                  onPickGalleryPhoto={() => pickForGallery(f.id)}
+                  onRemoveGalleryPhoto={(idx2) => onRemoveGalleryPhoto(f.id, idx2)}
+                  onPickLocation={() => openLocationPicker(f.id)}
+                />
+              ) : (
+                <DetailFieldRow
+                  key={f.id}
+                  field={f}
+                  isLast={idx === score.fields.length - 1}
+                  onPhotoPress={setLightboxUri}
+                />
+              )
+            )}
             {editMode && (
               <View style={styles.addFieldRow}>
                 {QUICK_FIELD_DEFS.map((def) => (
@@ -345,12 +508,32 @@ export default function DetailScreen({ route, navigation }) {
         </Pressable>
       </AnimatedSheet>
 
+      <LocationPickerOverlay
+        visible={!!editingLocationField}
+        initialValue={editingLocationField?.value}
+        onClose={() => setLocationFieldId(null)}
+        onConfirm={(value) => {
+          updateFieldLocally(locationFieldId, { value });
+          commitFieldValue(locationFieldId, value);
+          setLocationFieldId(null);
+        }}
+      />
+
+      <CoverPickerOverlay
+        visible={coverPickerOpen}
+        onClose={() => setCoverPickerOpen(false)}
+        onConfirm={(url) => {
+          onPhotosChange([...photos, url]);
+          setCoverPickerOpen(false);
+        }}
+      />
+
       <PhotoLightbox visible={!!lightboxUri} uri={lightboxUri} onClose={() => setLightboxUri(null)} />
     </View>
   );
 }
 
-function DetailFieldRow({ field, isLast, editMode, onRemove, onRemoveGalleryPhoto, onPhotoPress }) {
+function DetailFieldRow({ field, isLast, onPhotoPress }) {
   const def = FIELD_DEFS.find((d) => d.id === field.type);
   return (
     <View style={[styles.fieldRow, !isLast && styles.fieldRowDivider]}>
@@ -359,11 +542,6 @@ function DetailFieldRow({ field, isLast, editMode, onRemove, onRemoveGalleryPhot
           <FieldIcon type={def?.icon} size={13} color={colors.white} />
         </View>
         <Text style={[type.detailFieldLabel, styles.fieldHeadLabel, { color: colors.sub }]}>{field.label}</Text>
-        {editMode && (
-          <Pressable style={styles.fieldRemove} onPress={onRemove} accessibilityLabel={`Quitar campo ${field.label}`}>
-            <Text style={styles.fieldRemoveText}>✕</Text>
-          </Pressable>
-        )}
       </View>
 
       {field.type === 'list' && Array.isArray(field.value) && (
@@ -374,6 +552,8 @@ function DetailFieldRow({ field, isLast, editMode, onRemove, onRemoveGalleryPhot
         </View>
       )}
 
+      {/* legacy fallback for scores created before the standalone 'Foto'
+          field type was folded into 'Galería' */}
       {field.type === 'photo' && field.value && (
         <Pressable onPress={() => onPhotoPress(field.value)}>
           <Image source={{ uri: field.value }} style={styles.fieldPhoto} />
@@ -384,20 +564,9 @@ function DetailFieldRow({ field, isLast, editMode, onRemove, onRemoveGalleryPhot
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.fieldValue}>
           <View style={{ flexDirection: 'row', gap: 6 }}>
             {field.value.map((url, idx) => (
-              <View key={idx}>
-                <Pressable onPress={() => onPhotoPress(url)}>
-                  <Image source={{ uri: url }} style={styles.fieldGalleryThumb} />
-                </Pressable>
-                {editMode && (
-                  <Pressable
-                    style={styles.galleryThumbRemove}
-                    onPress={() => onRemoveGalleryPhoto(idx)}
-                    accessibilityLabel="Quitar foto"
-                  >
-                    <Text style={styles.galleryThumbRemoveText}>✕</Text>
-                  </Pressable>
-                )}
-              </View>
+              <Pressable key={idx} onPress={() => onPhotoPress(url)}>
+                <Image source={{ uri: url }} style={styles.fieldGalleryThumb} />
+              </Pressable>
             ))}
           </View>
         </ScrollView>
@@ -486,6 +655,8 @@ const styles = StyleSheet.create({
   categoryRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 8 },
   ownerRow: { marginTop: 16, gap: 8 },
   ownerScoreRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  readOnlyPeopleRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 16, marginTop: 10 },
+  readOnlyPerson: { alignItems: 'center', gap: 5 },
   fieldsCard: {
     marginHorizontal: 18,
     marginTop: 18,
@@ -505,32 +676,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  fieldRemove: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    backgroundColor: 'rgba(0,0,0,0.06)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  fieldRemoveText: { fontSize: 11, fontWeight: '700', color: colors.sub },
   fieldValue: { paddingLeft: 32 },
   tagRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
-  errorBanner: { fontFamily: 'Nunito_700Bold', fontSize: 12.5, color: '#c0392b', marginTop: 10 },
+  errorBanner: { fontFamily: 'Poppins_700Bold', fontSize: 12.5, color: '#c0392b', marginTop: 10 },
   fieldPhoto: { marginLeft: 32, width: 90, height: 90, borderRadius: 10 },
   fieldGalleryThumb: { width: 70, height: 70, borderRadius: 10 },
-  galleryThumbRemove: {
-    position: 'absolute',
-    top: -4,
-    right: -4,
-    width: 18,
-    height: 18,
-    borderRadius: 9,
-    backgroundColor: 'rgba(0,0,0,0.55)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  galleryThumbRemoveText: { fontSize: 9, fontWeight: '700', color: colors.white },
   addFieldRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, padding: 13, paddingHorizontal: 16 },
   quickChip: {
     flexDirection: 'row',

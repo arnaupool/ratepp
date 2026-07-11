@@ -20,4 +20,5 @@ export const scoresApi = {
   addField: (scoreId, payload) => api.post(`/api/scores/${scoreId}/fields`, payload),
   updateField: (scoreId, fieldId, payload) => api.patch(`/api/scores/${scoreId}/fields/${fieldId}`, payload),
   removeField: (scoreId, fieldId) => api.del(`/api/scores/${scoreId}/fields/${fieldId}`),
+  reorderFields: (scoreId, order) => api.post(`/api/scores/${scoreId}/fields/reorder`, { order }),
 };

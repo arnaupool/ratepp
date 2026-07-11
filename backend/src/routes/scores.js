@@ -293,4 +293,35 @@ router.delete('/:id/fields/:fieldId', asyncHandler(async (req, res) => {
   res.status(204).end();
 }));
 
+router.post('/:id/fields/reorder', asyncHandler(async (req, res) => {
+  const owned = await assertOwnedScore(req.params.id, req.userId);
+  if (!owned) return res.status(404).json({ error: 'Puntuación no encontrada' });
+  const { order } = req.body || {};
+  if (!Array.isArray(order) || order.length === 0) {
+    return res.status(400).json({ error: 'Falta el orden de campos' });
+  }
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    for (let i = 0; i < order.length; i++) {
+      await client.query(
+        'UPDATE score_fields SET sort_order = $1 WHERE id = $2 AND score_id = $3',
+        [i, order[i], req.params.id]
+      );
+    }
+    await client.query('UPDATE scores SET updated_at = now() WHERE id = $1', [req.params.id]);
+    await client.query('COMMIT');
+  } catch (err) {
+    await client.query('ROLLBACK');
+    throw err;
+  } finally {
+    client.release();
+  }
+  const fieldsRes = await pool.query(
+    'SELECT * FROM score_fields WHERE score_id = $1 ORDER BY sort_order ASC, created_at ASC',
+    [req.params.id]
+  );
+  res.json({ fields: fieldsRes.rows.map(mapField) });
+}));
+
 module.exports = router;

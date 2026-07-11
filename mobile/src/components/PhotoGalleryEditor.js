@@ -4,16 +4,22 @@ import { api } from '../api/client';
 import { pickImage } from '../utils/pickImage';
 import { colors } from '../theme/colors';
 import { type } from '../theme/typography';
-import CoverPickerOverlay from './CoverPickerOverlay';
 import { animateNext } from '../utils/animate';
 
 // Shared photo-gallery manager for a score: an ordered list of URLs where
 // the first one is always the cover. Used by both Create (fresh score) and
 // Detail (editing an existing one) — the parent owns the array and just
 // gets it back via onChange after every add/remove/reorder.
-export default function PhotoGalleryEditor({ photos, onChange, onError }) {
+//
+// The cover-search sheet (CoverPickerOverlay) is NOT rendered here: this
+// component lives nested inside a ScrollView, and RN resolves
+// `position: absolute` against the nearest ancestor rather than the whole
+// screen, so a full-screen overlay mounted this deep only covers its
+// immediate container instead of the screen. The parent screen owns and
+// renders that overlay at the top level instead; onOpenCoverSearch just
+// asks it to open.
+export default function PhotoGalleryEditor({ photos, onChange, onError, onOpenCoverSearch }) {
   const [uploading, setUploading] = useState(false);
-  const [searchOpen, setSearchOpen] = useState(false);
 
   const addUrl = (url) => {
     animateNext();
@@ -36,8 +42,7 @@ export default function PhotoGalleryEditor({ photos, onChange, onError }) {
 
   const openSearch = () => {
     Keyboard.dismiss();
-    animateNext();
-    setSearchOpen(true);
+    onOpenCoverSearch();
   };
 
   const remove = (idx) => {
@@ -97,14 +102,6 @@ export default function PhotoGalleryEditor({ photos, onChange, onError }) {
       <Pressable style={styles.searchBtn} onPress={openSearch}>
         <Text style={[type.quickChip, { color: colors.ink }]}>Buscar carátula</Text>
       </Pressable>
-      <CoverPickerOverlay
-        visible={searchOpen}
-        onClose={() => setSearchOpen(false)}
-        onConfirm={(url) => {
-          addUrl(url);
-          setSearchOpen(false);
-        }}
-      />
     </View>
   );
 }
@@ -123,7 +120,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 5,
     paddingVertical: 2,
   },
-  coverBadgeText: { fontFamily: 'Nunito_800ExtraBold', fontSize: 8, color: colors.white, letterSpacing: 0.3 },
+  coverBadgeText: { fontFamily: 'Poppins_800ExtraBold', fontSize: 8, color: colors.white, letterSpacing: 0.3 },
   removeBtn: {
     position: 'absolute',
     right: 4,

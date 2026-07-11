@@ -102,14 +102,14 @@ export default function HomeScreen({ navigation }) {
         </View>
       ) : error ? (
         <View style={styles.center}>
-          <Text style={{ fontFamily: 'Nunito_700Bold', color: colors.sub, textAlign: 'center' }}>{error}</Text>
+          <Text style={{ fontFamily: 'Poppins_700Bold', color: colors.sub, textAlign: 'center' }}>{error}</Text>
         </View>
       ) : filtered.length === 0 ? (
         <View style={styles.center}>
-          <Text style={{ fontFamily: 'Nunito_800ExtraBold', fontSize: 15, color: colors.ink, marginBottom: 4 }}>
+          <Text style={{ fontFamily: 'Poppins_800ExtraBold', fontSize: 15, color: colors.ink, marginBottom: 4 }}>
             Todavía no hay puntuaciones
           </Text>
-          <Text style={{ fontFamily: 'Nunito_600SemiBold', fontSize: 13, color: colors.sub, textAlign: 'center' }}>
+          <Text style={{ fontFamily: 'Poppins_600SemiBold', fontSize: 13, color: colors.sub, textAlign: 'center' }}>
             Toca el botón + para puntuar tu primer restaurante, peli o recuerdo.
           </Text>
         </View>
@@ -184,7 +184,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.line,
   },
-  searchInput: { flex: 1, fontFamily: 'Nunito_600SemiBold', fontSize: 14, color: colors.ink, padding: 0 },
+  searchInput: { flex: 1, fontFamily: 'Poppins_600SemiBold', fontSize: 14, color: colors.ink, padding: 0 },
   chipsRow: { gap: 8, paddingHorizontal: 18, paddingBottom: 4 },
   grid: { paddingHorizontal: 16, paddingTop: 14, paddingBottom: 100, gap: 12 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 40 },

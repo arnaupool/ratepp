@@ -94,28 +94,30 @@ The four screens from the design, wired to a real backend:
    always the cover), collapsible multi-select categories, required 1-10
    score (single-row pill selector), optional extra people's scores,
    dynamic fields (quick-add chips + "more fields" sheet: text, number,
-   date (native picker), location (map picker), photo, repeatable
-   gallery, list, tag (multi-select autocomplete of previously-used
-   tags)), save.
-4. **Detalle** — hero photo + thumbnails (tap any photo to open it
-   full-screen with pinch-to-zoom), your score always visible separately
-   from other people's scores (add/rename/remove), unified fields card
-   with thin dividers — date fields show a formatted date, location
-   fields show a small map that opens turn-by-turn navigation when
-   tapped. An edit mode (pencil icon) lets you reorder/remove gallery
-   photos, remove individual fields, add new ones, and remove photos from
-   gallery-type fields.
+   date (native picker), location (map picker), repeatable gallery, list,
+   tag (multi-select autocomplete of previously-used tags)), save.
+4. **Detalle** — read-only by default: hero photo + thumbnails (tap any
+   photo to open it full-screen with pinch-to-zoom), your score, other
+   people's scores, categories and fields are all just displayed. An edit
+   mode (pencil icon) unlocks everything: change your score, add/remove/
+   rename other people's scores, toggle categories, reorder/remove/add
+   fields, edit field values (including removing individual photos from
+   gallery-type fields), and reorder/remove/add gallery photos.
 
 A score's photo gallery is stored as an ordered list (`photoUrls`) — the
 first photo is always the cover shown on the home grid and as the hero
 image. Reordering photos in edit mode changes the cover.
 
-Colors, spacing and type are ported directly from the design's CSS (the
+Colors and spacing are ported directly from the design's CSS (the
 `oklch()` tokens are converted to sRGB at runtime in `src/theme/oklch.js` —
 RN has no `oklch()` support, so this keeps the palette pixel-accurate rather
 than eyeballed). The pure-CSS field-type icons (border tricks / pseudo
 elements) are recreated as small View compositions in
-`src/components/FieldIcon.js`.
+`src/components/FieldIcon.js`. Typeface is Poppins (swapped from the
+design's original Nunito by request).
+
+The standalone "Foto" field type was folded into "Galería" (a gallery of
+one photo is the same thing) to cut down on redundant options.
 
 ### Gaps filled beyond the prototype
 
