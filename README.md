@@ -89,17 +89,26 @@ The four screens from the design, wired to a real backend:
 1. **Acceder** — login/register (toggle, matches the design's single form).
 2. **Principal** — 2-column grid of your scores, search, tag filters, single
    score badge or stacked mini-badges + "+N" for multi-person scores.
-3. **Crear puntuación** — title, cover photo (upload or search movies/
-   games/books for a poster), multi-select categories, required 1-10 score
-   (single-row pill selector), optional extra people's scores, dynamic
-   fields (quick-add chips + "more fields" sheet: text, number, date
-   (native picker), location (map picker), photo, repeatable gallery,
-   list, tag (autocomplete of previously-used tags)), save.
-4. **Detalle** — hero photo + thumbnails (tap the image icon to change the
-   cover), your score always visible separately from other people's scores
-   (add/rename/remove), unified fields card with thin dividers — date
-   fields show a formatted date, location fields show a small map that
-   opens turn-by-turn navigation when tapped.
+3. **Crear puntuación** — title, a reorderable photo gallery (upload from
+   device or search movies/games/books for a poster; the first photo is
+   always the cover), collapsible multi-select categories, required 1-10
+   score (single-row pill selector), optional extra people's scores,
+   dynamic fields (quick-add chips + "more fields" sheet: text, number,
+   date (native picker), location (map picker), photo, repeatable
+   gallery, list, tag (multi-select autocomplete of previously-used
+   tags)), save.
+4. **Detalle** — hero photo + thumbnails (tap any photo to open it
+   full-screen with pinch-to-zoom), your score always visible separately
+   from other people's scores (add/rename/remove), unified fields card
+   with thin dividers — date fields show a formatted date, location
+   fields show a small map that opens turn-by-turn navigation when
+   tapped. An edit mode (pencil icon) lets you reorder/remove gallery
+   photos, remove individual fields, add new ones, and remove photos from
+   gallery-type fields.
+
+A score's photo gallery is stored as an ordered list (`photoUrls`) — the
+first photo is always the cover shown on the home grid and as the hero
+image. Reordering photos in edit mode changes the cover.
 
 Colors, spacing and type are ported directly from the design's CSS (the
 `oklch()` tokens are converted to sRGB at runtime in `src/theme/oklch.js` —

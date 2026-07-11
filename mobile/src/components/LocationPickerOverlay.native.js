@@ -4,6 +4,7 @@ import MapView, { Marker } from 'react-native-maps';
 import * as Location from 'expo-location';
 import { colors } from '../theme/colors';
 import { type } from '../theme/typography';
+import AnimatedSheet from './AnimatedSheet';
 
 const DEFAULT_REGION = { latitude: 40.4168, longitude: -3.7038, latitudeDelta: 0.05, longitudeDelta: 0.05 };
 
@@ -21,8 +22,6 @@ export default function LocationPickerOverlay({ visible, initialValue, onClose, 
   const [label, setLabel] = useState(initialValue?.label || '');
   const [search, setSearch] = useState('');
   const [busy, setBusy] = useState(false);
-
-  if (!visible) return null;
 
   const applyPoint = async (coords, fallbackLabel) => {
     setMarker(coords);
@@ -71,7 +70,7 @@ export default function LocationPickerOverlay({ visible, initialValue, onClose, 
   };
 
   return (
-    <Pressable style={styles.backdrop} onPress={onClose}>
+    <AnimatedSheet visible={visible} onClose={onClose}>
       <Pressable style={styles.sheet} onPress={() => {}}>
         <View style={styles.sheetGrab} />
         <Text style={[type.sheetTitle, { color: colors.ink }]}>Elegir ubicación</Text>
@@ -128,17 +127,11 @@ export default function LocationPickerOverlay({ visible, initialValue, onClose, 
           </Pressable>
         </View>
       </Pressable>
-    </Pressable>
+    </AnimatedSheet>
   );
 }
 
 const styles = StyleSheet.create({
-  backdrop: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0,0,0,0.35)',
-    justifyContent: 'flex-end',
-    zIndex: 60,
-  },
   sheet: {
     borderTopLeftRadius: 26,
     borderTopRightRadius: 26,

@@ -1,37 +1,84 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, TextInput, Pressable, StyleSheet } from 'react-native';
 import { tagsApi } from '../api/tags';
 import { colors } from '../theme/colors';
 import { type } from '../theme/typography';
+import { animateNext } from '../utils/animate';
 
-// Lets a 'tag' field either reuse an existing tag (typed on any other
-// score) or freely type a new one — the field's value is just the string.
-export default function TagAutocomplete({ value, onChange, placeholder }) {
+// Multi-select tag field: shows the chosen tags as removable chips, a text
+// input to type a brand-new one (Enter to add), and a collapsed-by-default
+// dropdown of previously-used tags (across all scores) to reuse instead of
+// retyping.
+export default function TagAutocomplete({ value, onChange }) {
+  const tags = Array.isArray(value) ? value : [];
   const [allTags, setAllTags] = useState([]);
+  const [expanded, setExpanded] = useState(false);
+  const [draft, setDraft] = useState('');
 
   useEffect(() => {
-    tagsApi.list().then(({ tags }) => setAllTags(tags)).catch(() => {});
+    tagsApi.list().then(({ tags: fetched }) => setAllTags(fetched)).catch(() => {});
   }, []);
 
-  const suggestions = useMemo(() => {
-    const q = (value || '').trim().toLowerCase();
-    const pool = q ? allTags.filter((t) => t.toLowerCase().includes(q) && t.toLowerCase() !== q) : allTags;
-    return pool.slice(0, 8);
-  }, [allTags, value]);
+  const addTag = (t) => {
+    const clean = t.trim();
+    if (!clean || tags.includes(clean)) return;
+    onChange([...tags, clean]);
+  };
+
+  const removeTag = (t) => {
+    animateNext();
+    onChange(tags.filter((x) => x !== t));
+  };
+
+  const submitDraft = () => {
+    addTag(draft);
+    setDraft('');
+  };
+
+  const toggleExpanded = () => {
+    animateNext();
+    setExpanded((v) => !v);
+  };
+
+  const availableSuggestions = allTags.filter((t) => !tags.includes(t));
 
   return (
     <View style={{ gap: 8 }}>
+      {tags.length > 0 && (
+        <View style={styles.chips}>
+          {tags.map((t) => (
+            <View key={t} style={styles.selectedChip}>
+              <Text style={[type.chip, { color: colors.accentInk }]}>{t}</Text>
+              <Pressable onPress={() => removeTag(t)} hitSlop={6} accessibilityLabel={`Quitar etiqueta ${t}`}>
+                <Text style={styles.selectedChipRemove}>✕</Text>
+              </Pressable>
+            </View>
+          ))}
+        </View>
+      )}
+
       <TextInput
         style={styles.input}
-        placeholder={placeholder || 'Escribe o elige una etiqueta...'}
+        placeholder="Escribe una etiqueta y pulsa enter..."
         placeholderTextColor={colors.sub}
-        value={value}
-        onChangeText={onChange}
+        value={draft}
+        onChangeText={setDraft}
+        onSubmitEditing={submitDraft}
+        returnKeyType="done"
       />
-      {suggestions.length > 0 && (
+
+      {availableSuggestions.length > 0 && (
+        <Pressable onPress={toggleExpanded} style={styles.toggleRow}>
+          <Text style={[type.listAdd, { color: colors.accent }]}>
+            {expanded ? 'Ocultar etiquetas usadas' : 'Ver etiquetas usadas anteriormente'} {expanded ? '▴' : '▾'}
+          </Text>
+        </Pressable>
+      )}
+
+      {expanded && (
         <View style={styles.chips}>
-          {suggestions.map((t) => (
-            <Pressable key={t} style={styles.chip} onPress={() => onChange(t)}>
+          {availableSuggestions.map((t) => (
+            <Pressable key={t} style={styles.suggestionChip} onPress={() => addTag(t)}>
               <Text style={[type.chip, { color: colors.sub }]}>{t}</Text>
             </Pressable>
           ))}
@@ -42,14 +89,25 @@ export default function TagAutocomplete({ value, onChange, placeholder }) {
 }
 
 const styles = StyleSheet.create({
+  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
+  selectedChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    backgroundColor: colors.accent,
+  },
+  selectedChipRemove: { fontSize: 9, fontWeight: '700', color: colors.white },
   input: {
     fontFamily: 'Nunito_600SemiBold',
     fontSize: 14.5,
     color: colors.ink,
     padding: 0,
   },
-  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
-  chip: {
+  toggleRow: { alignSelf: 'flex-start' },
+  suggestionChip: {
     borderRadius: 999,
     paddingHorizontal: 10,
     paddingVertical: 5,

@@ -33,7 +33,7 @@ async function loadScore(scoreId, userId, { withFields } = {}) {
     id: score.id,
     title: score.title,
     categories: score.categories || [],
-    coverPhotoUrl: score.cover_photo_url,
+    photoUrls: score.photo_urls || [],
     createdAt: score.created_at,
     updatedAt: score.updated_at,
     ratings: ratingsRes.rows.map(mapRating),
@@ -88,7 +88,7 @@ router.get('/', asyncHandler(async (req, res) => {
     id: s.id,
     title: s.title,
     categories: s.categories || [],
-    coverPhotoUrl: s.cover_photo_url,
+    photoUrls: s.photo_urls || [],
     createdAt: s.created_at,
     updatedAt: s.updated_at,
     ratings: ratingsByScore[s.id] || [],
@@ -107,8 +107,13 @@ function normalizeCategories(categories) {
   return [...new Set(categories.map((c) => String(c).trim()).filter(Boolean))];
 }
 
+function normalizePhotoUrls(photoUrls) {
+  if (!Array.isArray(photoUrls)) return [];
+  return photoUrls.map((u) => String(u).trim()).filter(Boolean);
+}
+
 router.post('/', asyncHandler(async (req, res) => {
-  const { title, categories, coverPhotoUrl, ownerValue, ratings = [], fields = [] } = req.body || {};
+  const { title, categories, photoUrls, ownerValue, ratings = [], fields = [] } = req.body || {};
   if (!title || !String(title).trim()) {
     return res.status(400).json({ error: 'El título es obligatorio' });
   }
@@ -126,8 +131,8 @@ router.post('/', asyncHandler(async (req, res) => {
   try {
     await client.query('BEGIN');
     const scoreRes = await client.query(
-      'INSERT INTO scores (owner_id, title, categories, cover_photo_url) VALUES ($1, $2, $3, $4) RETURNING *',
-      [req.userId, String(title).trim(), normalizeCategories(categories), coverPhotoUrl || null]
+      'INSERT INTO scores (owner_id, title, categories, photo_urls) VALUES ($1, $2, $3, $4) RETURNING *',
+      [req.userId, String(title).trim(), normalizeCategories(categories), normalizePhotoUrls(photoUrls)]
     );
     const score = scoreRes.rows[0];
 
@@ -167,12 +172,12 @@ router.post('/', asyncHandler(async (req, res) => {
 router.patch('/:id', asyncHandler(async (req, res) => {
   const owned = await assertOwnedScore(req.params.id, req.userId);
   if (!owned) return res.status(404).json({ error: 'Puntuación no encontrada' });
-  const { title, categories, coverPhotoUrl } = req.body || {};
+  const { title, categories, photoUrls } = req.body || {};
   const fieldsSet = [];
   const values = [];
   if (title !== undefined) { values.push(title); fieldsSet.push(`title = $${values.length}`); }
   if (categories !== undefined) { values.push(normalizeCategories(categories)); fieldsSet.push(`categories = $${values.length}`); }
-  if (coverPhotoUrl !== undefined) { values.push(coverPhotoUrl); fieldsSet.push(`cover_photo_url = $${values.length}`); }
+  if (photoUrls !== undefined) { values.push(normalizePhotoUrls(photoUrls)); fieldsSet.push(`photo_urls = $${values.length}`); }
   if (fieldsSet.length === 0) {
     const score = await loadScore(req.params.id, req.userId, { withFields: true });
     return res.json({ score });

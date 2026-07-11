@@ -7,7 +7,7 @@ export const FIELD_DEFS = [
   { id: 'photo', label: 'Foto', icon: 'photo', kind: 'photo', placeholder: '' },
   { id: 'gallery', label: 'Galería', icon: 'gallery', kind: 'gallery', placeholder: '' },
   { id: 'list', label: 'Lista de ítems', icon: 'list', kind: 'list', placeholder: '' },
-  { id: 'tag', label: 'Selector / etiqueta', icon: 'tag', kind: 'tag', placeholder: 'Ej. Mediterránea' },
+  { id: 'tag', label: 'Etiqueta', icon: 'tag', kind: 'tag', placeholder: 'Ej. Mediterránea' },
 ];
 
 export const QUICK_FIELD_DEFS = FIELD_DEFS.slice(0, 4);
@@ -23,7 +23,7 @@ export function defaultFieldValue(kind) {
   if (kind === 'photo') return null;
   if (kind === 'date') return null;
   if (kind === 'location') return null;
-  if (kind === 'tag') return '';
+  if (kind === 'tag') return [];
   return '';
 }
 

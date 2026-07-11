@@ -20,9 +20,11 @@ import ScoreBadge from '../components/ScoreBadge';
 import NumberPillRow from '../components/NumberPillRow';
 import FieldIcon from '../components/FieldIcon';
 import MapPreview from '../components/MapPreview';
-import CoverPickerOverlay from '../components/CoverPickerOverlay';
+import PhotoGalleryEditor from '../components/PhotoGalleryEditor';
+import PhotoLightbox from '../components/PhotoLightbox';
+import AnimatedSheet from '../components/AnimatedSheet';
 import { formatDate } from '../components/DateField';
-import { FIELD_DEFS } from '../constants/fieldDefs';
+import { FIELD_DEFS, QUICK_FIELD_DEFS, MORE_FIELD_DEFS, defaultFieldValue } from '../constants/fieldDefs';
 import { animateNext } from '../utils/animate';
 
 export default function DetailScreen({ route, navigation }) {
@@ -33,7 +35,9 @@ export default function DetailScreen({ route, navigation }) {
   const [error, setError] = useState('');
   const [activeIndex, setActiveIndex] = useState(0);
   const [editingId, setEditingId] = useState(null);
-  const [coverPickerOpen, setCoverPickerOpen] = useState(false);
+  const [editMode, setEditMode] = useState(false);
+  const [fieldSheetOpen, setFieldSheetOpen] = useState(false);
+  const [lightboxUri, setLightboxUri] = useState(null);
 
   const load = useCallback(async () => {
     try {
@@ -53,18 +57,7 @@ export default function DetailScreen({ route, navigation }) {
     }, [load])
   );
 
-  const photos = useMemo(() => {
-    if (!score) return [];
-    const list = [];
-    if (score.coverPhotoUrl) list.push(score.coverPhotoUrl);
-    (score.fields || []).forEach((f) => {
-      if (f.type === 'photo' && f.value && !list.includes(f.value)) list.push(f.value);
-      if (f.type === 'gallery' && Array.isArray(f.value)) {
-        f.value.forEach((url) => !list.includes(url) && list.push(url));
-      }
-    });
-    return list;
-  }, [score]);
+  const photos = score?.photoUrls || [];
 
   const ownerRating = useMemo(() => score?.ratings.find((r) => r.isOwner), [score]);
 
@@ -134,15 +127,58 @@ export default function DetailScreen({ route, navigation }) {
     }
   };
 
-  const onChangeCover = async (url) => {
-    setCoverPickerOpen(false);
-    const prev = score.coverPhotoUrl;
-    setScore((s) => ({ ...s, coverPhotoUrl: url }));
+  const onPhotosChange = async (newPhotos) => {
+    const prev = score.photoUrls;
+    setActiveIndex(0);
+    setScore((s) => ({ ...s, photoUrls: newPhotos }));
     try {
-      await scoresApi.update(scoreId, { coverPhotoUrl: url });
+      await scoresApi.update(scoreId, { photoUrls: newPhotos });
     } catch (e) {
-      setError(e.message || 'No se pudo cambiar la portada');
-      setScore((s) => ({ ...s, coverPhotoUrl: prev }));
+      setError(e.message || 'No se pudo actualizar la galería');
+      setScore((s) => ({ ...s, photoUrls: prev }));
+    }
+  };
+
+  const onAddField = async (def) => {
+    try {
+      const { field } = await scoresApi.addField(scoreId, {
+        type: def.id,
+        label: def.label,
+        value: defaultFieldValue(def.kind),
+      });
+      animateNext();
+      setScore((s) => ({ ...s, fields: [...s.fields, field] }));
+      setFieldSheetOpen(false);
+    } catch (e) {
+      setError(e.message || 'No se pudo añadir el campo');
+    }
+  };
+
+  const onRemoveField = async (fieldId) => {
+    const prev = score.fields;
+    animateNext();
+    setScore((s) => ({ ...s, fields: s.fields.filter((f) => f.id !== fieldId) }));
+    try {
+      await scoresApi.removeField(scoreId, fieldId);
+    } catch (e) {
+      setError(e.message || 'No se pudo quitar el campo');
+      animateNext();
+      setScore((s) => ({ ...s, fields: prev }));
+    }
+  };
+
+  const onRemoveGalleryPhoto = async (fieldId, idx) => {
+    const field = score.fields.find((f) => f.id === fieldId);
+    if (!field) return;
+    const prevValue = field.value;
+    const nextValue = field.value.filter((_, i) => i !== idx);
+    animateNext();
+    setScore((s) => ({ ...s, fields: s.fields.map((f) => (f.id === fieldId ? { ...f, value: nextValue } : f)) }));
+    try {
+      await scoresApi.updateField(scoreId, fieldId, { value: nextValue });
+    } catch (e) {
+      setError(e.message || 'No se pudo quitar la foto');
+      setScore((s) => ({ ...s, fields: s.fields.map((f) => (f.id === fieldId ? { ...f, value: prevValue } : f)) }));
     }
   };
 
@@ -169,32 +205,54 @@ export default function DetailScreen({ route, navigation }) {
   return (
     <View style={styles.screen}>
       <ScrollView bounces={false} contentContainerStyle={{ paddingBottom: 40 }}>
-        <View style={styles.heroWrap}>
-          {heroUri ? (
-            <Image source={{ uri: heroUri }} style={styles.hero} />
-          ) : (
-            <PhotoStripe seed={hashSeed(score.id)} style={styles.hero} />
-          )}
-          <Pressable
-            style={[styles.backBtn, { top: insets.top + 14 }]}
-            onPress={() => navigation.goBack()}
-            accessibilityLabel="Volver"
-          >
-            <View style={styles.backArrow} />
-          </Pressable>
-          <Pressable
-            style={[styles.coverEditBtn, { top: insets.top + 14 }]}
-            onPress={() => setCoverPickerOpen(true)}
-            accessibilityLabel="Cambiar portada"
-          >
-            <Text style={{ fontSize: 14 }}>🖼️</Text>
-          </Pressable>
-        </View>
+        {editMode ? (
+          <View style={[styles.editHero, { paddingTop: insets.top + 14 }]}>
+            <View style={styles.editHeroHead}>
+              <Pressable style={styles.backBtnDark} onPress={() => navigation.goBack()} accessibilityLabel="Volver">
+                <View style={styles.backArrow} />
+              </Pressable>
+              <Pressable style={styles.doneBtn} onPress={() => setEditMode(false)}>
+                <Text style={[type.chip, { color: colors.white }]}>Listo</Text>
+              </Pressable>
+            </View>
+            <Text style={[type.scoreLabel, { color: colors.sub, marginTop: 10 }]}>Fotos</Text>
+            <PhotoGalleryEditor photos={photos} onChange={onPhotosChange} onError={setError} />
+          </View>
+        ) : (
+          <View style={styles.heroWrap}>
+            {heroUri ? (
+              <Pressable onPress={() => setLightboxUri(heroUri)}>
+                <Image source={{ uri: heroUri }} style={styles.hero} />
+              </Pressable>
+            ) : (
+              <PhotoStripe seed={hashSeed(score.id)} style={styles.hero} />
+            )}
+            <Pressable
+              style={[styles.backBtn, { top: insets.top + 14 }]}
+              onPress={() => navigation.goBack()}
+              accessibilityLabel="Volver"
+            >
+              <View style={styles.backArrow} />
+            </Pressable>
+            <Pressable
+              style={[styles.editModeBtn, { top: insets.top + 14 }]}
+              onPress={() => setEditMode(true)}
+              accessibilityLabel="Editar puntuación"
+            >
+              <Text style={{ fontSize: 14 }}>✎</Text>
+            </Pressable>
+          </View>
+        )}
 
-        {photos.length > 1 && (
+        {!editMode && photos.length > 1 && (
           <View style={styles.thumbRow}>
             {photos.map((url, idx) => (
-              <Pressable key={url} onPress={() => setActiveIndex(idx)} style={styles.thumbWrap}>
+              <Pressable
+                key={`${url}-${idx}`}
+                onPress={() => setActiveIndex(idx)}
+                onLongPress={() => setLightboxUri(url)}
+                style={styles.thumbWrap}
+              >
                 <Image source={{ uri: url }} style={[styles.thumb, idx === activeIndex && styles.thumbActive]} />
               </Pressable>
             ))}
@@ -239,25 +297,60 @@ export default function DetailScreen({ route, navigation }) {
           </View>
         </View>
 
-        {score.fields.length > 0 && (
+        {(score.fields.length > 0 || editMode) && (
           <View style={styles.fieldsCard}>
             {score.fields.map((f, idx) => (
-              <DetailFieldRow key={f.id} field={f} isLast={idx === score.fields.length - 1} />
+              <DetailFieldRow
+                key={f.id}
+                field={f}
+                isLast={idx === score.fields.length - 1 && !editMode}
+                editMode={editMode}
+                onRemove={() => onRemoveField(f.id)}
+                onRemoveGalleryPhoto={(idx2) => onRemoveGalleryPhoto(f.id, idx2)}
+                onPhotoPress={setLightboxUri}
+              />
             ))}
+            {editMode && (
+              <View style={styles.addFieldRow}>
+                {QUICK_FIELD_DEFS.map((def) => (
+                  <Pressable key={def.id} style={styles.quickChip} onPress={() => onAddField(def)}>
+                    <FieldIcon type={def.icon} size={15} color={colors.accent} />
+                    <Text style={[type.quickChip, { color: colors.ink }]}>{def.label}</Text>
+                  </Pressable>
+                ))}
+                <Pressable style={styles.quickChip} onPress={() => setFieldSheetOpen(true)}>
+                  <Text style={{ fontSize: 15, color: colors.ink }}>···</Text>
+                  <Text style={[type.quickChip, { color: colors.ink }]}>Más campos</Text>
+                </Pressable>
+              </View>
+            )}
           </View>
         )}
       </ScrollView>
 
-      <CoverPickerOverlay
-        visible={coverPickerOpen}
-        onClose={() => setCoverPickerOpen(false)}
-        onConfirm={onChangeCover}
-      />
+      <AnimatedSheet visible={fieldSheetOpen} onClose={() => setFieldSheetOpen(false)}>
+        <Pressable style={styles.sheet} onPress={() => {}}>
+          <View style={styles.sheetGrab} />
+          <Text style={[type.sheetTitle, { color: colors.ink }]}>Más campos</Text>
+          <View style={styles.sheetGrid}>
+            {MORE_FIELD_DEFS.map((def) => (
+              <Pressable key={def.id} style={styles.sheetItem} onPress={() => onAddField(def)}>
+                <View style={styles.ficonWrap}>
+                  <FieldIcon type={def.icon} size={18} color={colors.white} />
+                </View>
+                <Text style={[type.sheetItemLabel, { color: colors.ink }]}>{def.label}</Text>
+              </Pressable>
+            ))}
+          </View>
+        </Pressable>
+      </AnimatedSheet>
+
+      <PhotoLightbox visible={!!lightboxUri} uri={lightboxUri} onClose={() => setLightboxUri(null)} />
     </View>
   );
 }
 
-function DetailFieldRow({ field, isLast }) {
+function DetailFieldRow({ field, isLast, editMode, onRemove, onRemoveGalleryPhoto, onPhotoPress }) {
   const def = FIELD_DEFS.find((d) => d.id === field.type);
   return (
     <View style={[styles.fieldRow, !isLast && styles.fieldRowDivider]}>
@@ -265,7 +358,12 @@ function DetailFieldRow({ field, isLast }) {
         <View style={styles.ficonWrapSm}>
           <FieldIcon type={def?.icon} size={13} color={colors.white} />
         </View>
-        <Text style={[type.detailFieldLabel, { color: colors.sub }]}>{field.label}</Text>
+        <Text style={[type.detailFieldLabel, styles.fieldHeadLabel, { color: colors.sub }]}>{field.label}</Text>
+        {editMode && (
+          <Pressable style={styles.fieldRemove} onPress={onRemove} accessibilityLabel={`Quitar campo ${field.label}`}>
+            <Text style={styles.fieldRemoveText}>✕</Text>
+          </Pressable>
+        )}
       </View>
 
       {field.type === 'list' && Array.isArray(field.value) && (
@@ -277,14 +375,29 @@ function DetailFieldRow({ field, isLast }) {
       )}
 
       {field.type === 'photo' && field.value && (
-        <Image source={{ uri: field.value }} style={styles.fieldPhoto} />
+        <Pressable onPress={() => onPhotoPress(field.value)}>
+          <Image source={{ uri: field.value }} style={styles.fieldPhoto} />
+        </Pressable>
       )}
 
       {field.type === 'gallery' && Array.isArray(field.value) && field.value.length > 0 && (
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.fieldValue}>
           <View style={{ flexDirection: 'row', gap: 6 }}>
             {field.value.map((url, idx) => (
-              <Image key={idx} source={{ uri: url }} style={styles.fieldGalleryThumb} />
+              <View key={idx}>
+                <Pressable onPress={() => onPhotoPress(url)}>
+                  <Image source={{ uri: url }} style={styles.fieldGalleryThumb} />
+                </Pressable>
+                {editMode && (
+                  <Pressable
+                    style={styles.galleryThumbRemove}
+                    onPress={() => onRemoveGalleryPhoto(idx)}
+                    accessibilityLabel="Quitar foto"
+                  >
+                    <Text style={styles.galleryThumbRemoveText}>✕</Text>
+                  </Pressable>
+                )}
+              </View>
             ))}
           </View>
         </ScrollView>
@@ -300,7 +413,15 @@ function DetailFieldRow({ field, isLast }) {
         </View>
       )}
 
-      {!['list', 'photo', 'gallery', 'date', 'location'].includes(field.type) && (
+      {field.type === 'tag' && Array.isArray(field.value) && field.value.length > 0 && (
+        <View style={[styles.fieldValue, styles.tagRow]}>
+          {field.value.map((t) => (
+            <TagChip key={t} label={t} />
+          ))}
+        </View>
+      )}
+
+      {!['list', 'photo', 'gallery', 'date', 'location', 'tag'].includes(field.type) && (
         <Text style={[type.detailFieldValue, styles.fieldValue, { color: colors.ink }]}>{field.value}</Text>
       )}
     </View>
@@ -312,6 +433,22 @@ const styles = StyleSheet.create({
   center: { alignItems: 'center', justifyContent: 'center' },
   heroWrap: { width: '100%' },
   hero: { width: '100%', aspectRatio: 4 / 3 },
+  editHero: { paddingHorizontal: 18, paddingBottom: 8, backgroundColor: colors.surface },
+  editHeroHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  backBtnDark: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: 'rgba(0,0,0,0.06)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  doneBtn: {
+    borderRadius: 999,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    backgroundColor: colors.accent,
+  },
   backBtn: {
     position: 'absolute',
     left: 14,
@@ -322,7 +459,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  coverEditBtn: {
+  editModeBtn: {
     position: 'absolute',
     right: 14,
     width: 34,
@@ -359,6 +496,7 @@ const styles = StyleSheet.create({
   fieldRow: { padding: 13, paddingHorizontal: 16, gap: 5 },
   fieldRowDivider: { borderBottomWidth: 1, borderBottomColor: colors.line },
   fieldHead: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  fieldHeadLabel: { flex: 1 },
   ficonWrapSm: {
     width: 24,
     height: 24,
@@ -367,8 +505,71 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  fieldRemove: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: 'rgba(0,0,0,0.06)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  fieldRemoveText: { fontSize: 11, fontWeight: '700', color: colors.sub },
   fieldValue: { paddingLeft: 32 },
+  tagRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
   errorBanner: { fontFamily: 'Nunito_700Bold', fontSize: 12.5, color: '#c0392b', marginTop: 10 },
   fieldPhoto: { marginLeft: 32, width: 90, height: 90, borderRadius: 10 },
   fieldGalleryThumb: { width: 70, height: 70, borderRadius: 10 },
+  galleryThumbRemove: {
+    position: 'absolute',
+    top: -4,
+    right: -4,
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: 'rgba(0,0,0,0.55)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  galleryThumbRemoveText: { fontSize: 9, fontWeight: '700', color: colors.white },
+  addFieldRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, padding: 13, paddingHorizontal: 16 },
+  quickChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 9,
+    backgroundColor: colors.bg,
+    borderWidth: 1,
+    borderColor: colors.line,
+  },
+  ficonWrap: {
+    width: 34,
+    height: 34,
+    borderRadius: 10,
+    backgroundColor: colors.accent2,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  sheet: {
+    borderTopLeftRadius: 26,
+    borderTopRightRadius: 26,
+    paddingHorizontal: 18,
+    paddingTop: 10,
+    paddingBottom: 30,
+    backgroundColor: colors.surface,
+    gap: 14,
+  },
+  sheetGrab: { width: 36, height: 5, borderRadius: 3, backgroundColor: 'rgba(0,0,0,0.15)', alignSelf: 'center' },
+  sheetGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+  sheetItem: {
+    width: '47%',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    padding: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.line,
+  },
 });

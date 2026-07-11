@@ -91,13 +91,33 @@ async function inputWithValue(page, val) {
   log('Create screen opened via FAB');
 
   await page.getByPlaceholder('Título de tu puntuación').fill('Casa Pepa');
-  // multi-category: toggle two suggestion chips + type a custom one
+
+  // Fotos: upload one from device — it becomes the gallery's first photo
+  // (the "portada") automatically.
+  const galleryChooserPromise = page.waitForEvent('filechooser');
+  await page.getByLabel('Añadir foto a la galería').click();
+  const galleryChooser = await galleryChooserPromise;
+  await galleryChooser.setFiles(TEST_JPG);
+  await page.waitForSelector('img[src*="/uploads/"]', { timeout: 20000 });
+  await page.getByText('PORTADA', { exact: true }).waitFor();
+  log('First photo uploaded to score gallery, auto-marked as portada');
+
+  // cover search: open/close only (no external API keys configured here)
+  await page.getByText('Buscar carátula', { exact: true }).click();
+  await page.getByText('Película', { exact: true }).waitFor();
+  await page.getByText('Cerrar', { exact: true }).click();
+  log('Cover search sheet opens and closes');
+
+  // multi-category: collapsed by default — expand, toggle two chips, add a
+  // custom one via Enter (no "+" button anymore)
+  await page.getByText('Ver todas').click();
   await page.getByText('Restaurantes', { exact: true }).click();
   await page.getByText('Películas', { exact: true }).click();
-  await page.getByPlaceholder('Ej. Restaurantes').fill('Favoritos 2026');
-  await page.getByLabel('Añadir categoría').click();
+  const catInput = page.getByPlaceholder('Escribe y pulsa enter para añadir...');
+  await catInput.fill('Favoritos 2026');
+  await catInput.press('Enter');
   await page.getByText('Favoritos 2026', { exact: true }).waitFor();
-  log('Multiple categories selected (2 chips + 1 custom)');
+  log('Multiple categories selected (2 chips + 1 custom via enter)');
 
   // main score: pick 9
   await page.getByText('9', { exact: true }).first().click();
@@ -133,7 +153,7 @@ async function inputWithValue(page, val) {
   await page.getByText('Más campos', { exact: true }).first().click();
   await page.getByText('Galería', { exact: true }).click();
   const chooserPromise = page.waitForEvent('filechooser');
-  await page.getByLabel('Añadir foto').click();
+  await page.getByLabel('Añadir foto', { exact: true }).click();
   const chooser = await chooserPromise;
   await chooser.setFiles(TEST_JPG);
   // uploaded thumbnail appears as an img with the API's /uploads/ URL
@@ -154,29 +174,14 @@ async function inputWithValue(page, val) {
   await page.getByText('Calle Mayor 12, Madrid').waitFor();
   log('Location field set through the picker overlay');
 
-  // sheet field: selector/etiqueta with autocomplete
+  // sheet field: etiqueta (multi-select tag autocomplete, commit via enter)
   await page.getByText('Más campos', { exact: true }).first().click();
-  await page.getByText('Selector / etiqueta').click();
-  await page.getByPlaceholder('Ej. Mediterránea').fill('Mediterránea');
-  log('Tag field added and filled');
-
-  // cover: open the search sheet (no network assertions — external API keys
-  // aren't configured in this environment), then close it and upload a
-  // cover photo from device instead, exercising the dedicated cover flow.
-  await page.getByText('Buscar carátula').click();
-  await page.getByText('Película', { exact: true }).waitFor();
-  await page.getByText('Cerrar', { exact: true }).click();
-  const coverChooserPromise = page.waitForEvent('filechooser');
-  await page.getByText('Subir foto', { exact: true }).click();
-  const coverChooser = await coverChooserPromise;
-  await coverChooser.setFiles(TEST_JPG);
-  // wait for the second /uploads/ image (gallery photo + now the cover) so
-  // the cover upload finishes before we hit save
-  await page.waitForFunction(
-    () => document.querySelectorAll('img[src*="/uploads/"]').length >= 2,
-    { timeout: 20000 }
-  );
-  log('Cover: search sheet opened/closed, then uploaded from device');
+  await page.getByText('Etiqueta', { exact: true }).click();
+  const tagInput = page.getByPlaceholder('Escribe una etiqueta y pulsa enter...');
+  await tagInput.fill('Mediterránea');
+  await tagInput.press('Enter');
+  await page.getByText('Mediterránea', { exact: true }).waitFor();
+  log('Tag field added, tag committed via enter (multi-select chip)');
   await shot(page, '05-create-filled');
 
   // save
@@ -209,6 +214,30 @@ async function inputWithValue(page, val) {
   await page.getByText('10', { exact: true }).first().click();
   await page.getByText('10', { exact: true }).first().waitFor();
   log('Own score edited 9 -> 10 in Detail');
+
+  // photo lightbox: tap the hero photo, expect a full-screen viewer, close it
+  await page.locator('img[src*="/uploads/"]').first().click();
+  await page.getByLabel('Cerrar foto').waitFor({ timeout: 5000 });
+  await shot(page, '06b-lightbox');
+  await page.getByLabel('Cerrar foto').click();
+  await page.getByLabel('Cerrar foto').waitFor({ state: 'detached' });
+  log('Photo lightbox opens on tap and closes');
+
+  // edit mode: gallery editor visible, remove a field, add a new one
+  await page.getByLabel('Editar puntuación').click();
+  await page.getByText('Listo', { exact: true }).waitFor();
+  await page.getByLabel('Añadir foto a la galería').waitFor();
+  await page.getByLabel('Quitar campo Texto largo').click();
+  await page.getByText('El arroz estaba en su punto.').waitFor({ state: 'detached' });
+  log('Edit mode: removed the long-text field');
+
+  await page.getByText('Número', { exact: true }).click();
+  await page.getByLabel('Quitar campo Número', { exact: true }).waitFor();
+  log('Edit mode: added a new field (Número)');
+
+  await page.getByText('Listo', { exact: true }).click();
+  await page.getByLabel('Añadir foto a la galería').waitFor({ state: 'detached' });
+  log('Exited edit mode');
 
   // add + rename person in detail (the focus-loss bug from the design chat)
   await page.getByLabel('Añadir persona').click();

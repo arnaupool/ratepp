@@ -141,8 +141,8 @@ function ScoreCard({ item, onPress }) {
   const tint = categoryTint(item.categories?.[0]);
   return (
     <Pressable style={[styles.card, { backgroundColor: tint }]} onPress={onPress}>
-      {item.coverPhotoUrl ? (
-        <Image source={{ uri: item.coverPhotoUrl }} style={styles.cardPhoto} />
+      {item.photoUrls?.[0] ? (
+        <Image source={{ uri: item.photoUrls[0] }} style={styles.cardPhoto} />
       ) : (
         <PhotoStripe seed={hashSeed(item.id)} style={styles.cardPhoto} />
       )}

@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -10,9 +10,9 @@ import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
+  Keyboard,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import * as ImagePicker from 'expo-image-picker';
 import { scoresApi } from '../api/scores';
 import { api } from '../api/client';
 import { colors, hashSeed } from '../theme/colors';
@@ -26,22 +26,13 @@ import DateField from '../components/DateField';
 import TagAutocomplete from '../components/TagAutocomplete';
 import MapPreview from '../components/MapPreview';
 import LocationPickerOverlay from '../components/LocationPickerOverlay';
-import CoverPickerOverlay from '../components/CoverPickerOverlay';
+import PhotoGalleryEditor from '../components/PhotoGalleryEditor';
+import AnimatedSheet from '../components/AnimatedSheet';
 import { animateNext } from '../utils/animate';
+import { pickImage } from '../utils/pickImage';
 
 let tempIdSeq = 1;
 const tempId = () => `tmp-${tempIdSeq++}`;
-
-async function pickImage() {
-  const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
-  if (!perm.granted) throw new Error('Necesitamos acceso a tus fotos para continuar');
-  const result = await ImagePicker.launchImageLibraryAsync({
-    mediaTypes: ImagePicker.MediaTypeOptions.Images,
-    quality: 0.7,
-  });
-  if (result.canceled) return null;
-  return result.assets[0].uri;
-}
 
 export default function CreateScoreScreen({ navigation }) {
   const [title, setTitle] = useState('');
@@ -49,13 +40,12 @@ export default function CreateScoreScreen({ navigation }) {
   const [categories, setCategories] = useState([]);
   const [categoryInput, setCategoryInput] = useState('');
   const [categorySuggestions, setCategorySuggestions] = useState(DEFAULT_CATEGORIES);
+  const [categoriesExpanded, setCategoriesExpanded] = useState(false);
   const [others, setOthers] = useState([]);
   const [editingId, setEditingId] = useState(null);
   const [fields, setFields] = useState([]);
   const [sheetOpen, setSheetOpen] = useState(false);
-  const [coverPhotoUrl, setCoverPhotoUrl] = useState(null);
-  const [coverUploading, setCoverUploading] = useState(false);
-  const [coverPickerOpen, setCoverPickerOpen] = useState(false);
+  const [photos, setPhotos] = useState([]);
   const [locationFieldId, setLocationFieldId] = useState(null);
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
@@ -85,6 +75,11 @@ export default function CreateScoreScreen({ navigation }) {
     }
     if (!categorySuggestions.includes(c)) setCategorySuggestions((prev) => [...prev, c]);
     setCategoryInput('');
+  };
+
+  const toggleCategoriesExpanded = () => {
+    animateNext();
+    setCategoriesExpanded((v) => !v);
   };
 
   const onSelectNumber = (personId, n) => {
@@ -175,27 +170,15 @@ export default function CreateScoreScreen({ navigation }) {
     }
   };
 
-  const pickCoverFromDevice = async () => {
-    try {
-      const uri = await pickImage();
-      if (!uri) return;
-      setCoverUploading(true);
-      const url = await api.uploadPhoto(uri);
-      setCoverPhotoUrl(url);
-    } catch (e) {
-      setError(e.message || 'No se pudo subir la carátula');
-    } finally {
-      setCoverUploading(false);
-    }
+  const openMoreFields = () => {
+    Keyboard.dismiss();
+    setSheetOpen(true);
   };
 
-  const autoDerivedCover = useMemo(() => {
-    const coverField = fields.find(
-      (f) => (f.typeId === 'photo' && f.value) || (f.typeId === 'gallery' && f.value?.length)
-    );
-    if (!coverField) return null;
-    return coverField.typeId === 'photo' ? coverField.value : coverField.value[0];
-  }, [fields]);
+  const openLocationPicker = (fieldId) => {
+    Keyboard.dismiss();
+    setLocationFieldId(fieldId);
+  };
 
   const save = async () => {
     setError('');
@@ -216,7 +199,7 @@ export default function CreateScoreScreen({ navigation }) {
       const { score } = await scoresApi.create({
         title: title.trim(),
         categories,
-        coverPhotoUrl: coverPhotoUrl || autoDerivedCover,
+        photoUrls: photos,
         ownerValue,
         ratings: others.map((o) => ({ personName: o.name.trim() || 'Invitado', value: o.value })),
         fields: fields.map((f) => ({ type: f.typeId, label: f.label, value: f.value })),
@@ -230,7 +213,9 @@ export default function CreateScoreScreen({ navigation }) {
   };
 
   const editingLocationField = fields.find((f) => f.id === locationFieldId);
-  const coverPreview = coverPhotoUrl || autoDerivedCover;
+  const visibleCategoryChips = categoriesExpanded
+    ? categorySuggestions
+    : categorySuggestions.filter((c) => categories.includes(c));
 
   return (
     <SafeAreaView style={styles.screen} edges={['top']}>
@@ -251,58 +236,44 @@ export default function CreateScoreScreen({ navigation }) {
           />
 
           <View style={styles.section}>
-            <Text style={[type.scoreLabel, { color: colors.sub }]}>Portada</Text>
-            <View style={styles.coverRow}>
-              <View style={styles.coverPreviewWrap}>
-                {coverUploading ? (
-                  <ActivityIndicator color={colors.accent} />
-                ) : coverPreview ? (
-                  <Image source={{ uri: coverPreview }} style={StyleSheet.absoluteFill} />
-                ) : (
-                  <PhotoStripe seed={hashSeed(title || 'cover')} style={StyleSheet.absoluteFill} />
-                )}
-              </View>
-              <View style={{ gap: 8, flex: 1 }}>
-                <Pressable style={styles.coverActionBtn} onPress={pickCoverFromDevice}>
-                  <Text style={[type.quickChip, { color: colors.ink }]}>Subir foto</Text>
-                </Pressable>
-                <Pressable style={styles.coverActionBtn} onPress={() => setCoverPickerOpen(true)}>
-                  <Text style={[type.quickChip, { color: colors.ink }]}>Buscar carátula</Text>
-                </Pressable>
-              </View>
-            </View>
+            <Text style={[type.scoreLabel, { color: colors.sub }]}>Fotos</Text>
+            <PhotoGalleryEditor photos={photos} onChange={setPhotos} onError={setError} />
           </View>
 
           <View style={styles.section}>
-            <Text style={[type.scoreLabel, { color: colors.sub }]}>Categorías</Text>
-            <View style={styles.categoryInputRow}>
-              <TextInput
-                style={styles.categoryInput}
-                placeholder="Ej. Restaurantes"
-                placeholderTextColor={colors.sub}
-                value={categoryInput}
-                onChangeText={setCategoryInput}
-                onSubmitEditing={addCustomCategory}
-                returnKeyType="done"
-              />
-              <Pressable style={styles.categoryAddBtn} onPress={addCustomCategory} accessibilityLabel="Añadir categoría">
-                <Text style={{ fontSize: 16, fontWeight: '800', color: colors.white }}>+</Text>
+            <View style={styles.categoryHeadRow}>
+              <Text style={[type.scoreLabel, { color: colors.sub }]}>Categorías</Text>
+              <Pressable onPress={toggleCategoriesExpanded}>
+                <Text style={[type.listAdd, { color: colors.accent }]}>
+                  {categoriesExpanded ? 'Ocultar' : 'Ver todas'} {categoriesExpanded ? '▴' : '▾'}
+                </Text>
               </Pressable>
             </View>
-            <View style={styles.categoryChips}>
-              {categorySuggestions.map((c) => {
-                const on = categories.includes(c);
-                return (
-                  <Pressable
-                    key={c}
-                    onPress={() => toggleCategory(c)}
-                    style={[styles.categoryChip, on && styles.categoryChipOn]}
-                  >
-                    <Text style={[type.chip, { color: on ? colors.accentInk : colors.sub }]}>{c}</Text>
-                  </Pressable>
-                );
-              })}
-            </View>
+            <TextInput
+              style={styles.categoryInput}
+              placeholder="Escribe y pulsa enter para añadir..."
+              placeholderTextColor={colors.sub}
+              value={categoryInput}
+              onChangeText={setCategoryInput}
+              onSubmitEditing={addCustomCategory}
+              returnKeyType="done"
+            />
+            {visibleCategoryChips.length > 0 && (
+              <View style={styles.categoryChips}>
+                {visibleCategoryChips.map((c) => {
+                  const on = categories.includes(c);
+                  return (
+                    <Pressable
+                      key={c}
+                      onPress={() => toggleCategory(c)}
+                      style={[styles.categoryChip, on && styles.categoryChipOn]}
+                    >
+                      <Text style={[type.chip, { color: on ? colors.accentInk : colors.sub }]}>{c}</Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            )}
           </View>
 
           <View style={styles.section}>
@@ -334,7 +305,7 @@ export default function CreateScoreScreen({ navigation }) {
               onAddListItem={() => addListItem(f.id)}
               onPickPhoto={() => pickForPhoto(f.id)}
               onPickGalleryPhoto={() => pickForGallery(f.id)}
-              onPickLocation={() => setLocationFieldId(f.id)}
+              onPickLocation={() => openLocationPicker(f.id)}
             />
           ))}
 
@@ -346,7 +317,7 @@ export default function CreateScoreScreen({ navigation }) {
                 <Text style={[type.quickChip, { color: colors.ink }]}>{def.label}</Text>
               </Pressable>
             ))}
-            <Pressable style={styles.quickChip} onPress={() => setSheetOpen(true)}>
+            <Pressable style={styles.quickChip} onPress={openMoreFields}>
               <Text style={{ fontSize: 15, color: colors.ink }}>···</Text>
               <Text style={[type.quickChip, { color: colors.ink }]}>Más campos</Text>
             </Pressable>
@@ -362,27 +333,22 @@ export default function CreateScoreScreen({ navigation }) {
         </ScrollView>
       </KeyboardAvoidingView>
 
-      {/* Inline overlay instead of RN Modal — Modal's fade animation is
-          unreliable on react-native-web, and the design prototype renders
-          the sheet inside the screen this way too. */}
-      {sheetOpen && (
-        <Pressable style={styles.backdrop} onPress={() => setSheetOpen(false)}>
-          <Pressable style={styles.sheet} onPress={() => {}}>
-            <View style={styles.sheetGrab} />
-            <Text style={[type.sheetTitle, { color: colors.ink }]}>Más campos</Text>
-            <View style={styles.sheetGrid}>
-              {MORE_FIELD_DEFS.map((def) => (
-                <Pressable key={def.id} style={styles.sheetItem} onPress={() => addField(def)}>
-                  <View style={styles.ficonWrap}>
-                    <FieldIcon type={def.icon} size={18} color={colors.white} />
-                  </View>
-                  <Text style={[type.sheetItemLabel, { color: colors.ink }]}>{def.label}</Text>
-                </Pressable>
-              ))}
-            </View>
-          </Pressable>
+      <AnimatedSheet visible={sheetOpen} onClose={() => setSheetOpen(false)}>
+        <Pressable style={styles.sheet} onPress={() => {}}>
+          <View style={styles.sheetGrab} />
+          <Text style={[type.sheetTitle, { color: colors.ink }]}>Más campos</Text>
+          <View style={styles.sheetGrid}>
+            {MORE_FIELD_DEFS.map((def) => (
+              <Pressable key={def.id} style={styles.sheetItem} onPress={() => addField(def)}>
+                <View style={styles.ficonWrap}>
+                  <FieldIcon type={def.icon} size={18} color={colors.white} />
+                </View>
+                <Text style={[type.sheetItemLabel, { color: colors.ink }]}>{def.label}</Text>
+              </Pressable>
+            ))}
+          </View>
         </Pressable>
-      )}
+      </AnimatedSheet>
 
       <LocationPickerOverlay
         visible={!!editingLocationField}
@@ -391,15 +357,6 @@ export default function CreateScoreScreen({ navigation }) {
         onConfirm={(value) => {
           updateField(locationFieldId, { value });
           setLocationFieldId(null);
-        }}
-      />
-
-      <CoverPickerOverlay
-        visible={coverPickerOpen}
-        onClose={() => setCoverPickerOpen(false)}
-        onConfirm={(url) => {
-          setCoverPhotoUrl(url);
-          setCoverPickerOpen(false);
         }}
       />
     </SafeAreaView>
@@ -437,9 +394,7 @@ function FieldRow({ field, onRemove, onLabelChange, onValueChange, onListItemCha
 
       {def.kind === 'date' && <DateField value={field.value} onChange={onValueChange} />}
 
-      {def.kind === 'tag' && (
-        <TagAutocomplete value={field.value} onChange={onValueChange} placeholder={def.placeholder} />
-      )}
+      {def.kind === 'tag' && <TagAutocomplete value={field.value} onChange={onValueChange} />}
 
       {def.kind === 'location' && (
         field.value ? (
@@ -520,28 +475,8 @@ const styles = StyleSheet.create({
   body: { paddingHorizontal: 18, paddingTop: 8, paddingBottom: 60, gap: 16 },
   titleInput: { fontFamily: 'Nunito_900Black', fontSize: 24, color: colors.ink, padding: 0 },
   section: { gap: 8 },
-  coverRow: { flexDirection: 'row', gap: 12 },
-  coverPreviewWrap: {
-    width: 84,
-    height: 84,
-    borderRadius: 14,
-    overflow: 'hidden',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.surface,
-  },
-  coverActionBtn: {
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 9,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.line,
-    alignItems: 'center',
-  },
-  categoryInputRow: { flexDirection: 'row', gap: 8 },
+  categoryHeadRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   categoryInput: {
-    flex: 1,
     borderRadius: 14,
     paddingHorizontal: 14,
     paddingVertical: 11,
@@ -551,14 +486,6 @@ const styles = StyleSheet.create({
     fontFamily: 'Nunito_600SemiBold',
     fontSize: 14,
     color: colors.ink,
-  },
-  categoryAddBtn: {
-    width: 42,
-    height: 42,
-    borderRadius: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.accent,
   },
   categoryChips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   categoryChip: {
@@ -645,12 +572,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   error: { fontFamily: 'Nunito_700Bold', fontSize: 12.5, color: '#c0392b', textAlign: 'center' },
-  backdrop: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0,0,0,0.35)',
-    justifyContent: 'flex-end',
-    zIndex: 50,
-  },
   sheet: {
     borderTopLeftRadius: 26,
     borderTopRightRadius: 26,

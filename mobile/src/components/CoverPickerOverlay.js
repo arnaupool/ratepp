@@ -4,6 +4,7 @@ import { coversApi } from '../api/covers';
 import { COVER_TYPES } from '../constants/fieldDefs';
 import { colors } from '../theme/colors';
 import { type } from '../theme/typography';
+import AnimatedSheet from './AnimatedSheet';
 
 export default function CoverPickerOverlay({ visible, onClose, onConfirm }) {
   const [mediaType, setMediaType] = useState('movie');
@@ -12,8 +13,6 @@ export default function CoverPickerOverlay({ visible, onClose, onConfirm }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [searched, setSearched] = useState(false);
-
-  if (!visible) return null;
 
   const runSearch = async () => {
     if (!query.trim()) return;
@@ -33,7 +32,7 @@ export default function CoverPickerOverlay({ visible, onClose, onConfirm }) {
   };
 
   return (
-    <Pressable style={styles.backdrop} onPress={onClose}>
+    <AnimatedSheet visible={visible} onClose={onClose}>
       <Pressable style={styles.sheet} onPress={() => {}}>
         <View style={styles.sheetGrab} />
         <Text style={[type.sheetTitle, { color: colors.ink }]}>Buscar carátula</Text>
@@ -91,17 +90,11 @@ export default function CoverPickerOverlay({ visible, onClose, onConfirm }) {
           <Text style={[type.loginBtn, { color: colors.sub }]}>Cerrar</Text>
         </Pressable>
       </Pressable>
-    </Pressable>
+    </AnimatedSheet>
   );
 }
 
 const styles = StyleSheet.create({
-  backdrop: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0,0,0,0.35)',
-    justifyContent: 'flex-end',
-    zIndex: 60,
-  },
   sheet: {
     borderTopLeftRadius: 26,
     borderTopRightRadius: 26,

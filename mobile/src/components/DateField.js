@@ -33,6 +33,8 @@ export default function DateField({ value, onChange }) {
   }
 
   const onPickerChange = (event, selected) => {
+    // Android's native dialog closes itself on both 'set' and 'dismissed';
+    // iOS's inline calendar stays open until the "Listo" button below closes it.
     if (Platform.OS === 'android') setShowPicker(false);
     if (event.type === 'dismissed') return;
     if (selected) {
@@ -49,12 +51,19 @@ export default function DateField({ value, onChange }) {
         </Text>
       </Pressable>
       {showPicker && (
-        <DateTimePicker
-          value={dateObj}
-          mode="date"
-          display={Platform.OS === 'ios' ? 'inline' : 'default'}
-          onChange={onPickerChange}
-        />
+        <View>
+          <DateTimePicker
+            value={dateObj}
+            mode="date"
+            display={Platform.OS === 'ios' ? 'inline' : 'default'}
+            onChange={onPickerChange}
+          />
+          {Platform.OS === 'ios' && (
+            <Pressable style={styles.doneBtn} onPress={() => setShowPicker(false)}>
+              <Text style={[type.chip, { color: colors.white }]}>Listo</Text>
+            </Pressable>
+          )}
+        </View>
       )}
     </View>
   );
@@ -73,4 +82,12 @@ const webInputStyle = {
 
 const styles = StyleSheet.create({
   trigger: { paddingVertical: 2 },
+  doneBtn: {
+    alignSelf: 'center',
+    marginTop: 8,
+    borderRadius: 999,
+    paddingHorizontal: 18,
+    paddingVertical: 8,
+    backgroundColor: colors.accent,
+  },
 });

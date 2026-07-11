@@ -3,6 +3,7 @@ import { View, Text, TextInput, Pressable, StyleSheet } from 'react-native';
 import * as Location from 'expo-location';
 import { colors } from '../theme/colors';
 import { type } from '../theme/typography';
+import AnimatedSheet from './AnimatedSheet';
 
 // react-native-maps and expo-location's geocoding calls aren't available on
 // web; this fallback (used by the local web preview / e2e tests) just
@@ -12,8 +13,6 @@ export default function LocationPickerOverlay({ visible, initialValue, onClose, 
   const [coords, setCoords] = useState(
     initialValue?.lat != null ? { lat: initialValue.lat, lng: initialValue.lng } : null
   );
-
-  if (!visible) return null;
 
   const useCurrentLocation = async () => {
     try {
@@ -27,7 +26,7 @@ export default function LocationPickerOverlay({ visible, initialValue, onClose, 
   };
 
   return (
-    <Pressable style={styles.backdrop} onPress={onClose}>
+    <AnimatedSheet visible={visible} onClose={onClose}>
       <Pressable style={styles.sheet} onPress={() => {}}>
         <View style={styles.sheetGrab} />
         <Text style={[type.sheetTitle, { color: colors.ink }]}>Elegir ubicación</Text>
@@ -56,17 +55,11 @@ export default function LocationPickerOverlay({ visible, initialValue, onClose, 
           </Pressable>
         </View>
       </Pressable>
-    </Pressable>
+    </AnimatedSheet>
   );
 }
 
 const styles = StyleSheet.create({
-  backdrop: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0,0,0,0.35)',
-    justifyContent: 'flex-end',
-    zIndex: 60,
-  },
   sheet: {
     borderTopLeftRadius: 26,
     borderTopRightRadius: 26,
