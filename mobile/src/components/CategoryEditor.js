@@ -84,14 +84,14 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   chevronBtn: {
-    width: 42,
-    height: 42,
+    width: 46,
+    height: 46,
     borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
   },
-  chevronText: { fontSize: 14 },
+  chevronText: { fontSize: 22 },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   chip: {
     borderRadius: 999,

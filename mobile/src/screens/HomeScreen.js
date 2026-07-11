@@ -26,6 +26,7 @@ import FilterChip from '../components/FilterChip';
 import SideMenu from '../components/SideMenu';
 import AnimatedSheet from '../components/AnimatedSheet';
 import DateField from '../components/DateField';
+import DismissKeyboardView from '../components/DismissKeyboardView';
 import { animateNext } from '../utils/animate';
 
 export default function HomeScreen({ navigation }) {
@@ -94,6 +95,8 @@ export default function HomeScreen({ navigation }) {
     return items.length % 2 === 1 ? [...items, { id: '__spacer__', spacer: true }] : items;
   }, [items]);
 
+  const isFiltering = !!search || filter !== 'Todas' || !!tagFilter || !!dateFrom || !!dateTo;
+
   const clearFilters = () => {
     setTagFilter(null);
     setDateFrom(null);
@@ -102,6 +105,7 @@ export default function HomeScreen({ navigation }) {
 
   return (
     <SafeAreaView style={[styles.screen, { backgroundColor: colors.bg }]} edges={['top']}>
+      <DismissKeyboardView style={{ flex: 1 }}>
         <View style={styles.head}>
           <Pressable style={styles.menuBtn} onPress={() => setMenuOpen(true)} accessibilityLabel="Abrir menú" hitSlop={6}>
             <View style={[styles.menuBar, { backgroundColor: colors.ink }]} />
@@ -173,10 +177,12 @@ export default function HomeScreen({ navigation }) {
         ) : filtered.length === 0 ? (
           <View style={styles.center}>
             <Text style={{ fontFamily: 'Poppins_800ExtraBold', fontSize: 15, color: colors.ink, marginBottom: 4 }}>
-              Todavía no hay puntuaciones
+              {isFiltering ? 'No hay notas' : 'Todavía no hay puntuaciones'}
             </Text>
             <Text style={{ fontFamily: 'Poppins_600SemiBold', fontSize: 13, color: colors.sub, textAlign: 'center' }}>
-              Toca el botón + para puntuar tu primer restaurante, peli o recuerdo.
+              {isFiltering
+                ? 'Toca el botón + para crear una.'
+                : 'Toca el botón + para puntuar tu primer restaurante, peli o recuerdo.'}
             </Text>
           </View>
         ) : (
@@ -201,6 +207,7 @@ export default function HomeScreen({ navigation }) {
         <Pressable style={[styles.fab, { backgroundColor: colors.accent, shadowColor: colors.accent }]} onPress={() => navigation.navigate('Create')} accessibilityLabel="Crear puntuación">
           <Text style={[styles.fabPlus, { color: colors.white }]}>+</Text>
         </Pressable>
+      </DismissKeyboardView>
 
       <SideMenu visible={menuOpen} onClose={() => setMenuOpen(false)} onNavigate={(screen) => navigation.navigate(screen)} />
 
@@ -214,13 +221,13 @@ export default function HomeScreen({ navigation }) {
               <View style={styles.dateField}>
                 <Text style={[type.editContext, { color: colors.sub, marginBottom: 4 }]}>Desde</Text>
                 <View style={[styles.dateInputWrap, { backgroundColor: colors.bg, borderColor: colors.line }]}>
-                  <DateField value={dateFrom} onChange={setDateFrom} />
+                  <DateField value={dateFrom} onChange={setDateFrom} label="Desde" />
                 </View>
               </View>
               <View style={styles.dateField}>
                 <Text style={[type.editContext, { color: colors.sub, marginBottom: 4 }]}>Hasta</Text>
                 <View style={[styles.dateInputWrap, { backgroundColor: colors.bg, borderColor: colors.line }]}>
-                  <DateField value={dateTo} onChange={setDateTo} />
+                  <DateField value={dateTo} onChange={setDateTo} label="Hasta" />
                 </View>
               </View>
             </View>

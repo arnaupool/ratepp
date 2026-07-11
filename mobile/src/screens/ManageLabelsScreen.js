@@ -16,6 +16,10 @@ export default function ManageLabelsScreen({ navigation }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [pendingDelete, setPendingDelete] = useState(null); // { kind: 'category'|'tag', name }
+  // Kept separate from pendingDelete so the dialog's title/message keep
+  // showing the tag/category name during ConfirmDialog's close animation
+  // (pendingDelete itself is nulled immediately to trigger that close).
+  const [pendingDeleteDisplay, setPendingDeleteDisplay] = useState(null);
 
   const load = useCallback(async () => {
     try {
@@ -79,7 +83,10 @@ export default function ManageLabelsScreen({ navigation }) {
               <View key={c} style={[styles.item, { backgroundColor: colors.surface, borderColor: colors.line }]}>
                 <Text style={[type.detailFieldValue, { color: colors.ink, flex: 1 }]}>{c}</Text>
                 <Pressable
-                  onPress={() => setPendingDelete({ kind: 'category', name: c })}
+                  onPress={() => {
+                    setPendingDelete({ kind: 'category', name: c });
+                    setPendingDeleteDisplay({ kind: 'category', name: c });
+                  }}
                   accessibilityLabel={`Eliminar categoría ${c}`}
                   hitSlop={6}
                 >
@@ -98,7 +105,10 @@ export default function ManageLabelsScreen({ navigation }) {
               <View key={t} style={[styles.item, { backgroundColor: colors.surface, borderColor: colors.line }]}>
                 <Text style={[type.detailFieldValue, { color: colors.ink, flex: 1 }]}>{t}</Text>
                 <Pressable
-                  onPress={() => setPendingDelete({ kind: 'tag', name: t })}
+                  onPress={() => {
+                    setPendingDelete({ kind: 'tag', name: t });
+                    setPendingDeleteDisplay({ kind: 'tag', name: t });
+                  }}
                   accessibilityLabel={`Eliminar etiqueta ${t}`}
                   hitSlop={6}
                 >
@@ -112,7 +122,7 @@ export default function ManageLabelsScreen({ navigation }) {
 
       <ConfirmDialog
         visible={!!pendingDelete}
-        title={`¿Eliminar "${pendingDelete?.name}"?`}
+        title={`¿Eliminar "${pendingDeleteDisplay?.name}"?`}
         message="Se quitará de todas las puntuaciones que la usan. No se puede deshacer."
         onConfirm={confirmDelete}
         onCancel={() => setPendingDelete(null)}

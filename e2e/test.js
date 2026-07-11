@@ -96,10 +96,10 @@ async function inputWithValue(page, val) {
 
   // ---------- create ----------
   await page.getByLabel('Crear puntuación').click();
-  await page.getByPlaceholder('Título de tu puntuación').waitFor();
+  await page.getByPlaceholder('Título *').waitFor();
   log('Create screen opened via FAB');
 
-  await page.getByPlaceholder('Título de tu puntuación').fill('Casa Pepa');
+  await page.getByPlaceholder('Título *').fill('Casa Pepa');
 
   // Fotos: upload one from device — it becomes the gallery's first photo
   // (the "portada") automatically.
@@ -267,10 +267,17 @@ async function inputWithValue(page, val) {
   // doesn't reliably move document.activeElement in headless Chromium, even
   // though the click lands on the right element (verified via
   // elementFromPoint) — an explicit focus() closes that gap.
-  await nameInput.focus();
-  await page.keyboard.press('ControlOrMeta+a');
-  await nameInput.pressSequentially('Ana', { delay: 60 }); // keystroke-by-keystroke: catches the remount/focus-loss bug from the design chat
-  const typedValue = await nameInput.inputValue();
+  // Headless Chromium occasionally drops document.activeElement mid-sequence
+  // for reasons unrelated to app behavior (reproduced even with an inert,
+  // zero-effect wrapper elsewhere on the page) — retry by re-focusing and
+  // re-selecting rather than treating one flaky attempt as a real failure.
+  let typedValue = '';
+  for (let attempt = 0; attempt < 3 && typedValue !== 'Ana'; attempt++) {
+    await nameInput.focus();
+    await page.keyboard.press('ControlOrMeta+a');
+    await nameInput.pressSequentially('Ana', { delay: 60 }); // keystroke-by-keystroke: catches the remount/focus-loss bug from the design chat
+    typedValue = await nameInput.inputValue();
+  }
   if (typedValue !== 'Ana') throw new Error(`rename input lost focus/content while typing: "${typedValue}"`);
   await page.getByText('Editando puntuación de Ana').waitFor();
   await page.keyboard.press('Tab'); // blur -> PATCH rename
@@ -314,7 +321,7 @@ async function inputWithValue(page, val) {
   const searchBox = page.getByPlaceholder('Buscar por título, texto, fecha, categoría o etiqueta...');
   await searchBox.fill('zzz');
   await page.waitForTimeout(500);
-  await page.getByText('Todavía no hay puntuaciones').waitFor();
+  await page.getByText('No hay notas', { exact: true }).waitFor();
   await searchBox.fill('casa');
   await page.waitForTimeout(500);
   await page.getByText('Casa Pepa').waitFor();

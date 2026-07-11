@@ -25,6 +25,7 @@ import EditableFieldRow from '../components/EditableFieldRow';
 import LocationPickerOverlay from '../components/LocationPickerOverlay';
 import PhotoGalleryEditor from '../components/PhotoGalleryEditor';
 import CoverPickerOverlay from '../components/CoverPickerOverlay';
+import DismissKeyboardView from '../components/DismissKeyboardView';
 import { animateNext } from '../utils/animate';
 import { pickImage } from '../utils/pickImage';
 
@@ -216,10 +217,11 @@ export default function CreateScoreScreen({ navigation }) {
       </View>
 
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <DismissKeyboardView style={{ flex: 1 }}>
         <ScrollView contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag">
           <TextInput
             style={[styles.titleInput, { color: colors.ink }]}
-            placeholder="Título de tu puntuación"
+            placeholder="Título *"
             placeholderTextColor={colors.sub}
             value={title}
             onChangeText={setTitle}
@@ -297,6 +299,7 @@ export default function CreateScoreScreen({ navigation }) {
             )}
           </Pressable>
         </ScrollView>
+        </DismissKeyboardView>
       </KeyboardAvoidingView>
 
       <LocationPickerOverlay

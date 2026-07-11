@@ -29,6 +29,7 @@ import EditableFieldRow from '../components/EditableFieldRow';
 import LocationPickerOverlay from '../components/LocationPickerOverlay';
 import ConfirmDialog from '../components/ConfirmDialog';
 import { formatDate } from '../components/DateField';
+import DismissKeyboardView from '../components/DismissKeyboardView';
 import { FIELD_DEFS, QUICK_FIELD_DEFS, defaultFieldValue, DEFAULT_CATEGORIES } from '../constants/fieldDefs';
 import { animateNext } from '../utils/animate';
 import { pickImage } from '../utils/pickImage';
@@ -334,6 +335,7 @@ export default function DetailScreen({ route, navigation }) {
 
   return (
     <View style={[styles.screen, { backgroundColor: colors.bg }]}>
+      <DismissKeyboardView style={{ flex: 1 }}>
       <ScrollView bounces={false} contentContainerStyle={{ paddingBottom: 40 }} keyboardDismissMode="on-drag">
         {editMode ? (
           <View style={[styles.editHero, { backgroundColor: colors.surface, paddingTop: insets.top + 14 }]}>
@@ -508,6 +510,7 @@ export default function DetailScreen({ route, navigation }) {
           </View>
         )}
       </ScrollView>
+      </DismissKeyboardView>
 
       <LocationPickerOverlay
         visible={!!editingLocationField}
