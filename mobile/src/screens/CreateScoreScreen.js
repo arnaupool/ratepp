@@ -7,7 +7,6 @@ import {
   StyleSheet,
   ScrollView,
   Image,
-  Modal,
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
@@ -193,7 +192,7 @@ export default function CreateScoreScreen({ navigation }) {
   return (
     <SafeAreaView style={styles.screen} edges={['top']}>
       <View style={styles.head}>
-        <Pressable style={styles.backBtn} onPress={() => navigation.goBack()}>
+        <Pressable style={styles.backBtn} onPress={() => navigation.goBack()} accessibilityLabel="Volver">
           <View style={styles.backArrow} />
         </Pressable>
       </View>
@@ -282,9 +281,12 @@ export default function CreateScoreScreen({ navigation }) {
         </ScrollView>
       </KeyboardAvoidingView>
 
-      <Modal visible={sheetOpen} transparent animationType="fade" onRequestClose={() => setSheetOpen(false)}>
+      {/* Inline overlay instead of RN Modal — Modal's fade animation is
+          unreliable on react-native-web, and the design prototype renders
+          the sheet inside the screen this way too. */}
+      {sheetOpen && (
         <Pressable style={styles.backdrop} onPress={() => setSheetOpen(false)}>
-          <Pressable style={styles.sheet} onPress={(e) => e.stopPropagation?.()}>
+          <Pressable style={styles.sheet} onPress={() => {}}>
             <View style={styles.sheetGrab} />
             <Text style={[type.sheetTitle, { color: colors.ink }]}>Más campos</Text>
             <View style={styles.sheetGrid}>
@@ -299,7 +301,7 @@ export default function CreateScoreScreen({ navigation }) {
             </View>
           </Pressable>
         </Pressable>
-      </Modal>
+      )}
     </SafeAreaView>
   );
 }
@@ -317,7 +319,7 @@ function FieldRow({ field, onRemove, onLabelChange, onValueChange, onListItemCha
           value={field.label}
           onChangeText={onLabelChange}
         />
-        <Pressable style={styles.fieldRemove} onPress={onRemove}>
+        <Pressable style={styles.fieldRemove} onPress={onRemove} accessibilityLabel="Quitar campo">
           <Text style={styles.fieldRemoveText}>✕</Text>
         </Pressable>
       </View>
@@ -368,7 +370,7 @@ function FieldRow({ field, onRemove, onLabelChange, onValueChange, onListItemCha
           {field.value.map((url, idx) => (
             <Image key={idx} source={{ uri: url }} style={styles.phMiniGridItem} />
           ))}
-          <Pressable style={[styles.phMiniGridItem, styles.addPhotoTile]} onPress={onPickGalleryPhoto}>
+          <Pressable style={[styles.phMiniGridItem, styles.addPhotoTile]} onPress={onPickGalleryPhoto} accessibilityLabel="Añadir foto">
             {field.uploading ? <ActivityIndicator color={colors.sub} /> : <Text style={styles.addPhotoPlus}>+</Text>}
           </Pressable>
         </View>
@@ -485,7 +487,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   error: { fontFamily: 'Nunito_700Bold', fontSize: 12.5, color: '#c0392b', textAlign: 'center' },
-  backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.35)', justifyContent: 'flex-end' },
+  backdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.35)',
+    justifyContent: 'flex-end',
+    zIndex: 50,
+  },
   sheet: {
     borderTopLeftRadius: 26,
     borderTopRightRadius: 26,

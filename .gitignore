@@ -10,5 +10,10 @@ backend/uploads/*
 mobile/.expo/
 mobile/dist/
 mobile/web-build/
+
+# e2e artifacts
+e2e/shots/
+e2e/test-photo.jpg
+
 *.log
 .DS_Store

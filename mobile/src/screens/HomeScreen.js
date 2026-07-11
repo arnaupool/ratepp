@@ -4,6 +4,7 @@ import {
   Text,
   TextInput,
   FlatList,
+  ScrollView,
   Image,
   Pressable,
   StyleSheet,
@@ -79,16 +80,19 @@ export default function HomeScreen({ navigation }) {
         </View>
       </View>
 
-      <FlatList
+      {/* flexGrow: 0 keeps the chip strip at its content height — as a bare
+          horizontal list it would split the leftover screen height with the
+          grid below and stretch the chips vertically. */}
+      <ScrollView
         horizontal
-        data={categories}
-        keyExtractor={(c) => c}
         showsHorizontalScrollIndicator={false}
+        style={{ flexGrow: 0 }}
         contentContainerStyle={styles.chipsRow}
-        renderItem={({ item }) => (
-          <FilterChip label={item} active={filter === item} onPress={() => setFilter(item)} />
-        )}
-      />
+      >
+        {categories.map((c) => (
+          <FilterChip key={c} label={c} active={filter === c} onPress={() => setFilter(c)} />
+        ))}
+      </ScrollView>
 
       {loading ? (
         <View style={styles.center}>
@@ -124,7 +128,7 @@ export default function HomeScreen({ navigation }) {
         />
       )}
 
-      <Pressable style={styles.fab} onPress={() => navigation.navigate('Create')}>
+      <Pressable style={styles.fab} onPress={() => navigation.navigate('Create')} accessibilityLabel="Crear puntuación">
         <Text style={styles.fabPlus}>+</Text>
       </Pressable>
     </SafeAreaView>

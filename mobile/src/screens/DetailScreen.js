@@ -153,6 +153,7 @@ export default function DetailScreen({ route, navigation }) {
           <Pressable
             style={[styles.backBtn, { top: insets.top + 14 }]}
             onPress={() => navigation.goBack()}
+            accessibilityLabel="Volver"
           >
             <View style={styles.backArrow} />
           </Pressable>
@@ -203,7 +204,7 @@ function DetailFieldRow({ field, isLast }) {
     <View style={[styles.fieldRow, !isLast && styles.fieldRowDivider]}>
       <View style={styles.fieldHead}>
         <View style={styles.ficonWrapSm}>
-          <FieldIcon type={def?.icon} size={13} color={colors.accent2} />
+          <FieldIcon type={def?.icon} size={13} color={colors.white} />
         </View>
         <Text style={[type.detailFieldLabel, { color: colors.sub }]}>{field.label}</Text>
       </View>

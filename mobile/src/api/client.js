@@ -1,3 +1,5 @@
+import { Platform } from 'react-native';
+
 export const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:4000';
 
 let authToken = null;
@@ -37,13 +39,18 @@ export const api = {
   patch: (path, body) => request(path, { method: 'PATCH', body }),
   del: (path) => request(path, { method: 'DELETE' }),
   uploadPhoto: async (uri) => {
-    const filename = uri.split('/').pop() || 'photo.jpg';
-    const match = /\.(\w+)$/.exec(filename);
-    const ext = match ? match[1].toLowerCase() : 'jpg';
-    const mime = ext === 'png' ? 'image/png' : ext === 'webp' ? 'image/webp' : 'image/jpeg';
-
     const form = new FormData();
-    form.append('photo', { uri, name: filename, type: mime });
+    if (Platform.OS === 'web') {
+      // On web the picker returns a blob:/data: URI; FormData needs a real Blob.
+      const blob = await (await fetch(uri)).blob();
+      form.append('photo', blob, 'photo.jpg');
+    } else {
+      const filename = uri.split('/').pop() || 'photo.jpg';
+      const match = /\.(\w+)$/.exec(filename);
+      const ext = match ? match[1].toLowerCase() : 'jpg';
+      const mime = ext === 'png' ? 'image/png' : ext === 'webp' ? 'image/webp' : 'image/jpeg';
+      form.append('photo', { uri, name: filename, type: mime });
+    }
 
     const data = await request('/api/uploads', { method: 'POST', body: form, isMultipart: true });
     return data.url;

@@ -56,6 +56,20 @@ only works in an iOS Simulator on the same machine. Set it to your computer's
 LAN IP (or the public URL of your deployed backend) when testing on a real
 device via Expo Go.
 
+The app also runs as a web build (`npx expo start --web`) — auth token
+storage and photo upload have web-specific code paths.
+
+## End-to-end tests
+
+`e2e/test.js` drives the web build with Playwright through the full user
+flow: register, empty home, create a score (title, category, 1-10 pills,
+extra people with rename, long-text/list/gallery fields, real photo upload
+through the file picker), detail view, editing scores per person,
+adding/renaming/removing people, the home card's stacked "+N" badges,
+search, category filters, and session persistence across reloads. It also
+fails on any browser console error. Setup instructions are in the file
+header. Run it against a disposable database.
+
 ## What's implemented
 
 The four screens from the design, wired to a real backend:

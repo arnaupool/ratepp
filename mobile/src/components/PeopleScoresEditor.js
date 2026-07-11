@@ -36,7 +36,7 @@ export default function PeopleScoresEditor({
                   onBlur={() => onRenameCommit && onRenameCommit(p.id)}
                   style={[type.personName, styles.nameInput]}
                 />
-                <Pressable onPress={() => onRemove(p.id)} style={styles.removeBtn} hitSlop={6}>
+                <Pressable onPress={() => onRemove(p.id)} style={styles.removeBtn} hitSlop={6} accessibilityLabel="Quitar persona">
                   <Text style={styles.removeBtnText}>✕</Text>
                 </Pressable>
               </View>
@@ -45,7 +45,7 @@ export default function PeopleScoresEditor({
           </View>
         ))}
         <View style={styles.person}>
-          <Pressable style={styles.addPerson} onPress={onAdd}>
+          <Pressable style={styles.addPerson} onPress={onAdd} accessibilityLabel="Añadir persona">
             <Text style={styles.addPersonPlus}>+</Text>
           </Pressable>
           <Text style={[type.personName, styles.name]}>Añadir</Text>
