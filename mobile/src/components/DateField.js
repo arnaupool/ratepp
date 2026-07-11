@@ -1,9 +1,8 @@
 import React, { useState } from 'react';
-import { View, Text, Pressable, StyleSheet, Platform } from 'react-native';
+import { View, Text, Pressable, StyleSheet, Platform, Modal } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { useTheme } from '../theme/ThemeContext';
 import { type } from '../theme/typography';
-import AnimatedSheet from './AnimatedSheet';
 
 const MONTHS = [
   'enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
@@ -52,30 +51,36 @@ export default function DateField({ value, onChange, label }) {
           {value ? formatDate(value) : 'Toca para elegir una fecha'}
         </Text>
       </Pressable>
-      {/* Rendered in a full-width sheet rather than inline: the trigger above
-          often sits in a narrow half-width column (e.g. Desde/Hasta side by
-          side), which isn't wide enough for a calendar and previously made
-          it overflow its box. The sheet title also makes it obvious which
-          field ("Desde"/"Hasta") is being edited when there's more than one. */}
-      <AnimatedSheet visible={showPicker} onClose={() => setShowPicker(false)}>
-        <View style={[styles.sheet, { backgroundColor: colors.surface }]}>
-          <Text style={[type.sheetTitle, { color: colors.ink }]}>
-            {label ? `Elegir fecha — ${label}` : 'Elegir fecha'}
-          </Text>
-          <DateTimePicker
-            value={dateObj}
-            mode="date"
-            display={Platform.OS === 'ios' ? 'inline' : 'calendar'}
-            onChange={onPickerChange}
-            style={styles.picker}
-            themeVariant={dark ? 'dark' : 'light'}
-            accentColor={colors.accent}
-          />
-          <Pressable style={[styles.doneBtn, { backgroundColor: colors.accent }]} onPress={() => setShowPicker(false)}>
-            <Text style={[type.loginBtn, { color: colors.white }]}>Listo</Text>
-          </Pressable>
+      {/* A real Modal, not an inline AnimatedSheet: this component often sits
+          nested inside another sheet (e.g. the Home Filtros sheet's Desde/
+          Hasta boxes), where AnimatedSheet's absolute-positioned backdrop
+          resolves against the tiny date-input wrapper instead of the screen
+          — the calendar rendered as a broken floating card mid-screen. A
+          Modal always overlays the full window regardless of nesting. The
+          title also makes it obvious which field ("Desde"/"Hasta") is being
+          edited when there's more than one. */}
+      <Modal visible={showPicker} transparent animationType="slide" onRequestClose={() => setShowPicker(false)}>
+        <View style={styles.backdrop}>
+          <Pressable style={StyleSheet.absoluteFillObject} onPress={() => setShowPicker(false)} />
+          <View style={[styles.sheet, { backgroundColor: colors.surface }]}>
+            <Text style={[type.sheetTitle, { color: colors.ink }]}>
+              {label ? `Elegir fecha — ${label}` : 'Elegir fecha'}
+            </Text>
+            <DateTimePicker
+              value={dateObj}
+              mode="date"
+              display={Platform.OS === 'ios' ? 'inline' : 'calendar'}
+              onChange={onPickerChange}
+              style={styles.picker}
+              themeVariant={dark ? 'dark' : 'light'}
+              accentColor={colors.accent}
+            />
+            <Pressable style={[styles.doneBtn, { backgroundColor: colors.accent }]} onPress={() => setShowPicker(false)}>
+              <Text style={[type.loginBtn, { color: colors.white }]}>Listo</Text>
+            </Pressable>
+          </View>
         </View>
-      </AnimatedSheet>
+      </Modal>
     </View>
   );
 }
@@ -92,6 +97,11 @@ const webInputStyle = {
 
 const styles = StyleSheet.create({
   trigger: { paddingVertical: 2 },
+  backdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.35)',
+    justifyContent: 'flex-end',
+  },
   sheet: {
     borderTopLeftRadius: 26,
     borderTopRightRadius: 26,

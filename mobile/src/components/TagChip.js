@@ -14,11 +14,16 @@ export default function TagChip({ label, style }) {
 }
 
 const styles = StyleSheet.create({
+  // Fixed height + centered content instead of a padding-driven auto height,
+  // same reasoning as FilterChip: custom-font (Poppins) text metrics on
+  // Android can measure oddly and squish a padding-sized container.
   chip: {
     alignSelf: 'flex-start',
+    height: 22,
     borderRadius: 999,
     paddingHorizontal: 9,
-    paddingVertical: 3,
     borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });

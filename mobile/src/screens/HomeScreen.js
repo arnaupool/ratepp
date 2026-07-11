@@ -354,9 +354,9 @@ const styles = StyleSheet.create({
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 40 },
   card: { flex: 1, borderRadius: 20, overflow: 'hidden' },
   cardPhoto: { width: '100%', aspectRatio: 4 / 3 },
-  cardBody: { paddingHorizontal: 12, paddingTop: 11, paddingBottom: 13, gap: 6 },
+  cardBody: { paddingHorizontal: 12, paddingTop: 11, paddingBottom: 13, gap: 9 },
   cardTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
-  cardTagRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 4 },
+  cardTagRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 5 },
   cardTitleText: { flex: 1 },
   fab: {
     position: 'absolute',

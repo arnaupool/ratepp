@@ -8,6 +8,8 @@ import {
   Pressable,
   StyleSheet,
   ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
@@ -348,6 +350,10 @@ export default function DetailScreen({ route, navigation }) {
 
   return (
     <View style={[styles.screen, { backgroundColor: colors.bg }]}>
+      {/* Without this, editing a field near the bottom of the screen (in
+          edit mode) let the keyboard cover it with no way to see what was
+          being typed — CreateScoreScreen already had this, Detail didn't. */}
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       {/* DismissKeyboardView wraps the ScrollView's rendered content, not
           the ScrollView itself: wrapping the scrollable container directly
           in TouchableWithoutFeedback (native's only real tap-to-dismiss
@@ -537,6 +543,7 @@ export default function DetailScreen({ route, navigation }) {
         )}
       </DismissKeyboardView>
       </ScrollView>
+      </KeyboardAvoidingView>
 
       <LocationPickerOverlay
         visible={!!editingLocationField}
