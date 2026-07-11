@@ -11,6 +11,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useFocusEffect } from '@react-navigation/native';
 import { scoresApi } from '../api/scores';
 import { categoriesApi } from '../api/categories';
@@ -160,16 +161,28 @@ export default function HomeScreen({ navigation }) {
           grid below and stretch the chips vertically. alignItems: 'flex-start'
           stops the row from stretching its chips to match the tallest one
           (the default 'stretch' made every chip as tall as its container). */}
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        style={styles.chipsScroll}
-        contentContainerStyle={styles.chipsRow}
-      >
-        {categories.map((c) => (
-          <FilterChip key={c} label={c} active={filter === c} onPress={() => setFilter(c)} />
-        ))}
-      </ScrollView>
+      <View style={styles.chipsWrap}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={styles.chipsScroll}
+          contentContainerStyle={styles.chipsRow}
+        >
+          {categories.map((c) => (
+            <FilterChip key={c} label={c} active={filter === c} onPress={() => setFilter(c)} />
+          ))}
+        </ScrollView>
+        {/* Softens the last chip's hard cut at the screen edge into a fade,
+            reading as "scroll for more" instead of looking like clipped/
+            broken layout. */}
+        <LinearGradient
+          colors={['transparent', colors.bg]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 0 }}
+          style={styles.chipsFade}
+          pointerEvents="none"
+        />
+      </View>
 
         {loading ? (
           <View style={styles.center}>
@@ -348,8 +361,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: 2,
   },
-  chipsScroll: { flexGrow: 0, marginBottom: 14 },
+  chipsWrap: { position: 'relative', marginBottom: 14 },
+  chipsScroll: { flexGrow: 0 },
   chipsRow: { gap: 8, paddingHorizontal: 18, alignItems: 'flex-start' },
+  chipsFade: { position: 'absolute', right: 0, top: 0, bottom: 0, width: 28 },
   grid: { paddingHorizontal: 16, paddingBottom: 100, gap: 12 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 40 },
   card: { flex: 1, borderRadius: 20, overflow: 'hidden' },

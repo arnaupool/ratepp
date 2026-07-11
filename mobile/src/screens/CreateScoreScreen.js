@@ -27,6 +27,7 @@ import LocationPickerOverlay from '../components/LocationPickerOverlay';
 import PhotoGalleryEditor from '../components/PhotoGalleryEditor';
 import CoverPickerOverlay from '../components/CoverPickerOverlay';
 import ColorPicker from '../components/ColorPicker';
+import CollapsibleSection from '../components/CollapsibleSection';
 import DismissKeyboardView from '../components/DismissKeyboardView';
 import { animateNext } from '../utils/animate';
 import { pickImage } from '../utils/pickImage';
@@ -283,11 +284,6 @@ export default function CreateScoreScreen({ navigation }) {
           </View>
 
           <View style={styles.section}>
-            <Text style={[type.scoreLabel, { color: colors.sub }]}>Color de la card</Text>
-            <ColorPicker value={cardColor} onChange={setCardColor} suggestedColor={suggestedColor} />
-          </View>
-
-          <View style={styles.section}>
             <Text style={[type.scoreLabel, { color: colors.sub }]}>Nota *</Text>
             <NumberPillRow value={ownerValue} onSelect={(n) => onSelectNumber('owner', n)} />
           </View>
@@ -335,6 +331,10 @@ export default function CreateScoreScreen({ navigation }) {
               </Pressable>
             ))}
           </View>
+
+          <CollapsibleSection title="Color de la card">
+            <ColorPicker value={cardColor} onChange={setCardColor} suggestedColor={suggestedColor} />
+          </CollapsibleSection>
 
           {!!error && <Text style={styles.error}>{error}</Text>}
 

@@ -24,6 +24,7 @@ import TagChip from '../components/TagChip';
 import PeopleScoresEditor from '../components/PeopleScoresEditor';
 import CategoryEditor from '../components/CategoryEditor';
 import ColorPicker from '../components/ColorPicker';
+import CollapsibleSection from '../components/CollapsibleSection';
 import ScoreBadge from '../components/ScoreBadge';
 import NumberPillRow from '../components/NumberPillRow';
 import FieldIcon from '../components/FieldIcon';
@@ -63,8 +64,7 @@ export default function DetailScreen({ route, navigation }) {
 
   // Guards against silently losing an uncommitted edit (a title/field
   // TextInput's value only saves onBlur — leaving without triggering that
-  // first would drop it) when exiting edit mode via the back button OR the
-  // iOS swipe-back gesture; 'beforeRemove' fires for both.
+  // first would drop it) when exiting edit mode via the back button.
   useEffect(() => {
     const unsub = navigation.addListener('beforeRemove', (e) => {
       if (!editMode) return;
@@ -72,6 +72,18 @@ export default function DetailScreen({ route, navigation }) {
       setPendingLeaveAction(e.data.action);
     });
     return unsub;
+  }, [navigation, editMode]);
+
+  // The iOS swipe-back gesture can finish removing the screen natively
+  // before beforeRemove's preventDefault() has a chance to stop it —
+  // native-stack doesn't fully support intercepting it (this is a known,
+  // documented limitation, not a bug in the listener above) — leaving JS
+  // navigation state out of sync with the native stack and crashing with
+  // "screen was removed natively but didn't get removed from JS state."
+  // Disabling the gesture during edit mode routes leaving through the
+  // explicit back button instead, which the listener above handles safely.
+  useEffect(() => {
+    navigation.setOptions({ gestureEnabled: !editMode });
   }, [navigation, editMode]);
 
   const confirmSaveAndLeave = () => {
@@ -522,14 +534,6 @@ export default function DetailScreen({ route, navigation }) {
             )
           )}
 
-          {editMode && (
-            <View style={{ marginTop: 14 }}>
-              <Text style={[type.scoreLabel, { color: colors.sub }]}>Color de la card</Text>
-              <View style={{ marginTop: 8 }}>
-                <ColorPicker value={score.cardColor} onChange={onCardColorChange} suggestedColor={suggestedColor} />
-              </View>
-            </View>
-          )}
           {!!error && <Text style={styles.errorBanner}>{error}</Text>}
 
           <View style={styles.ownerRow}>
@@ -617,6 +621,14 @@ export default function DetailScreen({ route, navigation }) {
                 ))}
               </View>
             )}
+          </View>
+        )}
+
+        {editMode && (
+          <View style={styles.content}>
+            <CollapsibleSection title="Color de la card">
+              <ColorPicker value={score.cardColor} onChange={onCardColorChange} suggestedColor={suggestedColor} />
+            </CollapsibleSection>
           </View>
         )}
       </DismissKeyboardView>
