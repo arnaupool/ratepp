@@ -20,6 +20,7 @@ import ScoreBadge from '../components/ScoreBadge';
 import ScoreStack from '../components/ScoreStack';
 import TagChip from '../components/TagChip';
 import FilterChip from '../components/FilterChip';
+import { animateNext } from '../utils/animate';
 
 export default function HomeScreen({ navigation }) {
   const [items, setItems] = useState([]);
@@ -32,6 +33,7 @@ export default function HomeScreen({ navigation }) {
     try {
       setError('');
       const { items: fetched } = await scoresApi.list();
+      animateNext();
       setItems(fetched);
     } catch (e) {
       setError(e.message || 'No se pudieron cargar tus puntuaciones');
@@ -48,13 +50,13 @@ export default function HomeScreen({ navigation }) {
 
   const categories = useMemo(() => {
     const set = new Set();
-    items.forEach((it) => it.category && set.add(it.category));
+    items.forEach((it) => (it.categories || []).forEach((c) => set.add(c)));
     return ['Todas', ...Array.from(set).sort()];
   }, [items]);
 
   const filtered = useMemo(() => {
     const visible = items
-      .filter((it) => filter === 'Todas' || it.category === filter)
+      .filter((it) => filter === 'Todas' || (it.categories || []).includes(filter))
       .filter((it) => it.title.toLowerCase().includes(search.toLowerCase()));
     // Pad odd counts with an invisible spacer so the last card keeps its
     // half-width column instead of stretching across the whole row.
@@ -136,7 +138,7 @@ export default function HomeScreen({ navigation }) {
 }
 
 function ScoreCard({ item, onPress }) {
-  const tint = categoryTint(item.category);
+  const tint = categoryTint(item.categories?.[0]);
   return (
     <Pressable style={[styles.card, { backgroundColor: tint }]} onPress={onPress}>
       {item.coverPhotoUrl ? (
@@ -155,7 +157,13 @@ function ScoreCard({ item, onPress }) {
             <ScoreStack ratings={item.ratings} />
           )}
         </View>
-        <TagChip label={item.category} />
+        {item.categories?.length > 0 && (
+          <View style={styles.cardTagRow}>
+            {item.categories.map((c) => (
+              <TagChip key={c} label={c} />
+            ))}
+          </View>
+        )}
       </View>
     </Pressable>
   );
@@ -184,6 +192,7 @@ const styles = StyleSheet.create({
   cardPhoto: { width: '100%', aspectRatio: 4 / 3 },
   cardBody: { paddingHorizontal: 12, paddingTop: 11, paddingBottom: 13, gap: 6 },
   cardTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
+  cardTagRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 4 },
   cardTitleText: { flex: 1 },
   fab: {
     position: 'absolute',

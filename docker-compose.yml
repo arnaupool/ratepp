@@ -26,6 +26,8 @@ services:
       JWT_SECRET: ${JWT_SECRET:-change-this-to-a-long-random-string}
       UPLOADS_DIR: /app/uploads
       PUBLIC_URL: ${PUBLIC_URL:-http://localhost:4000}
+      TMDB_API_KEY: ${TMDB_API_KEY:-}
+      RAWG_API_KEY: ${RAWG_API_KEY:-}
     ports:
       - "4000:4000"
     volumes:

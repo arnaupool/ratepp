@@ -16,8 +16,14 @@ import { type } from '../theme/typography';
 import PhotoStripe from '../components/PhotoStripe';
 import TagChip from '../components/TagChip';
 import PeopleScoresEditor from '../components/PeopleScoresEditor';
+import ScoreBadge from '../components/ScoreBadge';
+import NumberPillRow from '../components/NumberPillRow';
 import FieldIcon from '../components/FieldIcon';
+import MapPreview from '../components/MapPreview';
+import CoverPickerOverlay from '../components/CoverPickerOverlay';
+import { formatDate } from '../components/DateField';
 import { FIELD_DEFS } from '../constants/fieldDefs';
+import { animateNext } from '../utils/animate';
 
 export default function DetailScreen({ route, navigation }) {
   const { scoreId } = route.params;
@@ -27,6 +33,7 @@ export default function DetailScreen({ route, navigation }) {
   const [error, setError] = useState('');
   const [activeIndex, setActiveIndex] = useState(0);
   const [editingId, setEditingId] = useState(null);
+  const [coverPickerOpen, setCoverPickerOpen] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -59,12 +66,15 @@ export default function DetailScreen({ route, navigation }) {
     return list;
   }, [score]);
 
-  const people = useMemo(() => {
+  const ownerRating = useMemo(() => score?.ratings.find((r) => r.isOwner), [score]);
+
+  const otherPeople = useMemo(() => {
     if (!score) return [];
     return score.ratings
+      .filter((r) => !r.isOwner)
       .slice()
       .sort((a, b) => a.sortOrder - b.sortOrder)
-      .map((r) => ({ id: r.id, name: r.personName, value: r.value, isOwner: r.isOwner }));
+      .map((r) => ({ id: r.id, name: r.personName, value: r.value, isOwner: false }));
   }, [score]);
 
   const updateRatingLocally = (ratingId, patch) => {
@@ -102,6 +112,7 @@ export default function DetailScreen({ route, navigation }) {
   const onAddPerson = async () => {
     try {
       const { rating } = await scoresApi.addRating(scoreId, { personName: 'Nuevo', value: 5 });
+      animateNext();
       setScore((s) => ({ ...s, ratings: [...s.ratings, rating] }));
       setEditingId(rating.id);
     } catch (e) {
@@ -111,13 +122,27 @@ export default function DetailScreen({ route, navigation }) {
 
   const onRemove = async (personId) => {
     const prev = score.ratings;
+    animateNext();
     setScore((s) => ({ ...s, ratings: s.ratings.filter((r) => r.id !== personId) }));
     setEditingId((cur) => (cur === personId ? null : cur));
     try {
       await scoresApi.removeRating(scoreId, personId);
     } catch (e) {
       setError(e.message || 'No se pudo quitar');
+      animateNext();
       setScore((s) => ({ ...s, ratings: prev }));
+    }
+  };
+
+  const onChangeCover = async (url) => {
+    setCoverPickerOpen(false);
+    const prev = score.coverPhotoUrl;
+    setScore((s) => ({ ...s, coverPhotoUrl: url }));
+    try {
+      await scoresApi.update(scoreId, { coverPhotoUrl: url });
+    } catch (e) {
+      setError(e.message || 'No se pudo cambiar la portada');
+      setScore((s) => ({ ...s, coverPhotoUrl: prev }));
     }
   };
 
@@ -157,6 +182,13 @@ export default function DetailScreen({ route, navigation }) {
           >
             <View style={styles.backArrow} />
           </Pressable>
+          <Pressable
+            style={[styles.coverEditBtn, { top: insets.top + 14 }]}
+            onPress={() => setCoverPickerOpen(true)}
+            accessibilityLabel="Cambiar portada"
+          >
+            <Text style={{ fontSize: 14 }}>🖼️</Text>
+          </Pressable>
         </View>
 
         {photos.length > 1 && (
@@ -171,19 +203,40 @@ export default function DetailScreen({ route, navigation }) {
 
         <View style={styles.content}>
           <Text style={[type.detailTitle, { color: colors.ink }]}>{score.title}</Text>
-          <TagChip label={score.category} style={{ marginTop: 8 }} />
+          {score.categories?.length > 0 && (
+            <View style={styles.categoryRow}>
+              {score.categories.map((c) => (
+                <TagChip key={c} label={c} />
+              ))}
+            </View>
+          )}
           {!!error && <Text style={styles.errorBanner}>{error}</Text>}
 
-          <PeopleScoresEditor
-            people={people}
-            editingId={editingId}
-            onStartEdit={(id) => setEditingId((cur) => (cur === id ? null : id))}
-            onSelectNumber={onSelectNumber}
-            onRename={onRename}
-            onRenameCommit={onRenameCommit}
-            onRemove={onRemove}
-            onAdd={onAddPerson}
-          />
+          <View style={styles.ownerRow}>
+            <Text style={[type.scoreLabel, { color: colors.sub }]}>Tu puntuación</Text>
+            {ownerRating && (
+              <View style={styles.ownerScoreRow}>
+                <ScoreBadge value={ownerRating.value} size={40} />
+                <View style={{ flex: 1 }}>
+                  <NumberPillRow value={ownerRating.value} onSelect={(n) => onSelectNumber(ownerRating.id, n)} />
+                </View>
+              </View>
+            )}
+          </View>
+
+          <View style={{ marginTop: 16 }}>
+            <Text style={[type.scoreLabel, { color: colors.sub }]}>Puntuaciones de otras personas</Text>
+            <PeopleScoresEditor
+              people={otherPeople}
+              editingId={editingId}
+              onStartEdit={(id) => setEditingId((cur) => (cur === id ? null : id))}
+              onSelectNumber={onSelectNumber}
+              onRename={onRename}
+              onRenameCommit={onRenameCommit}
+              onRemove={onRemove}
+              onAdd={onAddPerson}
+            />
+          </View>
         </View>
 
         {score.fields.length > 0 && (
@@ -194,6 +247,12 @@ export default function DetailScreen({ route, navigation }) {
           </View>
         )}
       </ScrollView>
+
+      <CoverPickerOverlay
+        visible={coverPickerOpen}
+        onClose={() => setCoverPickerOpen(false)}
+        onConfirm={onChangeCover}
+      />
     </View>
   );
 }
@@ -231,7 +290,17 @@ function DetailFieldRow({ field, isLast }) {
         </ScrollView>
       )}
 
-      {!['list', 'photo', 'gallery'].includes(field.type) && (
+      {field.type === 'date' && !!field.value && (
+        <Text style={[type.detailFieldValue, styles.fieldValue, { color: colors.ink }]}>{formatDate(field.value)}</Text>
+      )}
+
+      {field.type === 'location' && !!field.value && (
+        <View style={styles.fieldValue}>
+          <MapPreview value={field.value} height={140} />
+        </View>
+      )}
+
+      {!['list', 'photo', 'gallery', 'date', 'location'].includes(field.type) && (
         <Text style={[type.detailFieldValue, styles.fieldValue, { color: colors.ink }]}>{field.value}</Text>
       )}
     </View>
@@ -253,6 +322,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  coverEditBtn: {
+    position: 'absolute',
+    right: 14,
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: 'rgba(255,255,255,0.85)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   backArrow: {
     width: 8,
     height: 8,
@@ -267,6 +346,9 @@ const styles = StyleSheet.create({
   thumb: { width: '100%', aspectRatio: 1, borderRadius: 10, opacity: 0.6 },
   thumbActive: { opacity: 1 },
   content: { paddingHorizontal: 18, paddingTop: 16 },
+  categoryRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 8 },
+  ownerRow: { marginTop: 16, gap: 8 },
+  ownerScoreRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   fieldsCard: {
     marginHorizontal: 18,
     marginTop: 18,

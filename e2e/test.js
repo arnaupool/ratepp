@@ -91,10 +91,13 @@ async function inputWithValue(page, val) {
   log('Create screen opened via FAB');
 
   await page.getByPlaceholder('Título de tu puntuación').fill('Casa Pepa');
+  // multi-category: toggle two suggestion chips + type a custom one
   await page.getByText('Restaurantes', { exact: true }).click();
-  const catValue = await page.getByPlaceholder('Ej. Restaurantes').inputValue();
-  if (catValue !== 'Restaurantes') throw new Error(`category chip did not fill input: "${catValue}"`);
-  log('Title + category set');
+  await page.getByText('Películas', { exact: true }).click();
+  await page.getByPlaceholder('Ej. Restaurantes').fill('Favoritos 2026');
+  await page.getByLabel('Añadir categoría').click();
+  await page.getByText('Favoritos 2026', { exact: true }).waitFor();
+  log('Multiple categories selected (2 chips + 1 custom)');
 
   // main score: pick 9
   await page.getByText('9', { exact: true }).first().click();
@@ -136,6 +139,44 @@ async function inputWithValue(page, val) {
   // uploaded thumbnail appears as an img with the API's /uploads/ URL
   await page.waitForSelector('img[src*="/uploads/"]', { timeout: 20000 });
   log('Gallery photo uploaded through the picker and rendered');
+
+  // quick field: fecha (native date input on web)
+  await page.getByText('Fecha', { exact: true }).click();
+  await page.locator('input[type="date"]').fill('2026-06-14');
+  log('Date field added via native date input');
+
+  // quick field: ubicación (map picker; web fallback is a plain address form)
+  await page.getByText('Ubicación', { exact: true }).click();
+  await page.getByText('📍 Elegir ubicación en el mapa').click();
+  await page.getByText('Elegir ubicación', { exact: true }).waitFor();
+  await page.getByPlaceholder('Ej. Calle Mayor 12, Madrid').fill('Calle Mayor 12, Madrid');
+  await page.getByText('Confirmar ubicación').click();
+  await page.getByText('Calle Mayor 12, Madrid').waitFor();
+  log('Location field set through the picker overlay');
+
+  // sheet field: selector/etiqueta with autocomplete
+  await page.getByText('Más campos', { exact: true }).first().click();
+  await page.getByText('Selector / etiqueta').click();
+  await page.getByPlaceholder('Ej. Mediterránea').fill('Mediterránea');
+  log('Tag field added and filled');
+
+  // cover: open the search sheet (no network assertions — external API keys
+  // aren't configured in this environment), then close it and upload a
+  // cover photo from device instead, exercising the dedicated cover flow.
+  await page.getByText('Buscar carátula').click();
+  await page.getByText('Película', { exact: true }).waitFor();
+  await page.getByText('Cerrar', { exact: true }).click();
+  const coverChooserPromise = page.waitForEvent('filechooser');
+  await page.getByText('Subir foto', { exact: true }).click();
+  const coverChooser = await coverChooserPromise;
+  await coverChooser.setFiles(TEST_JPG);
+  // wait for the second /uploads/ image (gallery photo + now the cover) so
+  // the cover upload finishes before we hit save
+  await page.waitForFunction(
+    () => document.querySelectorAll('img[src*="/uploads/"]').length >= 2,
+    { timeout: 20000 }
+  );
+  log('Cover: search sheet opened/closed, then uploaded from device');
   await shot(page, '05-create-filled');
 
   // save
@@ -147,16 +188,26 @@ async function inputWithValue(page, val) {
   await page.getByText('— Paella de marisco').waitFor();
   await page.getByText('— Croquetas de jamón').waitFor();
   await page.getByText('El arroz estaba en su punto.').waitFor();
+  await page.getByText('14 de junio de 2026').waitFor();
+  await page.getByText('Calle Mayor 12, Madrid').waitFor();
+  await page.getByText('Mediterránea').waitFor();
   await inputWithValue(page, 'Marta'); // extra people render as editable name inputs
-  log('Detail shows title, fields and both people');
+  log('Detail shows title, fields (date/location/tag included) and both people');
+
+  // categories: both toggled chips + the custom one, and no owner ("Tú")
+  // bubble mixed into "Puntuaciones de otras personas"
+  await page.getByText('Restaurantes', { exact: true }).waitFor();
+  await page.getByText('Películas', { exact: true }).waitFor();
+  await page.getByText('Favoritos 2026', { exact: true }).waitFor();
+  const detailTuCount = await page.getByText('Tú', { exact: true }).count();
+  if (detailTuCount !== 0) throw new Error(`expected no "Tú" bubble in the other-people editor, found ${detailTuCount}`);
+  log('Detail shows all 3 categories and no owner bubble in the other-people list');
   await shot(page, '06-detail');
 
-  // edit own score 9 -> 10
-  await page.getByText('9', { exact: true }).first().click();
-  await page.getByText('Editando puntuación de Tú').waitFor();
-  await page.getByText('10', { exact: true }).last().click();
-  await page.getByText('Editando puntuación de Tú').waitFor({ state: 'detached' });
-  await page.getByText('10', { exact: true }).waitFor();
+  // edit own score 9 -> 10 (owner's pill row is always visible now, no tap-to-reveal)
+  await page.getByText('Tu puntuación', { exact: true }).waitFor();
+  await page.getByText('10', { exact: true }).first().click();
+  await page.getByText('10', { exact: true }).first().waitFor();
   log('Own score edited 9 -> 10 in Detail');
 
   // add + rename person in detail (the focus-loss bug from the design chat)

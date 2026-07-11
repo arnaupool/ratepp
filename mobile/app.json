@@ -10,19 +10,29 @@
     },
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "com.puntuaciones.app"
+      "bundleIdentifier": "com.puntuaciones.app",
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "Puntuaciones usa tu ubicación para rellenar el campo de ubicación de una puntuación."
+      }
     },
     "android": {
       "package": "com.puntuaciones.app",
       "adaptiveIcon": {
         "backgroundColor": "#fbf4eb"
-      }
+      },
+      "permissions": ["ACCESS_COARSE_LOCATION", "ACCESS_FINE_LOCATION"]
     },
     "plugins": [
       [
         "expo-image-picker",
         {
           "photosPermission": "Puntuaciones necesita acceso a tus fotos para añadirlas a una puntuación."
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Puntuaciones usa tu ubicación para rellenar el campo de ubicación de una puntuación."
         }
       ]
     ]

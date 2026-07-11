@@ -6,6 +6,8 @@ const path = require('path');
 const authRoutes = require('./routes/auth');
 const scoresRoutes = require('./routes/scores');
 const uploadsRoutes = require('./routes/uploads');
+const tagsRoutes = require('./routes/tags');
+const coversRoutes = require('./routes/covers');
 
 const app = express();
 
@@ -18,6 +20,8 @@ app.get('/health', (req, res) => res.json({ ok: true }));
 app.use('/api/auth', authRoutes);
 app.use('/api/scores', scoresRoutes);
 app.use('/api/uploads', uploadsRoutes);
+app.use('/api/tags', tagsRoutes);
+app.use('/api/covers', coversRoutes);
 
 app.use((req, res) => res.status(404).json({ error: 'No encontrado' }));
 

@@ -22,6 +22,12 @@ import NumberPillRow from '../components/NumberPillRow';
 import PeopleScoresEditor from '../components/PeopleScoresEditor';
 import FieldIcon from '../components/FieldIcon';
 import PhotoStripe from '../components/PhotoStripe';
+import DateField from '../components/DateField';
+import TagAutocomplete from '../components/TagAutocomplete';
+import MapPreview from '../components/MapPreview';
+import LocationPickerOverlay from '../components/LocationPickerOverlay';
+import CoverPickerOverlay from '../components/CoverPickerOverlay';
+import { animateNext } from '../utils/animate';
 
 let tempIdSeq = 1;
 const tempId = () => `tmp-${tempIdSeq++}`;
@@ -40,12 +46,17 @@ async function pickImage() {
 export default function CreateScoreScreen({ navigation }) {
   const [title, setTitle] = useState('');
   const [ownerValue, setOwnerValue] = useState(null);
-  const [category, setCategory] = useState('');
+  const [categories, setCategories] = useState([]);
+  const [categoryInput, setCategoryInput] = useState('');
   const [categorySuggestions, setCategorySuggestions] = useState(DEFAULT_CATEGORIES);
   const [others, setOthers] = useState([]);
   const [editingId, setEditingId] = useState(null);
   const [fields, setFields] = useState([]);
   const [sheetOpen, setSheetOpen] = useState(false);
+  const [coverPhotoUrl, setCoverPhotoUrl] = useState(null);
+  const [coverUploading, setCoverUploading] = useState(false);
+  const [coverPickerOpen, setCoverPickerOpen] = useState(false);
+  const [locationFieldId, setLocationFieldId] = useState(null);
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
 
@@ -54,19 +65,27 @@ export default function CreateScoreScreen({ navigation }) {
       .list()
       .then(({ items }) => {
         const set = new Set(DEFAULT_CATEGORIES);
-        items.forEach((it) => it.category && set.add(it.category));
+        items.forEach((it) => (it.categories || []).forEach((c) => set.add(c)));
         setCategorySuggestions(Array.from(set));
       })
       .catch(() => {});
   }, []);
 
-  const people = useMemo(
-    () => [
-      { id: 'owner', name: 'Tú', value: ownerValue, isOwner: true },
-      ...others.map((o) => ({ ...o, isOwner: false })),
-    ],
-    [ownerValue, others]
-  );
+  const toggleCategory = (c) => {
+    animateNext();
+    setCategories((prev) => (prev.includes(c) ? prev.filter((x) => x !== c) : [...prev, c]));
+  };
+
+  const addCustomCategory = () => {
+    const c = categoryInput.trim();
+    if (!c) return;
+    if (!categories.includes(c)) {
+      animateNext();
+      setCategories((prev) => [...prev, c]);
+    }
+    if (!categorySuggestions.includes(c)) setCategorySuggestions((prev) => [...prev, c]);
+    setCategoryInput('');
+  };
 
   const onSelectNumber = (personId, n) => {
     if (personId === 'owner') {
@@ -78,6 +97,7 @@ export default function CreateScoreScreen({ navigation }) {
   };
 
   const addOther = () => {
+    animateNext();
     const id = tempId();
     setOthers((prev) => [...prev, { id, name: 'Nuevo', value: 5 }]);
     setEditingId(id);
@@ -88,11 +108,13 @@ export default function CreateScoreScreen({ navigation }) {
   };
 
   const removeOther = (id) => {
+    animateNext();
     setOthers((prev) => prev.filter((o) => o.id !== id));
     setEditingId((cur) => (cur === id ? null : cur));
   };
 
   const addField = (def) => {
+    animateNext();
     setFields((prev) => [
       ...prev,
       { id: tempId(), typeId: def.id, label: def.label, value: defaultFieldValue(def.kind) },
@@ -100,7 +122,10 @@ export default function CreateScoreScreen({ navigation }) {
     setSheetOpen(false);
   };
 
-  const removeField = (id) => setFields((prev) => prev.filter((f) => f.id !== id));
+  const removeField = (id) => {
+    animateNext();
+    setFields((prev) => prev.filter((f) => f.id !== id));
+  };
 
   const updateField = (id, patch) =>
     setFields((prev) => prev.map((f) => (f.id === id ? { ...f, ...patch } : f)));
@@ -117,6 +142,7 @@ export default function CreateScoreScreen({ navigation }) {
   };
 
   const addListItem = (fieldId) => {
+    animateNext();
     setFields((prev) => prev.map((f) => (f.id === fieldId ? { ...f, value: [...f.value, ''] } : f)));
   };
 
@@ -139,6 +165,7 @@ export default function CreateScoreScreen({ navigation }) {
       if (!uri) return;
       updateField(fieldId, { uploading: true });
       const url = await api.uploadPhoto(uri);
+      animateNext();
       setFields((prev) =>
         prev.map((f) => (f.id === fieldId ? { ...f, value: [...f.value, url], uploading: false } : f))
       );
@@ -147,6 +174,28 @@ export default function CreateScoreScreen({ navigation }) {
       setError(e.message || 'No se pudo subir la foto');
     }
   };
+
+  const pickCoverFromDevice = async () => {
+    try {
+      const uri = await pickImage();
+      if (!uri) return;
+      setCoverUploading(true);
+      const url = await api.uploadPhoto(uri);
+      setCoverPhotoUrl(url);
+    } catch (e) {
+      setError(e.message || 'No se pudo subir la carátula');
+    } finally {
+      setCoverUploading(false);
+    }
+  };
+
+  const autoDerivedCover = useMemo(() => {
+    const coverField = fields.find(
+      (f) => (f.typeId === 'photo' && f.value) || (f.typeId === 'gallery' && f.value?.length)
+    );
+    if (!coverField) return null;
+    return coverField.typeId === 'photo' ? coverField.value : coverField.value[0];
+  }, [fields]);
 
   const save = async () => {
     setError('');
@@ -164,19 +213,10 @@ export default function CreateScoreScreen({ navigation }) {
     }
     setSaving(true);
     try {
-      const coverField = fields.find(
-        (f) => (f.typeId === 'photo' && f.value) || (f.typeId === 'gallery' && f.value?.length)
-      );
-      const coverPhotoUrl = coverField
-        ? coverField.typeId === 'photo'
-          ? coverField.value
-          : coverField.value[0]
-        : null;
-
       const { score } = await scoresApi.create({
         title: title.trim(),
-        category: category.trim() || null,
-        coverPhotoUrl,
+        categories,
+        coverPhotoUrl: coverPhotoUrl || autoDerivedCover,
         ownerValue,
         ratings: others.map((o) => ({ personName: o.name.trim() || 'Invitado', value: o.value })),
         fields: fields.map((f) => ({ type: f.typeId, label: f.label, value: f.value })),
@@ -188,6 +228,9 @@ export default function CreateScoreScreen({ navigation }) {
       setSaving(false);
     }
   };
+
+  const editingLocationField = fields.find((f) => f.id === locationFieldId);
+  const coverPreview = coverPhotoUrl || autoDerivedCover;
 
   return (
     <SafeAreaView style={styles.screen} edges={['top']}>
@@ -208,20 +251,57 @@ export default function CreateScoreScreen({ navigation }) {
           />
 
           <View style={styles.section}>
-            <Text style={[type.scoreLabel, { color: colors.sub }]}>Categoría</Text>
-            <TextInput
-              style={styles.categoryInput}
-              placeholder="Ej. Restaurantes"
-              placeholderTextColor={colors.sub}
-              value={category}
-              onChangeText={setCategory}
-            />
-            <View style={styles.categoryChips}>
-              {categorySuggestions.map((c) => (
-                <Pressable key={c} onPress={() => setCategory(c)} style={styles.categoryChip}>
-                  <Text style={[type.chip, { color: colors.sub }]}>{c}</Text>
+            <Text style={[type.scoreLabel, { color: colors.sub }]}>Portada</Text>
+            <View style={styles.coverRow}>
+              <View style={styles.coverPreviewWrap}>
+                {coverUploading ? (
+                  <ActivityIndicator color={colors.accent} />
+                ) : coverPreview ? (
+                  <Image source={{ uri: coverPreview }} style={StyleSheet.absoluteFill} />
+                ) : (
+                  <PhotoStripe seed={hashSeed(title || 'cover')} style={StyleSheet.absoluteFill} />
+                )}
+              </View>
+              <View style={{ gap: 8, flex: 1 }}>
+                <Pressable style={styles.coverActionBtn} onPress={pickCoverFromDevice}>
+                  <Text style={[type.quickChip, { color: colors.ink }]}>Subir foto</Text>
                 </Pressable>
-              ))}
+                <Pressable style={styles.coverActionBtn} onPress={() => setCoverPickerOpen(true)}>
+                  <Text style={[type.quickChip, { color: colors.ink }]}>Buscar carátula</Text>
+                </Pressable>
+              </View>
+            </View>
+          </View>
+
+          <View style={styles.section}>
+            <Text style={[type.scoreLabel, { color: colors.sub }]}>Categorías</Text>
+            <View style={styles.categoryInputRow}>
+              <TextInput
+                style={styles.categoryInput}
+                placeholder="Ej. Restaurantes"
+                placeholderTextColor={colors.sub}
+                value={categoryInput}
+                onChangeText={setCategoryInput}
+                onSubmitEditing={addCustomCategory}
+                returnKeyType="done"
+              />
+              <Pressable style={styles.categoryAddBtn} onPress={addCustomCategory} accessibilityLabel="Añadir categoría">
+                <Text style={{ fontSize: 16, fontWeight: '800', color: colors.white }}>+</Text>
+              </Pressable>
+            </View>
+            <View style={styles.categoryChips}>
+              {categorySuggestions.map((c) => {
+                const on = categories.includes(c);
+                return (
+                  <Pressable
+                    key={c}
+                    onPress={() => toggleCategory(c)}
+                    style={[styles.categoryChip, on && styles.categoryChipOn]}
+                  >
+                    <Text style={[type.chip, { color: on ? colors.accentInk : colors.sub }]}>{c}</Text>
+                  </Pressable>
+                );
+              })}
             </View>
           </View>
 
@@ -233,7 +313,7 @@ export default function CreateScoreScreen({ navigation }) {
           <View style={styles.section}>
             <Text style={[type.scoreLabel, { color: colors.sub }]}>Puntuaciones de otras personas (opcional)</Text>
             <PeopleScoresEditor
-              people={people}
+              people={others.map((o) => ({ ...o, isOwner: false }))}
               editingId={editingId}
               onStartEdit={(id) => setEditingId((cur) => (cur === id ? null : id))}
               onSelectNumber={onSelectNumber}
@@ -254,6 +334,7 @@ export default function CreateScoreScreen({ navigation }) {
               onAddListItem={() => addListItem(f.id)}
               onPickPhoto={() => pickForPhoto(f.id)}
               onPickGalleryPhoto={() => pickForGallery(f.id)}
+              onPickLocation={() => setLocationFieldId(f.id)}
             />
           ))}
 
@@ -302,11 +383,30 @@ export default function CreateScoreScreen({ navigation }) {
           </Pressable>
         </Pressable>
       )}
+
+      <LocationPickerOverlay
+        visible={!!editingLocationField}
+        initialValue={editingLocationField?.value}
+        onClose={() => setLocationFieldId(null)}
+        onConfirm={(value) => {
+          updateField(locationFieldId, { value });
+          setLocationFieldId(null);
+        }}
+      />
+
+      <CoverPickerOverlay
+        visible={coverPickerOpen}
+        onClose={() => setCoverPickerOpen(false)}
+        onConfirm={(url) => {
+          setCoverPhotoUrl(url);
+          setCoverPickerOpen(false);
+        }}
+      />
     </SafeAreaView>
   );
 }
 
-function FieldRow({ field, onRemove, onLabelChange, onValueChange, onListItemChange, onAddListItem, onPickPhoto, onPickGalleryPhoto }) {
+function FieldRow({ field, onRemove, onLabelChange, onValueChange, onListItemChange, onAddListItem, onPickPhoto, onPickGalleryPhoto, onPickLocation }) {
   const def = FIELD_DEFS.find((d) => d.id === field.typeId);
   return (
     <View style={styles.fieldRow}>
@@ -333,6 +433,24 @@ function FieldRow({ field, onRemove, onLabelChange, onValueChange, onListItemCha
           onChangeText={onValueChange}
           keyboardType={def.keyboardType || 'default'}
         />
+      )}
+
+      {def.kind === 'date' && <DateField value={field.value} onChange={onValueChange} />}
+
+      {def.kind === 'tag' && (
+        <TagAutocomplete value={field.value} onChange={onValueChange} placeholder={def.placeholder} />
+      )}
+
+      {def.kind === 'location' && (
+        field.value ? (
+          <Pressable onPress={onPickLocation}>
+            <MapPreview value={field.value} height={120} />
+          </Pressable>
+        ) : (
+          <Pressable style={styles.locationBtn} onPress={onPickLocation}>
+            <Text style={[type.quickChip, { color: colors.accent }]}>📍 Elegir ubicación en el mapa</Text>
+          </Pressable>
+        )
       )}
 
       {def.kind === 'list' && (
@@ -402,7 +520,28 @@ const styles = StyleSheet.create({
   body: { paddingHorizontal: 18, paddingTop: 8, paddingBottom: 60, gap: 16 },
   titleInput: { fontFamily: 'Nunito_900Black', fontSize: 24, color: colors.ink, padding: 0 },
   section: { gap: 8 },
+  coverRow: { flexDirection: 'row', gap: 12 },
+  coverPreviewWrap: {
+    width: 84,
+    height: 84,
+    borderRadius: 14,
+    overflow: 'hidden',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.surface,
+  },
+  coverActionBtn: {
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 9,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.line,
+    alignItems: 'center',
+  },
+  categoryInputRow: { flexDirection: 'row', gap: 8 },
   categoryInput: {
+    flex: 1,
     borderRadius: 14,
     paddingHorizontal: 14,
     paddingVertical: 11,
@@ -413,6 +552,14 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: colors.ink,
   },
+  categoryAddBtn: {
+    width: 42,
+    height: 42,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.accent,
+  },
   categoryChips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   categoryChip: {
     borderRadius: 999,
@@ -422,6 +569,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.line,
   },
+  categoryChipOn: { backgroundColor: colors.accent, borderColor: colors.accent },
   fieldRow: {
     borderRadius: 14,
     padding: 12,
@@ -455,6 +603,16 @@ const styles = StyleSheet.create({
     color: colors.ink,
     padding: 0,
   },
+  locationBtn: {
+    borderRadius: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    backgroundColor: colors.bg,
+    borderWidth: 1,
+    borderColor: colors.line,
+    borderStyle: 'dashed',
+    alignItems: 'center',
+  },
   phMini: { width: '100%', aspectRatio: 1, borderRadius: 10, overflow: 'hidden', alignItems: 'center', justifyContent: 'center', backgroundColor: colors.surface },
   phGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
   phMiniGridItem: { width: '31.5%', aspectRatio: 1, borderRadius: 10, overflow: 'hidden' },
@@ -465,7 +623,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  addPhotoPlus: { fontSize: 20, fontWeight: '800', color: colors.sub },
+  addPhotoPlus: { fontSize: 20, fontWeight: '800', color: colors.sub, lineHeight: 22, marginTop: -1 },
   quickRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   quickChip: {
     flexDirection: 'row',

@@ -41,6 +41,11 @@ For a real server deployment, set `PUBLIC_URL` (in `docker-compose.yml`'s
 HTTPS URL of the API, since it's used to build photo URLs returned to the
 app.
 
+Optionally set `TMDB_API_KEY` (themoviedb.org, free) and `RAWG_API_KEY`
+(rawg.io, free) to enable "Buscar carátula" for movies/series and games.
+Book covers use Open Library and need no key. Leave a key blank to just
+skip that source in search results.
+
 ## Running the mobile app
 
 Requires Node 18+ and the Expo Go app (or a dev build) on your phone.
@@ -57,7 +62,14 @@ LAN IP (or the public URL of your deployed backend) when testing on a real
 device via Expo Go.
 
 The app also runs as a web build (`npx expo start --web`) — auth token
-storage and photo upload have web-specific code paths.
+storage, photo upload, and the map/location field have web-specific code
+paths (the location field falls back to an address-only form on web, since
+`react-native-maps` has no web target).
+
+The location field's map (`react-native-maps`) needs no setup to test via
+Expo Go — it works out of the box on both iOS and Android in Expo Go. A
+Google Maps API key is only required if you later build a standalone
+Android app (`eas build` or a dev client) for distribution.
 
 ## End-to-end tests
 
@@ -77,12 +89,17 @@ The four screens from the design, wired to a real backend:
 1. **Acceder** — login/register (toggle, matches the design's single form).
 2. **Principal** — 2-column grid of your scores, search, tag filters, single
    score badge or stacked mini-badges + "+N" for multi-person scores.
-3. **Crear puntuación** — title, required 1-10 score (single-row pill
-   selector), optional extra people's scores, dynamic fields (quick-add
-   chips + "more fields" sheet: text, number, date, location, photo,
-   repeatable gallery, list, tag), save.
-4. **Detalle** — hero photo + thumbnails, editable per-person scores
-   (add/rename/remove), unified fields card with thin dividers.
+3. **Crear puntuación** — title, cover photo (upload or search movies/
+   games/books for a poster), multi-select categories, required 1-10 score
+   (single-row pill selector), optional extra people's scores, dynamic
+   fields (quick-add chips + "more fields" sheet: text, number, date
+   (native picker), location (map picker), photo, repeatable gallery,
+   list, tag (autocomplete of previously-used tags)), save.
+4. **Detalle** — hero photo + thumbnails (tap the image icon to change the
+   cover), your score always visible separately from other people's scores
+   (add/rename/remove), unified fields card with thin dividers — date
+   fields show a formatted date, location fields show a small map that
+   opens turn-by-turn navigation when tapped.
 
 Colors, spacing and type are ported directly from the design's CSS (the
 `oklch()` tokens are converted to sRGB at runtime in `src/theme/oklch.js` —
