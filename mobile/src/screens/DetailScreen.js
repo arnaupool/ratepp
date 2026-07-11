@@ -90,8 +90,10 @@ export default function DetailScreen({ route, navigation }) {
   const onRenameCommit = async (personId) => {
     const rating = score.ratings.find((r) => r.id === personId);
     if (!rating) return;
+    const name = rating.personName.trim() || 'Invitado';
+    if (name !== rating.personName) updateRatingLocally(personId, { personName: name });
     try {
-      await scoresApi.updateRating(scoreId, personId, { personName: rating.personName });
+      await scoresApi.updateRating(scoreId, personId, { personName: name });
     } catch (e) {
       setError(e.message || 'No se pudo renombrar');
     }
@@ -141,7 +143,7 @@ export default function DetailScreen({ route, navigation }) {
 
   return (
     <View style={styles.screen}>
-      <ScrollView bounces={false}>
+      <ScrollView bounces={false} contentContainerStyle={{ paddingBottom: 40 }}>
         <View style={styles.heroWrap}>
           {heroUri ? (
             <Image source={{ uri: heroUri }} style={styles.hero} />
@@ -169,11 +171,12 @@ export default function DetailScreen({ route, navigation }) {
         <View style={styles.content}>
           <Text style={[type.detailTitle, { color: colors.ink }]}>{score.title}</Text>
           <TagChip label={score.category} style={{ marginTop: 8 }} />
+          {!!error && <Text style={styles.errorBanner}>{error}</Text>}
 
           <PeopleScoresEditor
             people={people}
             editingId={editingId}
-            onStartEdit={setEditingId}
+            onStartEdit={(id) => setEditingId((cur) => (cur === id ? null : id))}
             onSelectNumber={onSelectNumber}
             onRename={onRename}
             onRenameCommit={onRenameCommit}
@@ -282,6 +285,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   fieldValue: { paddingLeft: 32 },
+  errorBanner: { fontFamily: 'Nunito_700Bold', fontSize: 12.5, color: '#c0392b', marginTop: 10 },
   fieldPhoto: { marginLeft: 32, width: 90, height: 90, borderRadius: 10 },
   fieldGalleryThumb: { width: 70, height: 70, borderRadius: 10 },
 });

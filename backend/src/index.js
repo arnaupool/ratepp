@@ -23,6 +23,11 @@ app.use((req, res) => res.status(404).json({ error: 'No encontrado' }));
 
 // eslint-disable-next-line no-unused-vars
 app.use((err, req, res, next) => {
+  // Postgres invalid_text_representation — a malformed UUID in a route
+  // param, not a server fault.
+  if (err.code === '22P02') {
+    return res.status(400).json({ error: 'Identificador inválido' });
+  }
   console.error(err);
   res.status(500).json({ error: 'Error interno del servidor' });
 });

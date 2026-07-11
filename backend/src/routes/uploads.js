@@ -1,18 +1,30 @@
 const express = require('express');
 const multer = require('multer');
+const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 const { requireAuth } = require('../middleware/auth');
 
 const router = express.Router();
 
-const ALLOWED_MIME = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/heic']);
+// Extension comes from the validated mimetype, never from the client's
+// filename — otherwise a "photo.exe" with an image/* mimetype would be
+// stored and served with that extension.
+const EXT_BY_MIME = {
+  'image/jpeg': '.jpg',
+  'image/png': '.png',
+  'image/webp': '.webp',
+  'image/heic': '.heic',
+};
+const ALLOWED_MIME = new Set(Object.keys(EXT_BY_MIME));
+
+const uploadsDir = process.env.UPLOADS_DIR || path.join(__dirname, '../../uploads');
+fs.mkdirSync(uploadsDir, { recursive: true });
 
 const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, process.env.UPLOADS_DIR || path.join(__dirname, '../../uploads')),
+  destination: (req, file, cb) => cb(null, uploadsDir),
   filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname) || '.jpg';
-    cb(null, `${crypto.randomUUID()}${ext}`);
+    cb(null, `${crypto.randomUUID()}${EXT_BY_MIME[file.mimetype] || '.jpg'}`);
   },
 });
 

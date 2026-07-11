@@ -3,6 +3,7 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { pool } = require('../db');
 const { requireAuth } = require('../middleware/auth');
+const asyncHandler = require('../middleware/asyncHandler');
 
 const router = express.Router();
 
@@ -14,7 +15,7 @@ function publicUser(row) {
   return { id: row.id, email: row.email, name: row.name };
 }
 
-router.post('/register', async (req, res) => {
+router.post('/register', asyncHandler(async (req, res) => {
   const { email, password, name } = req.body || {};
   if (!email || !password || !name) {
     return res.status(400).json({ error: 'email, password y name son obligatorios' });
@@ -34,9 +35,9 @@ router.post('/register', async (req, res) => {
   );
   const user = result.rows[0];
   res.status(201).json({ token: signToken(user.id), user: publicUser(user) });
-});
+}));
 
-router.post('/login', async (req, res) => {
+router.post('/login', asyncHandler(async (req, res) => {
   const { email, password } = req.body || {};
   if (!email || !password) {
     return res.status(400).json({ error: 'email y password son obligatorios' });
@@ -48,13 +49,13 @@ router.post('/login', async (req, res) => {
   const ok = await bcrypt.compare(password, user.password_hash);
   if (!ok) return res.status(401).json({ error: 'Credenciales incorrectas' });
   res.json({ token: signToken(user.id), user: publicUser(user) });
-});
+}));
 
-router.get('/me', requireAuth, async (req, res) => {
+router.get('/me', requireAuth, asyncHandler(async (req, res) => {
   const result = await pool.query('SELECT id, email, name FROM users WHERE id = $1', [req.userId]);
   const user = result.rows[0];
   if (!user) return res.status(404).json({ error: 'Usuario no encontrado' });
   res.json({ user: publicUser(user) });
-});
+}));
 
 module.exports = router;

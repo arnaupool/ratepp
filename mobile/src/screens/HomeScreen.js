@@ -52,9 +52,12 @@ export default function HomeScreen({ navigation }) {
   }, [items]);
 
   const filtered = useMemo(() => {
-    return items
+    const visible = items
       .filter((it) => filter === 'Todas' || it.category === filter)
       .filter((it) => it.title.toLowerCase().includes(search.toLowerCase()));
+    // Pad odd counts with an invisible spacer so the last card keeps its
+    // half-width column instead of stretching across the whole row.
+    return visible.length % 2 === 1 ? [...visible, { id: '__spacer__', spacer: true }] : visible;
   }, [items, filter, search]);
 
   return (
@@ -111,9 +114,13 @@ export default function HomeScreen({ navigation }) {
           numColumns={2}
           columnWrapperStyle={{ gap: 12 }}
           contentContainerStyle={styles.grid}
-          renderItem={({ item }) => (
-            <ScoreCard item={item} onPress={() => navigation.navigate('Detail', { scoreId: item.id })} />
-          )}
+          renderItem={({ item }) =>
+            item.spacer ? (
+              <View style={{ flex: 1 }} />
+            ) : (
+              <ScoreCard item={item} onPress={() => navigation.navigate('Detail', { scoreId: item.id })} />
+            )
+          }
         />
       )}
 

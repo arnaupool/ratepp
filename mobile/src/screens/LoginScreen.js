@@ -58,7 +58,7 @@ export default function LoginScreen() {
       >
         <ScrollView contentContainerStyle={styles.wrap} keyboardShouldPersistTaps="handled">
           <View style={styles.logo}>
-            <Text style={type.logoLetter}>P</Text>
+            <Text style={[type.logoLetter, { color: colors.white }]}>P</Text>
           </View>
 
           <View>

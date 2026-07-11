@@ -179,7 +179,7 @@ export default function CreateScoreScreen({ navigation }) {
         category: category.trim() || null,
         coverPhotoUrl,
         ownerValue,
-        ratings: others.map((o) => ({ personName: o.name, value: o.value })),
+        ratings: others.map((o) => ({ personName: o.name.trim() || 'Invitado', value: o.value })),
         fields: fields.map((f) => ({ type: f.typeId, label: f.label, value: f.value })),
       });
       navigation.replace('Detail', { scoreId: score.id });
@@ -236,7 +236,7 @@ export default function CreateScoreScreen({ navigation }) {
             <PeopleScoresEditor
               people={people}
               editingId={editingId}
-              onStartEdit={setEditingId}
+              onStartEdit={(id) => setEditingId((cur) => (cur === id ? null : id))}
               onSelectNumber={onSelectNumber}
               onRename={renameOther}
               onRemove={removeOther}

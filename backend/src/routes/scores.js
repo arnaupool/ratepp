@@ -1,6 +1,7 @@
 const express = require('express');
 const { pool } = require('../db');
 const { requireAuth } = require('../middleware/auth');
+const asyncHandler = require('../middleware/asyncHandler');
 
 const router = express.Router();
 router.use(requireAuth);
@@ -56,7 +57,7 @@ async function assertOwnedScore(scoreId, userId) {
 
 // ---------- scores ----------
 
-router.get('/', async (req, res) => {
+router.get('/', asyncHandler(async (req, res) => {
   const { search = '', category = '' } = req.query;
   const params = [req.userId];
   let where = 'owner_id = $1';
@@ -93,15 +94,15 @@ router.get('/', async (req, res) => {
     ratings: ratingsByScore[s.id] || [],
   }));
   res.json({ items });
-});
+}));
 
-router.get('/:id', async (req, res) => {
+router.get('/:id', asyncHandler(async (req, res) => {
   const score = await loadScore(req.params.id, req.userId, { withFields: true });
   if (!score) return res.status(404).json({ error: 'Puntuación no encontrada' });
   res.json({ score });
-});
+}));
 
-router.post('/', async (req, res) => {
+router.post('/', asyncHandler(async (req, res) => {
   const { title, category, coverPhotoUrl, ownerValue, ratings = [], fields = [] } = req.body || {};
   if (!title || !String(title).trim()) {
     return res.status(400).json({ error: 'El título es obligatorio' });
@@ -156,9 +157,9 @@ router.post('/', async (req, res) => {
   } finally {
     client.release();
   }
-});
+}));
 
-router.patch('/:id', async (req, res) => {
+router.patch('/:id', asyncHandler(async (req, res) => {
   const owned = await assertOwnedScore(req.params.id, req.userId);
   if (!owned) return res.status(404).json({ error: 'Puntuación no encontrada' });
   const { title, category, coverPhotoUrl } = req.body || {};
@@ -176,18 +177,18 @@ router.patch('/:id', async (req, res) => {
   await pool.query(`UPDATE scores SET ${fieldsSet.join(', ')} WHERE id = $${values.length}`, values);
   const score = await loadScore(req.params.id, req.userId, { withFields: true });
   res.json({ score });
-});
+}));
 
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', asyncHandler(async (req, res) => {
   const owned = await assertOwnedScore(req.params.id, req.userId);
   if (!owned) return res.status(404).json({ error: 'Puntuación no encontrada' });
   await pool.query('DELETE FROM scores WHERE id = $1', [req.params.id]);
   res.status(204).end();
-});
+}));
 
 // ---------- ratings (per-person scores) ----------
 
-router.post('/:id/ratings', async (req, res) => {
+router.post('/:id/ratings', asyncHandler(async (req, res) => {
   const owned = await assertOwnedScore(req.params.id, req.userId);
   if (!owned) return res.status(404).json({ error: 'Puntuación no encontrada' });
   const { personName = 'Nuevo', value = 5 } = req.body || {};
@@ -201,9 +202,9 @@ router.post('/:id/ratings', async (req, res) => {
   );
   await pool.query('UPDATE scores SET updated_at = now() WHERE id = $1', [req.params.id]);
   res.status(201).json({ rating: mapRating(rating.rows[0]) });
-});
+}));
 
-router.patch('/:id/ratings/:ratingId', async (req, res) => {
+router.patch('/:id/ratings/:ratingId', asyncHandler(async (req, res) => {
   const owned = await assertOwnedScore(req.params.id, req.userId);
   if (!owned) return res.status(404).json({ error: 'Puntuación no encontrada' });
   const { personName, value } = req.body || {};
@@ -226,9 +227,9 @@ router.patch('/:id/ratings/:ratingId', async (req, res) => {
   }
   const updated = await pool.query('SELECT * FROM score_ratings WHERE id = $1', [req.params.ratingId]);
   res.json({ rating: mapRating(updated.rows[0]) });
-});
+}));
 
-router.delete('/:id/ratings/:ratingId', async (req, res) => {
+router.delete('/:id/ratings/:ratingId', asyncHandler(async (req, res) => {
   const owned = await assertOwnedScore(req.params.id, req.userId);
   if (!owned) return res.status(404).json({ error: 'Puntuación no encontrada' });
   const existing = await pool.query('SELECT * FROM score_ratings WHERE id = $1 AND score_id = $2', [req.params.ratingId, req.params.id]);
@@ -237,11 +238,11 @@ router.delete('/:id/ratings/:ratingId', async (req, res) => {
   await pool.query('DELETE FROM score_ratings WHERE id = $1', [req.params.ratingId]);
   await pool.query('UPDATE scores SET updated_at = now() WHERE id = $1', [req.params.id]);
   res.status(204).end();
-});
+}));
 
 // ---------- dynamic fields ----------
 
-router.post('/:id/fields', async (req, res) => {
+router.post('/:id/fields', asyncHandler(async (req, res) => {
   const owned = await assertOwnedScore(req.params.id, req.userId);
   if (!owned) return res.status(404).json({ error: 'Puntuación no encontrada' });
   const { type, label, value } = req.body || {};
@@ -253,9 +254,9 @@ router.post('/:id/fields', async (req, res) => {
   );
   await pool.query('UPDATE scores SET updated_at = now() WHERE id = $1', [req.params.id]);
   res.status(201).json({ field: mapField(field.rows[0]) });
-});
+}));
 
-router.patch('/:id/fields/:fieldId', async (req, res) => {
+router.patch('/:id/fields/:fieldId', asyncHandler(async (req, res) => {
   const owned = await assertOwnedScore(req.params.id, req.userId);
   if (!owned) return res.status(404).json({ error: 'Puntuación no encontrada' });
   const { label, value } = req.body || {};
@@ -272,14 +273,14 @@ router.patch('/:id/fields/:fieldId', async (req, res) => {
   if (result.rowCount === 0) return res.status(404).json({ error: 'Campo no encontrado' });
   await pool.query('UPDATE scores SET updated_at = now() WHERE id = $1', [req.params.id]);
   res.json({ field: mapField(result.rows[0]) });
-});
+}));
 
-router.delete('/:id/fields/:fieldId', async (req, res) => {
+router.delete('/:id/fields/:fieldId', asyncHandler(async (req, res) => {
   const owned = await assertOwnedScore(req.params.id, req.userId);
   if (!owned) return res.status(404).json({ error: 'Puntuación no encontrada' });
   await pool.query('DELETE FROM score_fields WHERE id = $1 AND score_id = $2', [req.params.fieldId, req.params.id]);
   await pool.query('UPDATE scores SET updated_at = now() WHERE id = $1', [req.params.id]);
   res.status(204).end();
-});
+}));
 
 module.exports = router;
