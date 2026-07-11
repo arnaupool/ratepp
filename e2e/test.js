@@ -263,6 +263,11 @@ async function inputWithValue(page, val) {
   await page.getByText('Editando puntuación de Nuevo').waitFor();
   const nameInput = await inputWithValue(page, 'Nuevo');
   await nameInput.click();
+  // This TextInput is small (44x16px); Playwright's synthetic click on it
+  // doesn't reliably move document.activeElement in headless Chromium, even
+  // though the click lands on the right element (verified via
+  // elementFromPoint) — an explicit focus() closes that gap.
+  await nameInput.focus();
   await page.keyboard.press('ControlOrMeta+a');
   await nameInput.pressSequentially('Ana', { delay: 60 }); // keystroke-by-keystroke: catches the remount/focus-loss bug from the design chat
   const typedValue = await nameInput.inputValue();

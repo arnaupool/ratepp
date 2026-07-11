@@ -334,7 +334,7 @@ export default function DetailScreen({ route, navigation }) {
 
   return (
     <View style={[styles.screen, { backgroundColor: colors.bg }]}>
-      <ScrollView bounces={false} contentContainerStyle={{ paddingBottom: 40 }}>
+      <ScrollView bounces={false} contentContainerStyle={{ paddingBottom: 40 }} keyboardDismissMode="on-drag">
         {editMode ? (
           <View style={[styles.editHero, { backgroundColor: colors.surface, paddingTop: insets.top + 14 }]}>
             <View style={styles.editHeroHead}>
@@ -361,8 +361,9 @@ export default function DetailScreen({ route, navigation }) {
               style={[styles.backBtn, { top: insets.top + 14 }]}
               onPress={() => navigation.goBack()}
               accessibilityLabel="Volver"
+              hitSlop={10}
             >
-              <View style={[styles.backArrow, { borderColor: colors.ink }]} />
+              <View style={styles.backArrowLight} />
             </Pressable>
             <Pressable
               style={[styles.editModeBtn, { top: insets.top + 14 }]}
@@ -632,7 +633,9 @@ const styles = StyleSheet.create({
     width: 34,
     height: 34,
     borderRadius: 17,
-    backgroundColor: 'rgba(255,255,255,0.85)',
+    // Fixed dark tint (not theme-dependent) so it stays visible against any
+    // cover photo, regardless of how light/white the photo is.
+    backgroundColor: 'rgba(0,0,0,0.55)',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -662,6 +665,15 @@ const styles = StyleSheet.create({
     marginLeft: 3,
     borderLeftWidth: 2.5,
     borderBottomWidth: 2.5,
+    transform: [{ rotate: '45deg' }],
+  },
+  backArrowLight: {
+    width: 8,
+    height: 8,
+    marginLeft: 3,
+    borderLeftWidth: 2.5,
+    borderBottomWidth: 2.5,
+    borderColor: '#fff',
     transform: [{ rotate: '45deg' }],
   },
   thumbRow: { flexDirection: 'row', gap: 6, paddingHorizontal: 18, paddingTop: 14 },

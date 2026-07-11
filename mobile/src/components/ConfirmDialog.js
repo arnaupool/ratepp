@@ -13,7 +13,6 @@ export default function ConfirmDialog({ visible, title, message, confirmLabel = 
   return (
     <AnimatedSheet visible={visible} onClose={onCancel}>
       <View style={[styles.sheet, { backgroundColor: colors.surface }]}>
-        <View style={styles.grab} />
         <Text style={[type.sheetTitle, { color: colors.ink }]}>{title}</Text>
         {!!message && <Text style={[type.detailFieldValue, { color: colors.sub, marginTop: 6 }]}>{message}</Text>}
         <View style={styles.actions}>
@@ -38,7 +37,6 @@ const styles = StyleSheet.create({
     paddingBottom: 30,
     gap: 12,
   },
-  grab: { width: 36, height: 5, borderRadius: 3, backgroundColor: 'rgba(0,0,0,0.15)', alignSelf: 'center' },
   actions: { flexDirection: 'row', gap: 10, marginTop: 4 },
   cancelBtn: { flex: 1, paddingVertical: 13, alignItems: 'center', justifyContent: 'center' },
   confirmBtn: {

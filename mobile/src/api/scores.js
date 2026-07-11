@@ -5,6 +5,9 @@ export const scoresApi = {
     const qs = new URLSearchParams();
     if (params.search) qs.set('search', params.search);
     if (params.category) qs.set('category', params.category);
+    if (params.tag) qs.set('tag', params.tag);
+    if (params.dateFrom) qs.set('dateFrom', params.dateFrom);
+    if (params.dateTo) qs.set('dateTo', params.dateTo);
     const suffix = qs.toString() ? `?${qs.toString()}` : '';
     return api.get(`/api/scores${suffix}`);
   },

@@ -58,7 +58,7 @@ async function assertOwnedScore(scoreId, userId) {
 // ---------- scores ----------
 
 router.get('/', asyncHandler(async (req, res) => {
-  const { search = '', category = '' } = req.query;
+  const { search = '', category = '', tag = '', dateFrom = '', dateTo = '' } = req.query;
   const params = [req.userId];
   let where = 'owner_id = $1';
   if (search) {
@@ -76,6 +76,34 @@ router.get('/', asyncHandler(async (req, res) => {
   if (category && category !== 'Todas') {
     params.push(category);
     where += ` AND $${params.length} = ANY(categories)`;
+  }
+  if (tag) {
+    // Free-text search over jsonb already substring-matches tag values, but
+    // that requires knowing the exact spelling — this is an exact-match
+    // filter driven by picking a tag from the list of ones actually in use.
+    params.push(tag);
+    where += ` AND EXISTS (
+      SELECT 1 FROM score_fields sf
+      WHERE sf.score_id = scores.id AND sf.type = 'tag' AND sf.value ? $${params.length}::text
+    )`;
+  }
+  if (dateFrom || dateTo) {
+    // Date-type field values are stored as a jsonb string ("YYYY-MM-DD");
+    // #>>'{}' extracts the raw text so it can be cast and range-compared.
+    const conditions = [];
+    if (dateFrom) {
+      params.push(dateFrom);
+      conditions.push(`(sf.value#>>'{}')::date >= $${params.length}::date`);
+    }
+    if (dateTo) {
+      params.push(dateTo);
+      conditions.push(`(sf.value#>>'{}')::date <= $${params.length}::date`);
+    }
+    where += ` AND EXISTS (
+      SELECT 1 FROM score_fields sf
+      WHERE sf.score_id = scores.id AND sf.type = 'date' AND jsonb_typeof(sf.value) = 'string'
+        AND ${conditions.join(' AND ')}
+    )`;
   }
   const scoresRes = await pool.query(
     `SELECT * FROM scores WHERE ${where} ORDER BY created_at DESC`,

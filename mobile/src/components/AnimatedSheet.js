@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Animated, Pressable, StyleSheet, Easing, Keyboard, KeyboardAvoidingView } from 'react-native';
+import { Animated, Pressable, StyleSheet, Easing, Keyboard, KeyboardAvoidingView, Platform, Dimensions } from 'react-native';
 
 // Shared bottom-sheet chrome (backdrop fade + slide-up) for every inline
 // overlay in the app ("Más campos", cover search, location picker) — a
@@ -7,8 +7,26 @@ import { Animated, Pressable, StyleSheet, Easing, Keyboard, KeyboardAvoidingView
 // just teleporting in.
 export default function AnimatedSheet({ visible, onClose, children }) {
   const [mounted, setMounted] = useState(visible);
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
   const translateY = useRef(new Animated.Value(320)).current;
   const backdropOpacity = useRef(new Animated.Value(0)).current;
+
+  // KeyboardAvoidingView's "padding" mode shifts the whole sheet upward by
+  // the keyboard's height without shrinking it — fine for short sheets, but
+  // a tall one (like the cover-search results grid) just gets pushed off
+  // the top of the screen, taking its search box with it. Tracking the
+  // real keyboard height lets us cap the sheet's own height so it shrinks
+  // to fit the space still visible above the keyboard instead.
+  useEffect(() => {
+    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+    const showSub = Keyboard.addListener(showEvent, (e) => setKeyboardHeight(e.endCoordinates?.height || 0));
+    const hideSub = Keyboard.addListener(hideEvent, () => setKeyboardHeight(0));
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, []);
 
   useEffect(() => {
     if (visible) {
@@ -31,6 +49,8 @@ export default function AnimatedSheet({ visible, onClose, children }) {
 
   if (!mounted) return null;
 
+  const availableHeight = keyboardHeight > 0 ? Dimensions.get('window').height - keyboardHeight - 40 : undefined;
+
   return (
     <Animated.View style={[styles.backdrop, { opacity: backdropOpacity }]}>
       <Pressable style={StyleSheet.absoluteFillObject} onPress={onClose} />
@@ -39,7 +59,7 @@ export default function AnimatedSheet({ visible, onClose, children }) {
         style={{ width: '100%' }}
         pointerEvents="box-none"
       >
-        <Animated.View style={{ transform: [{ translateY }] }}>{children}</Animated.View>
+        <Animated.View style={{ transform: [{ translateY }], maxHeight: availableHeight }}>{children}</Animated.View>
       </KeyboardAvoidingView>
     </Animated.View>
   );

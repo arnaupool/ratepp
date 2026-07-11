@@ -15,36 +15,35 @@ import AnimatedSheet from './AnimatedSheet';
 // abruptly partway down the screen.
 const MAX_SHEET_HEIGHT = Math.round(Dimensions.get('window').height * 0.85);
 
+const EMPTY_TAB_STATE = { query: '', results: [], loading: false, error: '', searched: false };
+
 export default function CoverPickerOverlay({ visible, onClose, onConfirm }) {
   const { colors } = useTheme();
   const [mediaType, setMediaType] = useState('movie');
-  const [query, setQuery] = useState('');
-  const [results, setResults] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [searched, setSearched] = useState(false);
+  // Each tab (movie/tv/game/book) keeps its own query+results, so switching
+  // tabs doesn't leak the previous tab's search into the new one.
+  const [tabState, setTabState] = useState({});
+  const current = tabState[mediaType] || EMPTY_TAB_STATE;
+
+  const patchTab = (type, patch) =>
+    setTabState((prev) => ({ ...prev, [type]: { ...(prev[type] || EMPTY_TAB_STATE), ...patch } }));
 
   const runSearch = async () => {
-    if (!query.trim()) return;
-    setLoading(true);
-    setError('');
-    setSearched(true);
+    const tabType = mediaType;
+    const searchQuery = (tabState[tabType]?.query || '').trim();
+    if (!searchQuery) return;
+    patchTab(tabType, { loading: true, error: '', searched: true });
     try {
-      const { results: found, note } = await coversApi.search(mediaType, query.trim());
-      setResults(found || []);
-      if ((!found || found.length === 0) && note) setError(note);
+      const { results: found, note } = await coversApi.search(tabType, searchQuery);
+      patchTab(tabType, { results: found || [], loading: false, error: !found?.length && note ? note : '' });
     } catch (e) {
-      setError(e.message || 'No se pudo buscar');
-      setResults([]);
-    } finally {
-      setLoading(false);
+      patchTab(tabType, { results: [], loading: false, error: e.message || 'No se pudo buscar' });
     }
   };
 
   return (
     <AnimatedSheet visible={visible} onClose={onClose}>
       <Pressable style={[styles.sheet, { backgroundColor: colors.surface }]} onPress={() => {}}>
-        <View style={styles.sheetGrab} />
         <Text style={[type.sheetTitle, { color: colors.ink }]}>Buscar carátula</Text>
 
         <View style={styles.typeRow}>
@@ -69,8 +68,8 @@ export default function CoverPickerOverlay({ visible, onClose, onConfirm }) {
             style={[styles.searchInput, { backgroundColor: colors.bg, borderColor: colors.line, color: colors.ink }]}
             placeholder="Título..."
             placeholderTextColor={colors.sub}
-            value={query}
-            onChangeText={setQuery}
+            value={current.query}
+            onChangeText={(v) => patchTab(mediaType, { query: v })}
             onSubmitEditing={runSearch}
             returnKeyType="search"
           />
@@ -80,15 +79,15 @@ export default function CoverPickerOverlay({ visible, onClose, onConfirm }) {
         </View>
 
         <View style={styles.resultsWrap}>
-          {loading ? (
+          {current.loading ? (
             <ActivityIndicator color={colors.accent} style={{ marginTop: 20 }} />
-          ) : !!error ? (
-            <Text style={[type.editContext, { color: colors.sub, textAlign: 'center', marginTop: 12 }]}>{error}</Text>
-          ) : searched && results.length === 0 ? (
+          ) : !!current.error ? (
+            <Text style={[type.editContext, { color: colors.sub, textAlign: 'center', marginTop: 12 }]}>{current.error}</Text>
+          ) : current.searched && current.results.length === 0 ? (
             <Text style={[type.editContext, { color: colors.sub, textAlign: 'center', marginTop: 12 }]}>Sin resultados</Text>
           ) : (
-            <ScrollView contentContainerStyle={styles.grid}>
-              {results.map((r) => (
+            <ScrollView contentContainerStyle={styles.grid} keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag">
+              {current.results.map((r) => (
                 <Pressable key={r.id} style={styles.card} onPress={() => onConfirm(r.posterUrl)}>
                   <Image source={{ uri: r.posterUrl }} style={[styles.poster, { backgroundColor: colors.bg }]} />
                   <Text style={[type.personName, { color: colors.ink }]} numberOfLines={1}>{r.title}</Text>
@@ -120,7 +119,6 @@ const styles = StyleSheet.create({
     maxHeight: MAX_SHEET_HEIGHT,
     overflow: 'hidden',
   },
-  sheetGrab: { width: 36, height: 5, borderRadius: 3, backgroundColor: 'rgba(0,0,0,0.15)', alignSelf: 'center' },
   typeRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   typeChip: {
     borderRadius: 999,

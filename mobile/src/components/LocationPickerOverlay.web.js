@@ -29,7 +29,6 @@ export default function LocationPickerOverlay({ visible, initialValue, onClose, 
   return (
     <AnimatedSheet visible={visible} onClose={onClose}>
       <Pressable style={[styles.sheet, { backgroundColor: colors.surface }]} onPress={() => {}}>
-        <View style={styles.sheetGrab} />
         <Text style={[type.sheetTitle, { color: colors.ink }]}>Elegir ubicación</Text>
         <TextInput
           style={[styles.input, { backgroundColor: colors.bg, borderColor: colors.line, color: colors.ink }]}
@@ -69,7 +68,6 @@ const styles = StyleSheet.create({
     paddingBottom: 30,
     gap: 12,
   },
-  sheetGrab: { width: 36, height: 5, borderRadius: 3, backgroundColor: 'rgba(0,0,0,0.15)', alignSelf: 'center' },
   input: {
     borderRadius: 12,
     paddingHorizontal: 12,
