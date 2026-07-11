@@ -280,7 +280,7 @@ export default function HomeScreen({ navigation }) {
 
 function ScoreCard({ item, dark, onPress }) {
   const { colors } = useTheme();
-  const tint = categoryTint(item.categories?.[0], dark);
+  const tint = item.cardColor || categoryTint(item.categories?.[0], dark);
   return (
     <Pressable style={[styles.card, { backgroundColor: tint }]} onPress={onPress} accessibilityLabel={`Ver ${item.title}`}>
       {item.photoUrls?.[0] ? (
@@ -348,9 +348,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: 2,
   },
-  chipsScroll: { flexGrow: 0 },
-  chipsRow: { gap: 8, paddingHorizontal: 18, paddingBottom: 4, alignItems: 'flex-start' },
-  grid: { paddingHorizontal: 16, paddingTop: 14, paddingBottom: 100, gap: 12 },
+  chipsScroll: { flexGrow: 0, marginBottom: 14 },
+  chipsRow: { gap: 8, paddingHorizontal: 18, alignItems: 'flex-start' },
+  grid: { paddingHorizontal: 16, paddingBottom: 100, gap: 12 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 40 },
   card: { flex: 1, borderRadius: 20, overflow: 'hidden' },
   cardPhoto: { width: '100%', aspectRatio: 4 / 3 },

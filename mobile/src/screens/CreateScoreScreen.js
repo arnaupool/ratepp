@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { scoresApi } from '../api/scores';
+import { colorsApi } from '../api/colors';
 import { api } from '../api/client';
 import { useTheme } from '../theme/ThemeContext';
 import { type } from '../theme/typography';
@@ -25,6 +26,7 @@ import EditableFieldRow from '../components/EditableFieldRow';
 import LocationPickerOverlay from '../components/LocationPickerOverlay';
 import PhotoGalleryEditor from '../components/PhotoGalleryEditor';
 import CoverPickerOverlay from '../components/CoverPickerOverlay';
+import ColorPicker from '../components/ColorPicker';
 import DismissKeyboardView from '../components/DismissKeyboardView';
 import { animateNext } from '../utils/animate';
 import { pickImage } from '../utils/pickImage';
@@ -42,6 +44,8 @@ export default function CreateScoreScreen({ navigation }) {
   const [editingId, setEditingId] = useState(null);
   const [fields, setFields] = useState([]);
   const [photos, setPhotos] = useState([]);
+  const [cardColor, setCardColor] = useState(null);
+  const [suggestedColor, setSuggestedColor] = useState(null);
   const [coverPickerOpen, setCoverPickerOpen] = useState(false);
   const [locationFieldId, setLocationFieldId] = useState(null);
   const [error, setError] = useState('');
@@ -57,6 +61,28 @@ export default function CreateScoreScreen({ navigation }) {
       })
       .catch(() => {});
   }, []);
+
+  // Suggests a card color from the cover photo (photos[0]) whenever it
+  // changes — best-effort only, a failed/unsupported extraction just leaves
+  // suggestedColor null and the picker simply won't show the "from photo"
+  // swatch.
+  const coverUrl = photos[0] || null;
+  useEffect(() => {
+    if (!coverUrl) {
+      setSuggestedColor(null);
+      return;
+    }
+    let cancelled = false;
+    colorsApi
+      .dominant(coverUrl)
+      .then(({ color }) => {
+        if (!cancelled) setSuggestedColor(color);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [coverUrl]);
 
   const toggleCategory = (c) => {
     animateNext();
@@ -194,6 +220,7 @@ export default function CreateScoreScreen({ navigation }) {
         title: title.trim(),
         categories,
         photoUrls: photos,
+        cardColor,
         ownerValue,
         ratings: others.map((o) => ({ personName: o.name.trim() || 'Invitado', value: o.value })),
         fields: fields.map((f) => ({ type: f.type, label: f.label, value: f.value })),
@@ -216,7 +243,10 @@ export default function CreateScoreScreen({ navigation }) {
         </Pressable>
       </View>
 
-      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      {/* 'height' on Android, not the no-op undefined: without a native
+          rebuild setting windowSoftInputMode=adjustResize, Android gets no
+          keyboard compensation at all from 'undefined'. */}
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
         {/* DismissKeyboardView wraps the ScrollView's rendered content, not
             the ScrollView itself: wrapping the scrollable container directly
             in TouchableWithoutFeedback (native's only real tap-to-dismiss
@@ -250,6 +280,11 @@ export default function CreateScoreScreen({ navigation }) {
               onToggle={toggleCategory}
               onAddCustom={addCustomCategory}
             />
+          </View>
+
+          <View style={styles.section}>
+            <Text style={[type.scoreLabel, { color: colors.sub }]}>Color de la card</Text>
+            <ColorPicker value={cardColor} onChange={setCardColor} suggestedColor={suggestedColor} />
           </View>
 
           <View style={styles.section}>

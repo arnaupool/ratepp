@@ -55,7 +55,7 @@ export default function LoginScreen() {
     <View style={[styles.screen, { backgroundColor: colors.bg }]}>
       <KeyboardAvoidingView
         style={{ flex: 1 }}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
         <ScrollView contentContainerStyle={styles.wrap} keyboardShouldPersistTaps="handled">
           <View style={[styles.logo, { backgroundColor: colors.accent }]}>

@@ -34,6 +34,7 @@ async function loadScore(scoreId, userId, { withFields } = {}) {
     title: score.title,
     categories: score.categories || [],
     photoUrls: score.photo_urls || [],
+    cardColor: score.card_color || null,
     createdAt: score.created_at,
     updatedAt: score.updated_at,
     ratings: ratingsRes.rows.map(mapRating),
@@ -125,6 +126,7 @@ router.get('/', asyncHandler(async (req, res) => {
     title: s.title,
     categories: s.categories || [],
     photoUrls: s.photo_urls || [],
+    cardColor: s.card_color || null,
     createdAt: s.created_at,
     updatedAt: s.updated_at,
     ratings: ratingsByScore[s.id] || [],
@@ -180,8 +182,18 @@ function normalizePhotoUrls(photoUrls) {
   return photoUrls.map((u) => String(u).trim()).filter(Boolean);
 }
 
+const HEX_COLOR = /^#[0-9a-fA-F]{6}$/;
+
+// null clears a custom color (falls back to the client's category tint);
+// anything else must be a plain #rrggbb hex string.
+function normalizeCardColor(cardColor) {
+  if (cardColor === null) return null;
+  if (typeof cardColor === 'string' && HEX_COLOR.test(cardColor)) return cardColor;
+  return undefined; // signals "invalid, ignore" to the caller
+}
+
 router.post('/', asyncHandler(async (req, res) => {
-  const { title, categories, photoUrls, ownerValue, ratings = [], fields = [] } = req.body || {};
+  const { title, categories, photoUrls, cardColor, ownerValue, ratings = [], fields = [] } = req.body || {};
   if (!title || !String(title).trim()) {
     return res.status(400).json({ error: 'El título es obligatorio' });
   }
@@ -194,13 +206,15 @@ router.post('/', asyncHandler(async (req, res) => {
       return res.status(400).json({ error: `Tipo de campo inválido: ${f.type}` });
     }
   }
+  const color = cardColor === undefined ? null : normalizeCardColor(cardColor);
+  if (color === undefined) return res.status(400).json({ error: 'Color de card inválido' });
 
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
     const scoreRes = await client.query(
-      'INSERT INTO scores (owner_id, title, categories, photo_urls) VALUES ($1, $2, $3, $4) RETURNING *',
-      [req.userId, String(title).trim(), normalizeCategories(categories), normalizePhotoUrls(photoUrls)]
+      'INSERT INTO scores (owner_id, title, categories, photo_urls, card_color) VALUES ($1, $2, $3, $4, $5) RETURNING *',
+      [req.userId, String(title).trim(), normalizeCategories(categories), normalizePhotoUrls(photoUrls), color]
     );
     const score = scoreRes.rows[0];
 
@@ -240,12 +254,18 @@ router.post('/', asyncHandler(async (req, res) => {
 router.patch('/:id', asyncHandler(async (req, res) => {
   const owned = await assertOwnedScore(req.params.id, req.userId);
   if (!owned) return res.status(404).json({ error: 'Puntuación no encontrada' });
-  const { title, categories, photoUrls } = req.body || {};
+  const { title, categories, photoUrls, cardColor } = req.body || {};
   const fieldsSet = [];
   const values = [];
   if (title !== undefined) { values.push(title); fieldsSet.push(`title = $${values.length}`); }
   if (categories !== undefined) { values.push(normalizeCategories(categories)); fieldsSet.push(`categories = $${values.length}`); }
   if (photoUrls !== undefined) { values.push(normalizePhotoUrls(photoUrls)); fieldsSet.push(`photo_urls = $${values.length}`); }
+  if (cardColor !== undefined) {
+    const color = normalizeCardColor(cardColor);
+    if (color === undefined) return res.status(400).json({ error: 'Color de card inválido' });
+    values.push(color);
+    fieldsSet.push(`card_color = $${values.length}`);
+  }
   if (fieldsSet.length === 0) {
     const score = await loadScore(req.params.id, req.userId, { withFields: true });
     return res.json({ score });

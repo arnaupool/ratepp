@@ -10,10 +10,12 @@ import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
+  Keyboard,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { scoresApi } from '../api/scores';
+import { colorsApi } from '../api/colors';
 import { hashSeed } from '../theme/palettes';
 import { useTheme } from '../theme/ThemeContext';
 import { type } from '../theme/typography';
@@ -21,6 +23,7 @@ import PhotoStripe from '../components/PhotoStripe';
 import TagChip from '../components/TagChip';
 import PeopleScoresEditor from '../components/PeopleScoresEditor';
 import CategoryEditor from '../components/CategoryEditor';
+import ColorPicker from '../components/ColorPicker';
 import ScoreBadge from '../components/ScoreBadge';
 import NumberPillRow from '../components/NumberPillRow';
 import FieldIcon from '../components/FieldIcon';
@@ -31,6 +34,7 @@ import PhotoLightbox from '../components/PhotoLightbox';
 import EditableFieldRow from '../components/EditableFieldRow';
 import LocationPickerOverlay from '../components/LocationPickerOverlay';
 import ConfirmDialog from '../components/ConfirmDialog';
+import UnsavedChangesDialog from '../components/UnsavedChangesDialog';
 import { formatDate } from '../components/DateField';
 import DismissKeyboardView from '../components/DismissKeyboardView';
 import { FIELD_DEFS, QUICK_FIELD_DEFS, defaultFieldValue, DEFAULT_CATEGORIES } from '../constants/fieldDefs';
@@ -54,6 +58,34 @@ export default function DetailScreen({ route, navigation }) {
   const [categorySuggestions, setCategorySuggestions] = useState(DEFAULT_CATEGORIES);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [pendingLeaveAction, setPendingLeaveAction] = useState(null);
+  const [suggestedColor, setSuggestedColor] = useState(null);
+
+  // Guards against silently losing an uncommitted edit (a title/field
+  // TextInput's value only saves onBlur — leaving without triggering that
+  // first would drop it) when exiting edit mode via the back button OR the
+  // iOS swipe-back gesture; 'beforeRemove' fires for both.
+  useEffect(() => {
+    const unsub = navigation.addListener('beforeRemove', (e) => {
+      if (!editMode) return;
+      e.preventDefault();
+      setPendingLeaveAction(e.data.action);
+    });
+    return unsub;
+  }, [navigation, editMode]);
+
+  const confirmSaveAndLeave = () => {
+    Keyboard.dismiss(); // blurs the focused input, firing its onBlur commit
+    const action = pendingLeaveAction;
+    setPendingLeaveAction(null);
+    setTimeout(() => action && navigation.dispatch(action), 0);
+  };
+
+  const confirmDiscardAndLeave = () => {
+    const action = pendingLeaveAction;
+    setPendingLeaveAction(null);
+    if (action) navigation.dispatch(action);
+  };
 
   const load = useCallback(async () => {
     try {
@@ -85,6 +117,26 @@ export default function DetailScreen({ route, navigation }) {
   }, []);
 
   const photos = score?.photoUrls || [];
+  const coverUrl = photos[0] || null;
+
+  // Suggests a card color from the cover photo whenever it changes —
+  // best-effort only, doesn't overwrite an already-set score.cardColor.
+  useEffect(() => {
+    if (!coverUrl) {
+      setSuggestedColor(null);
+      return;
+    }
+    let cancelled = false;
+    colorsApi
+      .dominant(coverUrl)
+      .then(({ color }) => {
+        if (!cancelled) setSuggestedColor(color);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [coverUrl]);
 
   const ownerRating = useMemo(() => score?.ratings.find((r) => r.isOwner), [score]);
 
@@ -182,6 +234,17 @@ export default function DetailScreen({ route, navigation }) {
   const addCustomCategory = (c) => {
     if (!categorySuggestions.includes(c)) setCategorySuggestions((prev) => [...prev, c]);
     if (!score.categories.includes(c)) toggleCategory(c);
+  };
+
+  const onCardColorChange = async (cardColor) => {
+    const prev = score.cardColor;
+    setScore((s) => ({ ...s, cardColor }));
+    try {
+      await scoresApi.update(scoreId, { cardColor });
+    } catch (e) {
+      setError(e.message || 'No se pudo actualizar el color');
+      setScore((s) => ({ ...s, cardColor: prev }));
+    }
   };
 
   const onTitleChange = (title) => setScore((s) => ({ ...s, title }));
@@ -353,7 +416,13 @@ export default function DetailScreen({ route, navigation }) {
       {/* Without this, editing a field near the bottom of the screen (in
           edit mode) let the keyboard cover it with no way to see what was
           being typed — CreateScoreScreen already had this, Detail didn't. */}
-      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      {/* 'height' on Android, not the no-op undefined: without a native
+          rebuild setting windowSoftInputMode=adjustResize (app.json's
+          softwareKeyboardLayoutMode requires one), Android gets zero
+          keyboard compensation from 'undefined' and the keyboard just
+          overlaps whatever field is focused. 'height' works immediately,
+          no rebuild needed. */}
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
       {/* DismissKeyboardView wraps the ScrollView's rendered content, not
           the ScrollView itself: wrapping the scrollable container directly
           in TouchableWithoutFeedback (native's only real tap-to-dismiss
@@ -451,6 +520,15 @@ export default function DetailScreen({ route, navigation }) {
                 ))}
               </View>
             )
+          )}
+
+          {editMode && (
+            <View style={{ marginTop: 14 }}>
+              <Text style={[type.scoreLabel, { color: colors.sub }]}>Color de la card</Text>
+              <View style={{ marginTop: 8 }}>
+                <ColorPicker value={score.cardColor} onChange={onCardColorChange} suggestedColor={suggestedColor} />
+              </View>
+            </View>
           )}
           {!!error && <Text style={styles.errorBanner}>{error}</Text>}
 
@@ -574,6 +652,13 @@ export default function DetailScreen({ route, navigation }) {
         confirmLabel={deleting ? 'Eliminando...' : 'Eliminar'}
         onConfirm={onDelete}
         onCancel={() => setDeleteConfirmOpen(false)}
+      />
+
+      <UnsavedChangesDialog
+        visible={!!pendingLeaveAction}
+        onSave={confirmSaveAndLeave}
+        onDiscard={confirmDiscardAndLeave}
+        onCancel={() => setPendingLeaveAction(null)}
       />
     </View>
   );

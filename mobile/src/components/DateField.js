@@ -59,7 +59,17 @@ export default function DateField({ value, onChange, label }) {
           Modal always overlays the full window regardless of nesting. The
           title also makes it obvious which field ("Desde"/"Hasta") is being
           edited when there's more than one. */}
-      <Modal visible={showPicker} transparent animationType="slide" onRequestClose={() => setShowPicker(false)}>
+      {/* animationType="fade" + statusBarTranslucent: "slide" on Android has
+          a known issue where a transparent Modal renders its backdrop as
+          solid black instead of the translucent color we set, specifically
+          during/after the slide transition. fade doesn't have this problem. */}
+      <Modal
+        visible={showPicker}
+        transparent
+        animationType="fade"
+        statusBarTranslucent
+        onRequestClose={() => setShowPicker(false)}
+      >
         <View style={styles.backdrop}>
           <Pressable style={StyleSheet.absoluteFillObject} onPress={() => setShowPicker(false)} />
           <View style={[styles.sheet, { backgroundColor: colors.surface }]}>
