@@ -164,16 +164,23 @@ export default function HomeScreen({ navigation }) {
           at the screen edge, but it rendered as a solid grey/dark block on
           a real device instead of a fade — worse than the plain cutoff it
           was meant to fix, so it's gone rather than chasing a fix blind. */}
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        style={styles.chipsScroll}
-        contentContainerStyle={styles.chipsRow}
-      >
-        {categories.map((c) => (
-          <FilterChip key={c} label={c} active={filter === c} onPress={() => setFilter(c)} />
-        ))}
-      </ScrollView>
+      {/* The gap to the grid below is a plain View's marginBottom, not the
+          ScrollView's own style.marginBottom: that stopped visibly applying
+          on-device (margin on a horizontal ScrollView's outer style is
+          unreliable on native), even though it read correctly in code. A
+          separate wrapping View's margin is unambiguous. */}
+      <View style={styles.chipsWrap}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={styles.chipsScroll}
+          contentContainerStyle={styles.chipsRow}
+        >
+          {categories.map((c) => (
+            <FilterChip key={c} label={c} active={filter === c} onPress={() => setFilter(c)} />
+          ))}
+        </ScrollView>
+      </View>
 
         {loading ? (
           <View style={styles.center}>
@@ -352,7 +359,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: 2,
   },
-  chipsScroll: { flexGrow: 0, marginBottom: 14 },
+  chipsWrap: { marginBottom: 14 },
+  chipsScroll: { flexGrow: 0 },
   chipsRow: { gap: 8, paddingHorizontal: 18, alignItems: 'flex-start' },
   grid: { paddingHorizontal: 16, paddingBottom: 100, gap: 12 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 40 },
