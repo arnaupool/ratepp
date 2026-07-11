@@ -217,8 +217,18 @@ export default function CreateScoreScreen({ navigation }) {
       </View>
 
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        <DismissKeyboardView style={{ flex: 1 }}>
-        <ScrollView contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag">
+        {/* DismissKeyboardView wraps the ScrollView's rendered content, not
+            the ScrollView itself: wrapping the scrollable container directly
+            in TouchableWithoutFeedback (native's only real tap-to-dismiss
+            mechanism) blocked scrolling over its content on-device. */}
+        {/* On native, DismissKeyboardView renders a real wrapping View, so
+            styles.body (padding/gap) is applied there. On web it's a
+            transparent Fragment, so the same style is applied here instead
+            — otherwise its children (flattened directly into this
+            ScrollView's content container on web) would render with no
+            spacing at all. */}
+        <ScrollView contentContainerStyle={Platform.OS === 'web' ? styles.body : undefined} keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag">
+        <DismissKeyboardView style={styles.body}>
           <TextInput
             style={[styles.titleInput, { color: colors.ink }]}
             placeholder="Título *"
@@ -298,8 +308,8 @@ export default function CreateScoreScreen({ navigation }) {
               <Text style={[type.loginBtn, { color: colors.white }]}>Guardar puntuación</Text>
             )}
           </Pressable>
-        </ScrollView>
         </DismissKeyboardView>
+        </ScrollView>
       </KeyboardAvoidingView>
 
       <LocationPickerOverlay

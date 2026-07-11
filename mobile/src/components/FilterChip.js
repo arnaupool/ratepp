@@ -21,10 +21,18 @@ export default function FilterChip({ label, active, onPress }) {
 }
 
 const styles = StyleSheet.create({
+  // Fixed height + justifyContent:'center' instead of a padding-driven auto
+  // height: on Android, custom-font text metrics (Poppins) can measure
+  // differently than expected, so a container sized purely from
+  // paddingVertical could still end up shorter/taller than its neighbors
+  // depending on font-loading timing — a fixed height sidesteps that
+  // entirely instead of chasing font-metric flags.
   chip: {
+    height: 32,
     borderRadius: 999,
     paddingHorizontal: 14,
-    paddingVertical: 7,
     borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });

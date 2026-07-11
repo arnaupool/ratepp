@@ -123,7 +123,7 @@ export default function ManageLabelsScreen({ navigation }) {
       <ConfirmDialog
         visible={!!pendingDelete}
         title={`¿Eliminar "${pendingDeleteDisplay?.name}"?`}
-        message="Se quitará de todas las puntuaciones que la usan. No se puede deshacer."
+        message="Está siendo usada por una o más notas. Se quitará de todas ellas. No se puede deshacer."
         onConfirm={confirmDelete}
         onCancel={() => setPendingDelete(null)}
       />

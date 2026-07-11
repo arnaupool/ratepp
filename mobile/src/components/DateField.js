@@ -22,7 +22,7 @@ export function formatDate(iso) {
 // side by side (e.g. the Home filters' Desde/Hasta row) so it's clear which
 // one is currently open.
 export default function DateField({ value, onChange, label }) {
-  const { colors } = useTheme();
+  const { colors, dark } = useTheme();
   const [showPicker, setShowPicker] = useState(false);
   const dateObj = value ? new Date(`${value}T00:00:00`) : new Date();
 
@@ -68,6 +68,8 @@ export default function DateField({ value, onChange, label }) {
             display={Platform.OS === 'ios' ? 'inline' : 'calendar'}
             onChange={onPickerChange}
             style={styles.picker}
+            themeVariant={dark ? 'dark' : 'light'}
+            accentColor={colors.accent}
           />
           <Pressable style={[styles.doneBtn, { backgroundColor: colors.accent }]} onPress={() => setShowPicker(false)}>
             <Text style={[type.loginBtn, { color: colors.white }]}>Listo</Text>
@@ -98,7 +100,7 @@ const styles = StyleSheet.create({
     paddingBottom: 30,
     gap: 10,
   },
-  picker: { alignSelf: 'center' },
+  picker: { alignSelf: 'stretch', width: '100%' },
   doneBtn: {
     marginTop: 4,
     borderRadius: 14,

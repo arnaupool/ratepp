@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   View,
   Text,
+  TextInput,
   Image,
   ScrollView,
   Pressable,
@@ -181,6 +182,18 @@ export default function DetailScreen({ route, navigation }) {
     if (!score.categories.includes(c)) toggleCategory(c);
   };
 
+  const onTitleChange = (title) => setScore((s) => ({ ...s, title }));
+
+  const onTitleCommit = async () => {
+    const title = score.title.trim() || 'Sin título';
+    if (title !== score.title) setScore((s) => ({ ...s, title }));
+    try {
+      await scoresApi.update(scoreId, { title });
+    } catch (e) {
+      setError(e.message || 'No se pudo actualizar el título');
+    }
+  };
+
   const onAddField = async (def) => {
     try {
       const { field } = await scoresApi.addField(scoreId, {
@@ -335,8 +348,12 @@ export default function DetailScreen({ route, navigation }) {
 
   return (
     <View style={[styles.screen, { backgroundColor: colors.bg }]}>
-      <DismissKeyboardView style={{ flex: 1 }}>
+      {/* DismissKeyboardView wraps the ScrollView's rendered content, not
+          the ScrollView itself: wrapping the scrollable container directly
+          in TouchableWithoutFeedback (native's only real tap-to-dismiss
+          mechanism) blocked scrolling over its content on-device. */}
       <ScrollView bounces={false} contentContainerStyle={{ paddingBottom: 40 }} keyboardDismissMode="on-drag">
+      <DismissKeyboardView>
         {editMode ? (
           <View style={[styles.editHero, { backgroundColor: colors.surface, paddingTop: insets.top + 14 }]}>
             <View style={styles.editHeroHead}>
@@ -372,7 +389,7 @@ export default function DetailScreen({ route, navigation }) {
               onPress={() => setEditMode(true)}
               accessibilityLabel="Editar puntuación"
             >
-              <Text style={{ fontSize: 14 }}>✎</Text>
+              <Text style={{ fontSize: 19 }}>✎</Text>
             </Pressable>
             <Pressable
               style={[styles.deleteBtn, { top: insets.top + 56 }]}
@@ -400,7 +417,16 @@ export default function DetailScreen({ route, navigation }) {
         )}
 
         <View style={styles.content}>
-          <Text style={[type.detailTitle, { color: colors.ink }]}>{score.title}</Text>
+          {editMode ? (
+            <TextInput
+              style={[type.detailTitle, styles.titleInput, { color: colors.ink }]}
+              value={score.title}
+              onChangeText={onTitleChange}
+              onBlur={onTitleCommit}
+            />
+          ) : (
+            <Text style={[type.detailTitle, { color: colors.ink }]}>{score.title}</Text>
+          )}
 
           {editMode ? (
             <View style={{ marginTop: 8 }}>
@@ -509,8 +535,8 @@ export default function DetailScreen({ route, navigation }) {
             )}
           </View>
         )}
-      </ScrollView>
       </DismissKeyboardView>
+      </ScrollView>
 
       <LocationPickerOverlay
         visible={!!editingLocationField}
@@ -684,6 +710,7 @@ const styles = StyleSheet.create({
   thumb: { width: '100%', aspectRatio: 1, borderRadius: 10, opacity: 0.6 },
   thumbActive: { opacity: 1 },
   content: { paddingHorizontal: 18, paddingTop: 16 },
+  titleInput: { padding: 0 },
   categoryRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 8 },
   ownerRow: { marginTop: 16, gap: 8 },
   ownerScoreRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },

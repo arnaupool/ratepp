@@ -105,7 +105,7 @@ export default function HomeScreen({ navigation }) {
 
   return (
     <SafeAreaView style={[styles.screen, { backgroundColor: colors.bg }]} edges={['top']}>
-      <DismissKeyboardView style={{ flex: 1 }}>
+      <DismissKeyboardView>
         <View style={styles.head}>
           <Pressable style={styles.menuBtn} onPress={() => setMenuOpen(true)} accessibilityLabel="Abrir menú" hitSlop={6}>
             <View style={[styles.menuBar, { backgroundColor: colors.ink }]} />
@@ -149,22 +149,27 @@ export default function HomeScreen({ navigation }) {
             )}
           </Pressable>
         </View>
+      </DismissKeyboardView>
 
-        {/* flexGrow: 0 keeps the chip strip at its content height — as a bare
-            horizontal list it would split the leftover screen height with the
-            grid below and stretch the chips vertically. alignItems: 'flex-start'
-            stops the row from stretching its chips to match the tallest one
-            (the default 'stretch' made every chip as tall as its container). */}
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          style={styles.chipsScroll}
-          contentContainerStyle={styles.chipsRow}
-        >
-          {categories.map((c) => (
-            <FilterChip key={c} label={c} active={filter === c} onPress={() => setFilter(c)} />
-          ))}
-        </ScrollView>
+      {/* Both scrollable pieces (this horizontal chip strip and the grid
+          below) stay outside DismissKeyboardView: wrapping a ScrollView/
+          FlatList in TouchableWithoutFeedback (native's only real tap-to-
+          dismiss mechanism) blocked scrolling over its content on-device. */}
+      {/* flexGrow: 0 keeps the chip strip at its content height — as a bare
+          horizontal list it would split the leftover screen height with the
+          grid below and stretch the chips vertically. alignItems: 'flex-start'
+          stops the row from stretching its chips to match the tallest one
+          (the default 'stretch' made every chip as tall as its container). */}
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        style={styles.chipsScroll}
+        contentContainerStyle={styles.chipsRow}
+      >
+        {categories.map((c) => (
+          <FilterChip key={c} label={c} active={filter === c} onPress={() => setFilter(c)} />
+        ))}
+      </ScrollView>
 
         {loading ? (
           <View style={styles.center}>
@@ -204,10 +209,9 @@ export default function HomeScreen({ navigation }) {
           />
         )}
 
-        <Pressable style={[styles.fab, { backgroundColor: colors.accent, shadowColor: colors.accent }]} onPress={() => navigation.navigate('Create')} accessibilityLabel="Crear puntuación">
-          <Text style={[styles.fabPlus, { color: colors.white }]}>+</Text>
-        </Pressable>
-      </DismissKeyboardView>
+      <Pressable style={[styles.fab, { backgroundColor: colors.accent, shadowColor: colors.accent }]} onPress={() => navigation.navigate('Create')} accessibilityLabel="Crear puntuación">
+        <Text style={[styles.fabPlus, { color: colors.white }]}>+</Text>
+      </Pressable>
 
       <SideMenu visible={menuOpen} onClose={() => setMenuOpen(false)} onNavigate={(screen) => navigation.navigate(screen)} />
 

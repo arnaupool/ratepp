@@ -5,6 +5,7 @@ import { COVER_TYPES } from '../constants/fieldDefs';
 import { useTheme } from '../theme/ThemeContext';
 import { type } from '../theme/typography';
 import AnimatedSheet from './AnimatedSheet';
+import DismissKeyboardView from './DismissKeyboardView';
 
 // A literal pixel cap instead of a '%'-based maxHeight: percentage heights
 // need a definite-height ancestor to resolve against, and this sheet's
@@ -44,39 +45,45 @@ export default function CoverPickerOverlay({ visible, onClose, onConfirm }) {
   return (
     <AnimatedSheet visible={visible} onClose={onClose}>
       <Pressable style={[styles.sheet, { backgroundColor: colors.surface }]} onPress={() => {}}>
-        <Text style={[type.sheetTitle, { color: colors.ink }]}>Buscar carátula</Text>
+        {/* Only the non-scrollable chrome above the results grid is wrapped:
+            wrapping the results ScrollView itself in TouchableWithoutFeedback
+            (native's only real tap-to-dismiss mechanism) blocks scrolling
+            over its content on-device. */}
+        <DismissKeyboardView style={{ gap: 12 }}>
+          <Text style={[type.sheetTitle, { color: colors.ink }]}>Buscar carátula</Text>
 
-        <View style={styles.typeRow}>
-          {COVER_TYPES.map((t) => (
-            <Pressable
-              key={t.id}
-              style={[
-                styles.typeChip,
-                mediaType === t.id
-                  ? { backgroundColor: colors.accent, borderColor: colors.accent }
-                  : { backgroundColor: colors.bg, borderColor: colors.line },
-              ]}
-              onPress={() => setMediaType(t.id)}
-            >
-              <Text style={[type.chip, { color: mediaType === t.id ? colors.accentInk : colors.sub }]}>{t.label}</Text>
+          <View style={styles.typeRow}>
+            {COVER_TYPES.map((t) => (
+              <Pressable
+                key={t.id}
+                style={[
+                  styles.typeChip,
+                  mediaType === t.id
+                    ? { backgroundColor: colors.accent, borderColor: colors.accent }
+                    : { backgroundColor: colors.bg, borderColor: colors.line },
+                ]}
+                onPress={() => setMediaType(t.id)}
+              >
+                <Text style={[type.chip, { color: mediaType === t.id ? colors.accentInk : colors.sub }]}>{t.label}</Text>
+              </Pressable>
+            ))}
+          </View>
+
+          <View style={styles.searchRow}>
+            <TextInput
+              style={[styles.searchInput, { backgroundColor: colors.bg, borderColor: colors.line, color: colors.ink }]}
+              placeholder="Título..."
+              placeholderTextColor={colors.sub}
+              value={current.query}
+              onChangeText={(v) => patchTab(mediaType, { query: v })}
+              onSubmitEditing={runSearch}
+              returnKeyType="search"
+            />
+            <Pressable style={[styles.searchBtn, { backgroundColor: colors.bg, borderColor: colors.line }]} onPress={runSearch}>
+              <Text style={{ fontSize: 15 }}>🔍</Text>
             </Pressable>
-          ))}
-        </View>
-
-        <View style={styles.searchRow}>
-          <TextInput
-            style={[styles.searchInput, { backgroundColor: colors.bg, borderColor: colors.line, color: colors.ink }]}
-            placeholder="Título..."
-            placeholderTextColor={colors.sub}
-            value={current.query}
-            onChangeText={(v) => patchTab(mediaType, { query: v })}
-            onSubmitEditing={runSearch}
-            returnKeyType="search"
-          />
-          <Pressable style={[styles.searchBtn, { backgroundColor: colors.bg, borderColor: colors.line }]} onPress={runSearch}>
-            <Text style={{ fontSize: 15 }}>🔍</Text>
-          </Pressable>
-        </View>
+          </View>
+        </DismissKeyboardView>
 
         <View style={styles.resultsWrap}>
           {current.loading ? (
