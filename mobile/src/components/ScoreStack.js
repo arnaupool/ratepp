@@ -1,7 +1,8 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { scoreColor, colors } from '../theme/colors';
+import { scoreColor } from '../theme/colors';
 import { type } from '../theme/typography';
+import { useTheme } from '../theme/ThemeContext';
 
 const MINI = 24;
 
@@ -9,12 +10,13 @@ const MINI = 24;
 // first two stacked mini-badges + a "+N" bubble when there are more —
 // ported from the design's `.score-stack` / `.score-badge.mini.extra`.
 export default function ScoreStack({ ratings }) {
+  const { colors } = useTheme();
   if (!ratings || ratings.length === 0) return null;
   if (ratings.length === 1) {
     const r = ratings[0];
     return (
-      <View style={[styles.mini, { width: 30, height: 30, borderRadius: 15, backgroundColor: scoreColor(r.value) }]}>
-        <Text style={[{ fontFamily: 'Poppins_900Black', fontSize: 13 }, styles.text]}>{r.value}</Text>
+      <View style={[styles.mini, { width: 30, height: 30, borderRadius: 15, backgroundColor: scoreColor(r.value), borderColor: colors.surface }]}>
+        <Text style={[{ fontFamily: 'Poppins_900Black', fontSize: 13 }, { color: colors.white }]}>{r.value}</Text>
       </View>
     );
   }
@@ -27,15 +29,15 @@ export default function ScoreStack({ ratings }) {
           key={r.id || i}
           style={[
             styles.mini,
-            { backgroundColor: scoreColor(r.value), marginLeft: i === 0 ? 0 : -9 },
+            { backgroundColor: scoreColor(r.value), marginLeft: i === 0 ? 0 : -9, borderColor: colors.surface },
           ]}
         >
-          <Text style={[type.scoreBadgeMini, styles.text]}>{r.value}</Text>
+          <Text style={[type.scoreBadgeMini, { color: colors.white }]}>{r.value}</Text>
         </View>
       ))}
       {extra > 0 && (
-        <View style={[styles.mini, { backgroundColor: colors.extraBadge, marginLeft: -9 }]}>
-          <Text style={[type.scoreBadgeMini, styles.text]}>+{extra}</Text>
+        <View style={[styles.mini, { backgroundColor: colors.extraBadge, marginLeft: -9, borderColor: colors.surface }]}>
+          <Text style={[type.scoreBadgeMini, { color: colors.white }]}>+{extra}</Text>
         </View>
       )}
     </View>
@@ -51,7 +53,5 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 2,
-    borderColor: '#fffbf8',
   },
-  text: { color: colors.white },
 });

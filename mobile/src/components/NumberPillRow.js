@@ -1,12 +1,14 @@
 import React from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { NUMBERS } from '../constants/fieldDefs';
-import { colors, scoreColor } from '../theme/colors';
+import { scoreColor } from '../theme/colors';
 import { type } from '../theme/typography';
+import { useTheme } from '../theme/ThemeContext';
 
 // Single-row 1-10 selector — kept as one non-wrapping row per the design
 // feedback ("me da un poco de TOC que esté el 9 y el 10 separados").
 export default function NumberPillRow({ value, onSelect }) {
+  const { colors } = useTheme();
   return (
     <View style={styles.row}>
       {NUMBERS.map((n) => {

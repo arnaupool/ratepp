@@ -1,6 +1,6 @@
 // Ported from FIELD_DEFS in Puntuaciones App.dc.html.
 export const FIELD_DEFS = [
-  { id: 'text_long', label: 'Texto largo', icon: 'text', kind: 'simple', placeholder: 'Escribe tus notas...' },
+  { id: 'text_long', label: 'Texto', icon: 'text', kind: 'simple', placeholder: 'Escribe tus notas...' },
   { id: 'number', label: 'Número', icon: 'number', kind: 'simple', placeholder: 'Ej. 24.50', keyboardType: 'decimal-pad' },
   { id: 'date', label: 'Fecha', icon: 'date', kind: 'date', placeholder: '' },
   { id: 'location', label: 'Ubicación', icon: 'location', kind: 'location', placeholder: '' },
@@ -9,8 +9,10 @@ export const FIELD_DEFS = [
   { id: 'tag', label: 'Etiqueta', icon: 'tag', kind: 'tag', placeholder: 'Ej. Mediterránea' },
 ];
 
-export const QUICK_FIELD_DEFS = FIELD_DEFS.slice(0, 4);
-export const MORE_FIELD_DEFS = FIELD_DEFS.slice(4);
+// All seven field types fit comfortably in a single quick-add row now that
+// "Foto" was folded into "Galería" — no need for a separate "more fields"
+// sheet anymore.
+export const QUICK_FIELD_DEFS = FIELD_DEFS;
 
 export function fieldDef(typeId) {
   return FIELD_DEFS.find((d) => d.id === typeId);

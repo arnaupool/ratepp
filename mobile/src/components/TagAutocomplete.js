@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, TextInput, Pressable, StyleSheet } from 'react-native';
 import { tagsApi } from '../api/tags';
-import { colors } from '../theme/colors';
+import { useTheme } from '../theme/ThemeContext';
 import { type } from '../theme/typography';
 import { animateNext } from '../utils/animate';
 
@@ -10,6 +10,7 @@ import { animateNext } from '../utils/animate';
 // dropdown of previously-used tags (across all scores) to reuse instead of
 // retyping.
 export default function TagAutocomplete({ value, onChange }) {
+  const { colors } = useTheme();
   const tags = Array.isArray(value) ? value : [];
   const [allTags, setAllTags] = useState([]);
   const [expanded, setExpanded] = useState(false);
@@ -47,10 +48,10 @@ export default function TagAutocomplete({ value, onChange }) {
       {tags.length > 0 && (
         <View style={styles.chips}>
           {tags.map((t) => (
-            <View key={t} style={styles.selectedChip}>
+            <View key={t} style={[styles.selectedChip, { backgroundColor: colors.accent }]}>
               <Text style={[type.chip, { color: colors.accentInk }]}>{t}</Text>
               <Pressable onPress={() => removeTag(t)} hitSlop={6} accessibilityLabel={`Quitar etiqueta ${t}`}>
-                <Text style={styles.selectedChipRemove}>✕</Text>
+                <Text style={[styles.selectedChipRemove, { color: colors.white }]}>✕</Text>
               </Pressable>
             </View>
           ))}
@@ -58,7 +59,7 @@ export default function TagAutocomplete({ value, onChange }) {
       )}
 
       <TextInput
-        style={styles.input}
+        style={[styles.input, { color: colors.ink }]}
         placeholder="Escribe una etiqueta y pulsa enter..."
         placeholderTextColor={colors.sub}
         value={draft}
@@ -78,7 +79,7 @@ export default function TagAutocomplete({ value, onChange }) {
       {expanded && (
         <View style={styles.chips}>
           {availableSuggestions.map((t) => (
-            <Pressable key={t} style={styles.suggestionChip} onPress={() => addTag(t)}>
+            <Pressable key={t} style={[styles.suggestionChip, { backgroundColor: colors.bg, borderColor: colors.line }]} onPress={() => addTag(t)}>
               <Text style={[type.chip, { color: colors.sub }]}>{t}</Text>
             </Pressable>
           ))}
@@ -97,13 +98,11 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     paddingHorizontal: 10,
     paddingVertical: 5,
-    backgroundColor: colors.accent,
   },
-  selectedChipRemove: { fontSize: 9, fontWeight: '700', color: colors.white },
+  selectedChipRemove: { fontSize: 9, fontWeight: '700' },
   input: {
     fontFamily: 'Poppins_600SemiBold',
     fontSize: 14.5,
-    color: colors.ink,
     padding: 0,
   },
   toggleRow: { alignSelf: 'flex-start' },
@@ -111,8 +110,6 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     paddingHorizontal: 10,
     paddingVertical: 5,
-    backgroundColor: colors.bg,
     borderWidth: 1,
-    borderColor: colors.line,
   },
 });

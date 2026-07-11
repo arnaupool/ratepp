@@ -2,7 +2,7 @@ import React, { useRef, useState } from 'react';
 import { View, Text, TextInput, Pressable, StyleSheet, ActivityIndicator } from 'react-native';
 import MapView, { Marker } from 'react-native-maps';
 import * as Location from 'expo-location';
-import { colors } from '../theme/colors';
+import { useTheme } from '../theme/ThemeContext';
 import { type } from '../theme/typography';
 import AnimatedSheet from './AnimatedSheet';
 
@@ -15,6 +15,7 @@ function buildLabel(geocoded) {
 }
 
 export default function LocationPickerOverlay({ visible, initialValue, onClose, onConfirm }) {
+  const { colors } = useTheme();
   const mapRef = useRef(null);
   const [marker, setMarker] = useState(
     initialValue?.lat != null ? { latitude: initialValue.lat, longitude: initialValue.lng } : null
@@ -71,13 +72,13 @@ export default function LocationPickerOverlay({ visible, initialValue, onClose, 
 
   return (
     <AnimatedSheet visible={visible} onClose={onClose}>
-      <Pressable style={styles.sheet} onPress={() => {}}>
+      <Pressable style={[styles.sheet, { backgroundColor: colors.surface }]} onPress={() => {}}>
         <View style={styles.sheetGrab} />
         <Text style={[type.sheetTitle, { color: colors.ink }]}>Elegir ubicación</Text>
 
         <View style={styles.searchRow}>
           <TextInput
-            style={styles.searchInput}
+            style={[styles.searchInput, { backgroundColor: colors.bg, borderColor: colors.line, color: colors.ink }]}
             placeholder="Buscar dirección..."
             placeholderTextColor={colors.sub}
             value={search}
@@ -85,7 +86,7 @@ export default function LocationPickerOverlay({ visible, initialValue, onClose, 
             onSubmitEditing={runSearch}
             returnKeyType="search"
           />
-          <Pressable style={styles.searchBtn} onPress={runSearch}>
+          <Pressable style={[styles.searchBtn, { backgroundColor: colors.bg, borderColor: colors.line }]} onPress={runSearch}>
             <Text style={{ fontSize: 15 }}>🔍</Text>
           </Pressable>
         </View>
@@ -104,7 +105,7 @@ export default function LocationPickerOverlay({ visible, initialValue, onClose, 
             {marker && <Marker coordinate={marker} />}
           </MapView>
           {busy && (
-            <View style={styles.busyOverlay}>
+            <View style={[styles.busyOverlay, { backgroundColor: 'rgba(255,255,255,0.5)' }]}>
               <ActivityIndicator color={colors.accent} />
             </View>
           )}
@@ -119,7 +120,7 @@ export default function LocationPickerOverlay({ visible, initialValue, onClose, 
             <Text style={[type.loginBtn, { color: colors.sub }]}>Cancelar</Text>
           </Pressable>
           <Pressable
-            style={[styles.confirmBtn, !marker && styles.confirmBtnDisabled]}
+            style={[styles.confirmBtn, { backgroundColor: colors.accent }, !marker && styles.confirmBtnDisabled]}
             disabled={!marker}
             onPress={() => onConfirm({ label, lat: marker.latitude, lng: marker.longitude })}
           >
@@ -138,7 +139,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 18,
     paddingTop: 10,
     paddingBottom: 30,
-    backgroundColor: colors.surface,
     gap: 12,
   },
   sheetGrab: { width: 36, height: 5, borderRadius: 3, backgroundColor: 'rgba(0,0,0,0.15)', alignSelf: 'center' },
@@ -148,12 +148,9 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     paddingHorizontal: 12,
     paddingVertical: 10,
-    backgroundColor: colors.bg,
     borderWidth: 1,
-    borderColor: colors.line,
     fontFamily: 'Poppins_600SemiBold',
     fontSize: 14,
-    color: colors.ink,
   },
   searchBtn: {
     width: 40,
@@ -161,15 +158,13 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.bg,
     borderWidth: 1,
-    borderColor: colors.line,
   },
   currentBtn: { alignSelf: 'flex-start' },
   mapWrap: { width: '100%', height: 220, borderRadius: 14, overflow: 'hidden' },
-  busyOverlay: { ...StyleSheet.absoluteFillObject, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,255,255,0.5)' },
+  busyOverlay: { ...StyleSheet.absoluteFillObject, alignItems: 'center', justifyContent: 'center' },
   actions: { flexDirection: 'row', gap: 10, marginTop: 4 },
   cancelBtn: { flex: 1, paddingVertical: 13, alignItems: 'center', justifyContent: 'center' },
-  confirmBtn: { flex: 2, borderRadius: 14, paddingVertical: 13, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.accent },
+  confirmBtn: { flex: 2, borderRadius: 14, paddingVertical: 13, alignItems: 'center', justifyContent: 'center' },
   confirmBtnDisabled: { opacity: 0.5 },
 });

@@ -11,9 +11,22 @@ import {
   Poppins_900Black,
 } from '@expo-google-fonts/poppins';
 import { AuthProvider } from './src/context/AuthContext';
+import { ThemeProvider, useTheme } from './src/theme/ThemeContext';
 import RootNavigator from './src/navigation/RootNavigator';
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
+
+function AppShell({ onLayoutRootView }) {
+  const { dark, colors } = useTheme();
+  return (
+    <View style={{ flex: 1, backgroundColor: colors.bg }} onLayout={onLayoutRootView}>
+      <StatusBar style={dark ? 'light' : 'dark'} />
+      <AuthProvider>
+        <RootNavigator />
+      </AuthProvider>
+    </View>
+  );
+}
 
 export default function App() {
   const [fontsLoaded] = useFonts({
@@ -31,12 +44,9 @@ export default function App() {
 
   return (
     <SafeAreaProvider>
-      <View style={{ flex: 1 }} onLayout={onLayoutRootView}>
-        <StatusBar style="dark" />
-        <AuthProvider>
-          <RootNavigator />
-        </AuthProvider>
-      </View>
+      <ThemeProvider>
+        <AppShell onLayoutRootView={onLayoutRootView} />
+      </ThemeProvider>
     </SafeAreaProvider>
   );
 }

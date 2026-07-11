@@ -13,21 +13,25 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { scoresApi } from '../api/scores';
-import { colors, categoryTint, hashSeed } from '../theme/colors';
+import { categoryTint, hashSeed } from '../theme/palettes';
+import { useTheme } from '../theme/ThemeContext';
 import { type } from '../theme/typography';
 import PhotoStripe from '../components/PhotoStripe';
 import ScoreBadge from '../components/ScoreBadge';
 import ScoreStack from '../components/ScoreStack';
 import TagChip from '../components/TagChip';
 import FilterChip from '../components/FilterChip';
+import SideMenu from '../components/SideMenu';
 import { animateNext } from '../utils/animate';
 
 export default function HomeScreen({ navigation }) {
+  const { colors, dark } = useTheme();
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState('Todas');
+  const [menuOpen, setMenuOpen] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -64,16 +68,21 @@ export default function HomeScreen({ navigation }) {
   }, [items, filter, search]);
 
   return (
-    <SafeAreaView style={styles.screen} edges={['top']}>
+    <SafeAreaView style={[styles.screen, { backgroundColor: colors.bg }]} edges={['top']}>
       <View style={styles.head}>
+        <Pressable style={styles.menuBtn} onPress={() => setMenuOpen(true)} accessibilityLabel="Abrir menú" hitSlop={6}>
+          <View style={[styles.menuBar, { backgroundColor: colors.ink }]} />
+          <View style={[styles.menuBar, { backgroundColor: colors.ink }]} />
+          <View style={[styles.menuBar, { backgroundColor: colors.ink, width: 12 }]} />
+        </Pressable>
         <Text style={[type.screenTitle, { color: colors.ink }]}>Tus puntuaciones</Text>
       </View>
 
       <View style={styles.searchWrap}>
-        <View style={styles.search}>
+        <View style={[styles.search, { backgroundColor: colors.surface, borderColor: colors.line }]}>
           <Text style={{ fontSize: 15, color: colors.sub }}>⌕</Text>
           <TextInput
-            style={styles.searchInput}
+            style={[styles.searchInput, { color: colors.ink }]}
             placeholder="Buscar por título..."
             placeholderTextColor={colors.sub}
             value={search}
@@ -84,11 +93,13 @@ export default function HomeScreen({ navigation }) {
 
       {/* flexGrow: 0 keeps the chip strip at its content height — as a bare
           horizontal list it would split the leftover screen height with the
-          grid below and stretch the chips vertically. */}
+          grid below and stretch the chips vertically. alignItems: 'flex-start'
+          stops the row from stretching its chips to match the tallest one
+          (the default 'stretch' made every chip as tall as its container). */}
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
-        style={{ flexGrow: 0 }}
+        style={styles.chipsScroll}
         contentContainerStyle={styles.chipsRow}
       >
         {categories.map((c) => (
@@ -124,23 +135,26 @@ export default function HomeScreen({ navigation }) {
             item.spacer ? (
               <View style={{ flex: 1 }} />
             ) : (
-              <ScoreCard item={item} onPress={() => navigation.navigate('Detail', { scoreId: item.id })} />
+              <ScoreCard item={item} dark={dark} onPress={() => navigation.navigate('Detail', { scoreId: item.id })} />
             )
           }
         />
       )}
 
-      <Pressable style={styles.fab} onPress={() => navigation.navigate('Create')} accessibilityLabel="Crear puntuación">
-        <Text style={styles.fabPlus}>+</Text>
+      <Pressable style={[styles.fab, { backgroundColor: colors.accent, shadowColor: colors.accent }]} onPress={() => navigation.navigate('Create')} accessibilityLabel="Crear puntuación">
+        <Text style={[styles.fabPlus, { color: colors.white }]}>+</Text>
       </Pressable>
+
+      <SideMenu visible={menuOpen} onClose={() => setMenuOpen(false)} onNavigate={(screen) => navigation.navigate(screen)} />
     </SafeAreaView>
   );
 }
 
-function ScoreCard({ item, onPress }) {
-  const tint = categoryTint(item.categories?.[0]);
+function ScoreCard({ item, dark, onPress }) {
+  const { colors } = useTheme();
+  const tint = categoryTint(item.categories?.[0], dark);
   return (
-    <Pressable style={[styles.card, { backgroundColor: tint }]} onPress={onPress}>
+    <Pressable style={[styles.card, { backgroundColor: tint }]} onPress={onPress} accessibilityLabel={`Ver ${item.title}`}>
       {item.photoUrls?.[0] ? (
         <Image source={{ uri: item.photoUrls[0] }} style={styles.cardPhoto} />
       ) : (
@@ -170,8 +184,10 @@ function ScoreCard({ item, onPress }) {
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: colors.bg },
-  head: { paddingHorizontal: 18, paddingTop: 6, paddingBottom: 14 },
+  screen: { flex: 1 },
+  head: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 18, paddingTop: 6, paddingBottom: 14 },
+  menuBtn: { gap: 4, padding: 4 },
+  menuBar: { width: 20, height: 2.5, borderRadius: 2 },
   searchWrap: { paddingHorizontal: 18, paddingBottom: 12 },
   search: {
     flexDirection: 'row',
@@ -180,12 +196,11 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     paddingHorizontal: 14,
     paddingVertical: 11,
-    backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: colors.line,
   },
-  searchInput: { flex: 1, fontFamily: 'Poppins_600SemiBold', fontSize: 14, color: colors.ink, padding: 0 },
-  chipsRow: { gap: 8, paddingHorizontal: 18, paddingBottom: 4 },
+  searchInput: { flex: 1, fontFamily: 'Poppins_600SemiBold', fontSize: 14, padding: 0 },
+  chipsScroll: { flexGrow: 0 },
+  chipsRow: { gap: 8, paddingHorizontal: 18, paddingBottom: 4, alignItems: 'flex-start' },
   grid: { paddingHorizontal: 16, paddingTop: 14, paddingBottom: 100, gap: 12 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 40 },
   card: { flex: 1, borderRadius: 20, overflow: 'hidden' },
@@ -201,14 +216,12 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: colors.accent,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: colors.accent,
     shadowOpacity: 0.55,
     shadowRadius: 12,
     shadowOffset: { width: 0, height: 6 },
     elevation: 6,
   },
-  fabPlus: { fontSize: 26, fontWeight: '800', color: colors.white, marginTop: -2 },
+  fabPlus: { fontSize: 26, fontWeight: '800', marginTop: -2 },
 });

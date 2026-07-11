@@ -2,11 +2,12 @@ import React, { useState } from 'react';
 import { View, Text, TextInput, Pressable, StyleSheet, Image, ScrollView, ActivityIndicator } from 'react-native';
 import { coversApi } from '../api/covers';
 import { COVER_TYPES } from '../constants/fieldDefs';
-import { colors } from '../theme/colors';
+import { useTheme } from '../theme/ThemeContext';
 import { type } from '../theme/typography';
 import AnimatedSheet from './AnimatedSheet';
 
 export default function CoverPickerOverlay({ visible, onClose, onConfirm }) {
+  const { colors } = useTheme();
   const [mediaType, setMediaType] = useState('movie');
   const [query, setQuery] = useState('');
   const [results, setResults] = useState([]);
@@ -33,7 +34,7 @@ export default function CoverPickerOverlay({ visible, onClose, onConfirm }) {
 
   return (
     <AnimatedSheet visible={visible} onClose={onClose}>
-      <Pressable style={styles.sheet} onPress={() => {}}>
+      <Pressable style={[styles.sheet, { backgroundColor: colors.surface }]} onPress={() => {}}>
         <View style={styles.sheetGrab} />
         <Text style={[type.sheetTitle, { color: colors.ink }]}>Buscar carátula</Text>
 
@@ -41,7 +42,12 @@ export default function CoverPickerOverlay({ visible, onClose, onConfirm }) {
           {COVER_TYPES.map((t) => (
             <Pressable
               key={t.id}
-              style={[styles.typeChip, mediaType === t.id && styles.typeChipOn]}
+              style={[
+                styles.typeChip,
+                mediaType === t.id
+                  ? { backgroundColor: colors.accent, borderColor: colors.accent }
+                  : { backgroundColor: colors.bg, borderColor: colors.line },
+              ]}
               onPress={() => setMediaType(t.id)}
             >
               <Text style={[type.chip, { color: mediaType === t.id ? colors.accentInk : colors.sub }]}>{t.label}</Text>
@@ -51,7 +57,7 @@ export default function CoverPickerOverlay({ visible, onClose, onConfirm }) {
 
         <View style={styles.searchRow}>
           <TextInput
-            style={styles.searchInput}
+            style={[styles.searchInput, { backgroundColor: colors.bg, borderColor: colors.line, color: colors.ink }]}
             placeholder="Título..."
             placeholderTextColor={colors.sub}
             value={query}
@@ -59,7 +65,7 @@ export default function CoverPickerOverlay({ visible, onClose, onConfirm }) {
             onSubmitEditing={runSearch}
             returnKeyType="search"
           />
-          <Pressable style={styles.searchBtn} onPress={runSearch}>
+          <Pressable style={[styles.searchBtn, { backgroundColor: colors.bg, borderColor: colors.line }]} onPress={runSearch}>
             <Text style={{ fontSize: 15 }}>🔍</Text>
           </Pressable>
         </View>
@@ -75,7 +81,7 @@ export default function CoverPickerOverlay({ visible, onClose, onConfirm }) {
             <ScrollView contentContainerStyle={styles.grid}>
               {results.map((r) => (
                 <Pressable key={r.id} style={styles.card} onPress={() => onConfirm(r.posterUrl)}>
-                  <Image source={{ uri: r.posterUrl }} style={styles.poster} />
+                  <Image source={{ uri: r.posterUrl }} style={[styles.poster, { backgroundColor: colors.bg }]} />
                   <Text style={[type.personName, { color: colors.ink }]} numberOfLines={1}>{r.title}</Text>
                   {!!r.subtitle && (
                     <Text style={[type.editContext, { color: colors.sub }]} numberOfLines={1}>{r.subtitle}</Text>
@@ -101,7 +107,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 18,
     paddingTop: 10,
     paddingBottom: 20,
-    backgroundColor: colors.surface,
     gap: 12,
     maxHeight: '85%',
   },
@@ -111,23 +116,17 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     paddingHorizontal: 12,
     paddingVertical: 7,
-    backgroundColor: colors.bg,
     borderWidth: 1,
-    borderColor: colors.line,
   },
-  typeChipOn: { backgroundColor: colors.accent, borderColor: colors.accent },
   searchRow: { flexDirection: 'row', gap: 8, alignItems: 'center' },
   searchInput: {
     flex: 1,
     borderRadius: 12,
     paddingHorizontal: 12,
     paddingVertical: 10,
-    backgroundColor: colors.bg,
     borderWidth: 1,
-    borderColor: colors.line,
     fontFamily: 'Poppins_600SemiBold',
     fontSize: 14,
-    color: colors.ink,
   },
   searchBtn: {
     width: 40,
@@ -135,13 +134,11 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.bg,
     borderWidth: 1,
-    borderColor: colors.line,
   },
   resultsWrap: { minHeight: 120 },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, paddingBottom: 8 },
   card: { width: '31%', gap: 3 },
-  poster: { width: '100%', aspectRatio: 2 / 3, borderRadius: 10, backgroundColor: colors.bg },
+  poster: { width: '100%', aspectRatio: 2 / 3, borderRadius: 10 },
   cancelBtn: { alignItems: 'center', paddingVertical: 10 },
 });

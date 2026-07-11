@@ -25,4 +25,26 @@ router.get('/', asyncHandler(async (req, res) => {
   res.json({ tags });
 }));
 
+// Removes a tag from every 'tag'-type field of every one of the user's
+// scores that has it — "delete globally" for fixing a typo or retiring a
+// tag, since tags aren't a separate managed entity, just values inside
+// each field's array.
+router.delete('/:name', asyncHandler(async (req, res) => {
+  await pool.query(
+    `UPDATE score_fields sf
+     SET value = (
+       SELECT COALESCE(jsonb_agg(elem), '[]'::jsonb)
+       FROM jsonb_array_elements_text(sf.value) elem
+       WHERE elem <> $1
+     )
+     FROM scores s
+     WHERE sf.score_id = s.id
+       AND s.owner_id = $2
+       AND sf.type = 'tag'
+       AND EXISTS (SELECT 1 FROM jsonb_array_elements_text(sf.value) e WHERE e = $1)`,
+    [req.params.name, req.userId]
+  );
+  res.status(204).end();
+}));
+
 module.exports = router;

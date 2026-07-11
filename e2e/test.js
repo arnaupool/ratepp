@@ -29,6 +29,7 @@ require('fs').writeFileSync(
 );
 const consoleErrors = [];
 let step = 0;
+let debugPage = null;
 
 function log(msg) { console.log(`[${++step}] ${msg}`); }
 
@@ -54,6 +55,7 @@ async function inputWithValue(page, val) {
   // iPhone-ish viewport so the layout matches the mobile design
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 } });
   const page = await ctx.newPage();
+  debugPage = page;
 
   page.on('console', (m) => {
     if (m.type() === 'error') consoleErrors.push(m.text());
@@ -134,23 +136,20 @@ async function inputWithValue(page, val) {
   await page.getByText('Editando puntuación de Marta').waitFor({ state: 'detached' });
   log('Marta scored 6, selector closed');
 
-  // quick field: texto largo
-  await page.getByText('Texto largo').click();
+  // quick field: texto (all 7 field types now live in one merged "Añadir
+  // campo" row — no more separate "Más campos" sheet)
+  await page.getByText('Texto', { exact: true }).click();
   await page.getByPlaceholder('Escribe tus notas...').fill('El arroz estaba en su punto.');
-  log('Long-text field added and filled');
+  log('Text field added and filled');
 
-  // sheet field: lista de ítems
-  await page.getByText('Más campos', { exact: true }).first().click();
-  await page.getByText('Lista de ítems').waitFor();
-  await shot(page, '04-more-fields-sheet');
-  await page.getByText('Lista de ítems').click();
+  // quick field: lista de ítems
+  await page.getByText('Lista de ítems', { exact: true }).click();
   await page.getByPlaceholder('Añade un ítem...').fill('Paella de marisco');
   await page.getByText('+ Añadir ítem').click();
   await page.getByPlaceholder('Añade un ítem...').nth(1).fill('Croquetas de jamón');
   log('List field added with two items');
 
-  // sheet field: galería + real photo upload through the file picker
-  await page.getByText('Más campos', { exact: true }).first().click();
+  // quick field: galería + real photo upload through the file picker
   await page.getByText('Galería', { exact: true }).click();
   const chooserPromise = page.waitForEvent('filechooser');
   await page.getByLabel('Añadir foto', { exact: true }).click();
@@ -174,22 +173,24 @@ async function inputWithValue(page, val) {
   await page.getByText('Calle Mayor 12, Madrid').waitFor();
   log('Location field set through the picker overlay');
 
-  // sheet field: etiqueta (multi-select tag autocomplete, commit via enter)
-  await page.getByText('Más campos', { exact: true }).first().click();
+  // quick field: etiqueta (multi-select tag autocomplete, commit via enter)
   await page.getByText('Etiqueta', { exact: true }).click();
   const tagInput = page.getByPlaceholder('Escribe una etiqueta y pulsa enter...');
   await tagInput.fill('Mediterránea');
   await tagInput.press('Enter');
   await page.getByText('Mediterránea', { exact: true }).waitFor();
   log('Tag field added, tag committed via enter (multi-select chip)');
-  await shot(page, '05-create-filled');
+  await shot(page, '04-create-filled');
 
   // save
   await page.getByText('Guardar puntuación').click();
 
   // ---------- detail (view mode: everything read-only) ----------
-  await page.getByText('Casa Pepa').waitFor({ timeout: 30000 });
-  await page.getByText('TEXTO LARGO').waitFor();
+  await page.getByText('Casa Pepa').waitFor({ timeout: 60000 });
+  // Note: getByText matches actual DOM textContent, not the CSS
+  // text-transform:uppercase rendering, so field labels stay their
+  // original case ("Texto") even though they display as "TEXTO".
+  await page.getByText('Texto', { exact: true }).waitFor({ timeout: 60000 });
   await page.getByText('— Paella de marisco').waitFor();
   await page.getByText('— Croquetas de jamón').waitFor();
   await page.getByText('El arroz estaba en su punto.').waitFor();
@@ -200,7 +201,7 @@ async function inputWithValue(page, val) {
   log('Detail (view mode) shows title, fields (date/location/tag included) and both people');
 
   // categories: both toggled chips + the custom one, and no owner ("Tú")
-  // bubble mixed into "Puntuaciones de otras personas"
+  // bubble mixed into "Nota adicional"
   await page.getByText('Restaurantes', { exact: true }).waitFor();
   await page.getByText('Películas', { exact: true }).waitFor();
   await page.getByText('Favoritos 2026', { exact: true }).waitFor();
@@ -240,7 +241,7 @@ async function inputWithValue(page, val) {
   log('Edit mode: category removed');
 
   // fields: remove one, add another
-  await page.getByLabel('Quitar campo Texto largo').click();
+  await page.getByLabel('Quitar campo Texto').click();
   await page.getByText('El arroz estaba en su punto.').waitFor({ state: 'detached' });
   await page.getByText('Número', { exact: true }).click();
   await page.getByLabel('Quitar campo Número', { exact: true }).waitFor();
@@ -282,6 +283,16 @@ async function inputWithValue(page, val) {
   log('Home card shows stacked scores with +1 overflow');
   await shot(page, '08-home-card');
 
+  // filter chips: "Todas" was reported squished only while selected as the
+  // active filter — compare its rendered height against a sibling chip.
+  const todasBox = await page.getByText('Todas', { exact: true }).first().boundingBox();
+  const pelisBox = await page.getByText('Películas', { exact: true }).first().boundingBox();
+  if (!todasBox || !pelisBox) throw new Error('could not measure filter chip bounding boxes');
+  if (Math.abs(todasBox.height - pelisBox.height) > 2) {
+    throw new Error(`"Todas" chip height (${todasBox.height}) differs from sibling chip (${pelisBox.height}) - looks squished`);
+  }
+  log(`Filter chips render at consistent height (Todas=${todasBox.height}px, Películas=${pelisBox.height}px)`);
+
   // search filtering
   await page.getByPlaceholder('Buscar por título...').fill('zzz');
   await page.getByText('Todavía no hay puntuaciones').waitFor();
@@ -302,6 +313,78 @@ async function inputWithValue(page, val) {
   log('Session persisted across reload (straight to Home, no login)');
   await shot(page, '09-home-after-reload');
 
+  // ---------- side menu: dark mode toggle ----------
+  await page.getByLabel('Abrir menú').click();
+  await page.getByText('Ajustes', { exact: false }).waitFor();
+  await shot(page, '10-side-menu');
+  await page.getByText('Ajustes', { exact: false }).click();
+  await page.getByText('Modo oscuro', { exact: true }).waitFor();
+  log('Settings screen opened from side menu');
+  // react-native-web's Switch renders as <input type="checkbox" role="switch">
+  // without an aria-checked attribute — read state via the checkbox's
+  // checked property instead.
+  const darkSwitch = page.getByRole('switch');
+  await darkSwitch.waitFor();
+  const beforeChecked = await darkSwitch.isChecked();
+  await darkSwitch.click();
+  await page.waitForTimeout(300);
+  const afterChecked = await darkSwitch.isChecked();
+  if (beforeChecked === afterChecked) throw new Error(`dark mode switch did not toggle (stayed checked=${beforeChecked})`);
+  log(`Dark mode toggle switched checked ${beforeChecked} -> ${afterChecked}`);
+  await shot(page, '11-dark-mode-on');
+  // toggle back off so the rest of the run stays in light mode
+  await darkSwitch.click();
+  await page.waitForTimeout(300);
+  await page.getByLabel('Volver').click();
+  await page.getByText('Tus puntuaciones').waitFor();
+  log('Dark mode toggled back off, returned to Home');
+
+  // ---------- side menu: manage categories & tags (global delete) ----------
+  await page.getByLabel('Abrir menú').click();
+  await page.getByText('Categorías y etiquetas', { exact: false }).click();
+  await page.getByText('Categorías', { exact: true }).waitFor();
+  await shot(page, '12-manage-labels');
+  await page.getByLabel('Eliminar categoría Películas').click();
+  await page.getByText('¿Eliminar "Películas"?').waitFor();
+  await page.getByText('Eliminar', { exact: true }).click();
+  // React Navigation keeps prior screens (Home, Detail) mounted-but-hidden
+  // in the stack, so a plain text match for "Películas" would still find
+  // those background chips and never report "detached" — the delete
+  // button's own accessibility label is unique to this screen's row.
+  await page.getByLabel('Eliminar categoría Películas').waitFor({ state: 'detached' });
+  log('Category "Películas" deleted globally from Manage Labels screen');
+  await page.getByLabel('Volver').click();
+  await page.getByText('Tus puntuaciones').waitFor();
+
+  // ---------- delete note with confirmation ----------
+  // React Navigation keeps Home mounted-but-hidden underneath Detail once
+  // pushed (only a plain goBack() unmounts it), so a plain text match for
+  // "Casa Pepa" becomes ambiguous once both screens have rendered it at
+  // some point — use the card's own accessibility label instead.
+  await page.getByLabel('Ver Casa Pepa').click();
+  await page.getByLabel('Eliminar puntuación').waitFor();
+  await page.getByLabel('Eliminar puntuación').click();
+  await page.getByText('¿Eliminar esta puntuación?').waitFor();
+  await shot(page, '13-delete-confirm');
+  // cancel first to make sure cancel doesn't delete
+  await page.getByText('Cancelar', { exact: true }).click();
+  await page.getByText('¿Eliminar esta puntuación?').waitFor({ state: 'detached' });
+  log('Delete confirmation dialog cancels without deleting');
+  // now actually delete
+  await page.getByLabel('Eliminar puntuación').click();
+  await page.getByText('¿Eliminar esta puntuación?').waitFor();
+  await page.getByText('Eliminar', { exact: true }).click();
+  await page.getByText('Tus puntuaciones').waitFor({ timeout: 10000 });
+  await page.getByText('Casa Pepa').waitFor({ state: 'detached' });
+  await page.getByText('Todavía no hay puntuaciones').waitFor();
+  log('Score deleted after confirming, back on Home with card gone');
+
+  // ---------- side menu: logout ----------
+  await page.getByLabel('Abrir menú').click();
+  await page.getByText('Cerrar sesión', { exact: false }).click();
+  await page.getByText('Bienvenido de nuevo').waitFor({ timeout: 10000 });
+  log('Logged out via side menu, back on login screen');
+
   // ---------- report ----------
   console.log('\n=== ALL STEPS PASSED ===');
   if (consoleErrors.length) {
@@ -319,6 +402,15 @@ async function inputWithValue(page, val) {
   if (consoleErrors.length) {
     console.log('\nConsole errors so far:');
     for (const e of [...new Set(consoleErrors)]) console.log(' -', e.slice(0, 300));
+  }
+  if (debugPage) {
+    try {
+      await debugPage.screenshot({ path: `${SHOTS}/FAILURE.png` });
+      const bodyText = await debugPage.evaluate(() => document.body.innerText);
+      require('fs').writeFileSync(`${SHOTS}/FAILURE.txt`, bodyText);
+    } catch (e2) {
+      console.error('(failed to capture debug screenshot)', e2.message);
+    }
   }
   process.exit(1);
 });

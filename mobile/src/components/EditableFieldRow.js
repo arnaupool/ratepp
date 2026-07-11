@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, TextInput, Pressable, StyleSheet, Image, ActivityIndicator } from 'react-native';
-import { colors } from '../theme/colors';
+import { useTheme } from '../theme/ThemeContext';
 import { type } from '../theme/typography';
 import { FIELD_DEFS } from '../constants/fieldDefs';
 import FieldIcon from './FieldIcon';
@@ -34,13 +34,14 @@ export default function EditableFieldRow({
   onMoveUp,
   onMoveDown,
 }) {
+  const { colors } = useTheme();
   const def = FIELD_DEFS.find((d) => d.id === field.type);
   if (!def) return null;
 
   return (
-    <View style={styles.fieldRow}>
+    <View style={[styles.fieldRow, { backgroundColor: colors.surface, borderColor: colors.line }]}>
       <View style={styles.fieldHead}>
-        <View style={styles.ficonWrap}>
+        <View style={[styles.ficonWrap, { backgroundColor: colors.accent2 }]}>
           <FieldIcon type={def.icon} size={18} color={colors.white} />
         </View>
         <TextInput
@@ -51,30 +52,30 @@ export default function EditableFieldRow({
         />
         <View style={styles.fieldActions}>
           <Pressable
-            style={[styles.moveBtn, isFirst && styles.moveBtnDisabled]}
+            style={[styles.moveBtn, { backgroundColor: 'rgba(128,128,128,0.15)' }, isFirst && styles.moveBtnDisabled]}
             disabled={isFirst}
             onPress={onMoveUp}
             accessibilityLabel={`Mover ${field.label} arriba`}
           >
-            <Text style={styles.moveBtnText}>▲</Text>
+            <Text style={[styles.moveBtnText, { color: colors.sub }]}>▲</Text>
           </Pressable>
           <Pressable
-            style={[styles.moveBtn, isLast && styles.moveBtnDisabled]}
+            style={[styles.moveBtn, { backgroundColor: 'rgba(128,128,128,0.15)' }, isLast && styles.moveBtnDisabled]}
             disabled={isLast}
             onPress={onMoveDown}
             accessibilityLabel={`Mover ${field.label} abajo`}
           >
-            <Text style={styles.moveBtnText}>▼</Text>
+            <Text style={[styles.moveBtnText, { color: colors.sub }]}>▼</Text>
           </Pressable>
-          <Pressable style={styles.fieldRemove} onPress={onRemove} accessibilityLabel={`Quitar campo ${field.label}`}>
-            <Text style={styles.fieldRemoveText}>✕</Text>
+          <Pressable style={[styles.fieldRemove, { backgroundColor: 'rgba(128,128,128,0.15)' }]} onPress={onRemove} accessibilityLabel={`Quitar campo ${field.label}`}>
+            <Text style={[styles.fieldRemoveText, { color: colors.sub }]}>✕</Text>
           </Pressable>
         </View>
       </View>
 
       {def.kind === 'simple' && (
         <TextInput
-          style={styles.fieldInput}
+          style={[styles.fieldInput, { color: colors.ink }]}
           placeholder={def.placeholder}
           placeholderTextColor={colors.sub}
           value={field.value}
@@ -110,7 +111,7 @@ export default function EditableFieldRow({
             <MapPreview value={field.value} height={120} />
           </Pressable>
         ) : (
-          <Pressable style={styles.locationBtn} onPress={onPickLocation}>
+          <Pressable style={[styles.locationBtn, { backgroundColor: colors.bg, borderColor: colors.line }]} onPress={onPickLocation}>
             <Text style={[type.quickChip, { color: colors.accent }]}>📍 Elegir ubicación en el mapa</Text>
           </Pressable>
         )
@@ -121,7 +122,7 @@ export default function EditableFieldRow({
           {field.value.map((v, idx) => (
             <TextInput
               key={idx}
-              style={styles.fieldInput}
+              style={[styles.fieldInput, { color: colors.ink }]}
               placeholder="Añade un ítem..."
               placeholderTextColor={colors.sub}
               value={v}
@@ -149,8 +150,8 @@ export default function EditableFieldRow({
               </Pressable>
             </View>
           ))}
-          <Pressable style={[styles.phMiniGridItem, styles.addPhotoTile]} onPress={onPickGalleryPhoto} accessibilityLabel="Añadir foto">
-            {field.uploading ? <ActivityIndicator color={colors.sub} /> : <Text style={styles.addPhotoPlus}>+</Text>}
+          <Pressable style={[styles.phMiniGridItem, styles.addPhotoTile, { borderColor: colors.line }]} onPress={onPickGalleryPhoto} accessibilityLabel="Añadir foto">
+            {field.uploading ? <ActivityIndicator color={colors.sub} /> : <Text style={[styles.addPhotoPlus, { color: colors.sub }]}>+</Text>}
           </Pressable>
         </View>
       )}
@@ -163,16 +164,13 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     padding: 12,
     gap: 8,
-    backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: colors.line,
   },
   fieldHead: { flexDirection: 'row', alignItems: 'center', gap: 9 },
   ficonWrap: {
     width: 34,
     height: 34,
     borderRadius: 10,
-    backgroundColor: colors.accent2,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -182,34 +180,29 @@ const styles = StyleSheet.create({
     width: 22,
     height: 22,
     borderRadius: 11,
-    backgroundColor: 'rgba(0,0,0,0.06)',
     alignItems: 'center',
     justifyContent: 'center',
   },
   moveBtnDisabled: { opacity: 0.3 },
-  moveBtnText: { fontSize: 8, color: colors.sub },
+  moveBtnText: { fontSize: 8 },
   fieldRemove: {
     width: 20,
     height: 20,
     borderRadius: 10,
-    backgroundColor: 'rgba(0,0,0,0.06)',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  fieldRemoveText: { fontSize: 11, fontWeight: '700', color: colors.sub },
+  fieldRemoveText: { fontSize: 11, fontWeight: '700' },
   fieldInput: {
     fontFamily: 'Poppins_600SemiBold',
     fontSize: 14.5,
-    color: colors.ink,
     padding: 0,
   },
   locationBtn: {
     borderRadius: 10,
     paddingVertical: 10,
     paddingHorizontal: 12,
-    backgroundColor: colors.bg,
     borderWidth: 1,
-    borderColor: colors.line,
     borderStyle: 'dashed',
     alignItems: 'center',
   },
@@ -217,12 +210,11 @@ const styles = StyleSheet.create({
   phMiniGridItem: { width: '31.5%', aspectRatio: 1, borderRadius: 10, overflow: 'hidden' },
   addPhotoTile: {
     borderWidth: 1.5,
-    borderColor: colors.line,
     borderStyle: 'dashed',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  addPhotoPlus: { fontSize: 20, fontWeight: '800', color: colors.sub, lineHeight: 22, marginTop: -1 },
+  addPhotoPlus: { fontSize: 20, fontWeight: '800', lineHeight: 22, marginTop: -1 },
   galleryRemove: {
     position: 'absolute',
     top: 3,
@@ -234,5 +226,5 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  galleryRemoveText: { fontSize: 9, fontWeight: '700', color: colors.white },
+  galleryRemoveText: { fontSize: 9, fontWeight: '700', color: '#fff' },
 });

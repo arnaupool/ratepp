@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, Pressable, StyleSheet } from 'react-native';
-import { colors } from '../theme/colors';
+import { useTheme } from '../theme/ThemeContext';
 import { type } from '../theme/typography';
 import { animateNext } from '../utils/animate';
 
@@ -9,6 +9,7 @@ import { animateNext } from '../utils/animate';
 // is collapsed behind the small chevron next to the input (not a "Ver
 // todas" text link) until tapped.
 export default function CategoryEditor({ categories, suggestions, onToggle, onAddCustom }) {
+  const { colors } = useTheme();
   const [draft, setDraft] = useState('');
   const [expanded, setExpanded] = useState(false);
 
@@ -30,7 +31,7 @@ export default function CategoryEditor({ categories, suggestions, onToggle, onAd
     <View style={{ gap: 8 }}>
       <View style={styles.row}>
         <TextInput
-          style={styles.input}
+          style={[styles.input, { backgroundColor: colors.surface, borderColor: colors.line, color: colors.ink }]}
           placeholder="Escribe y pulsa enter para añadir..."
           placeholderTextColor={colors.sub}
           value={draft}
@@ -39,11 +40,11 @@ export default function CategoryEditor({ categories, suggestions, onToggle, onAd
           returnKeyType="done"
         />
         <Pressable
-          style={styles.chevronBtn}
+          style={[styles.chevronBtn, { backgroundColor: colors.surface, borderColor: colors.line }]}
           onPress={toggleExpanded}
           accessibilityLabel={expanded ? 'Ocultar categorías' : 'Ver todas las categorías'}
         >
-          <Text style={styles.chevronText}>{expanded ? '▴' : '▾'}</Text>
+          <Text style={[styles.chevronText, { color: colors.sub }]}>{expanded ? '▴' : '▾'}</Text>
         </Pressable>
       </View>
       {visibleChips.length > 0 && (
@@ -51,7 +52,16 @@ export default function CategoryEditor({ categories, suggestions, onToggle, onAd
           {visibleChips.map((c) => {
             const on = categories.includes(c);
             return (
-              <Pressable key={c} onPress={() => onToggle(c)} style={[styles.chip, on && styles.chipOn]}>
+              <Pressable
+                key={c}
+                onPress={() => onToggle(c)}
+                style={[
+                  styles.chip,
+                  on
+                    ? { backgroundColor: colors.accent, borderColor: colors.accent }
+                    : { backgroundColor: colors.surface, borderColor: colors.line },
+                ]}
+              >
                 <Text style={[type.chip, { color: on ? colors.accentInk : colors.sub }]}>{c}</Text>
               </Pressable>
             );
@@ -69,12 +79,9 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     paddingHorizontal: 14,
     paddingVertical: 11,
-    backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: colors.line,
     fontFamily: 'Poppins_600SemiBold',
     fontSize: 14,
-    color: colors.ink,
   },
   chevronBtn: {
     width: 42,
@@ -82,19 +89,14 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: colors.line,
   },
-  chevronText: { fontSize: 14, color: colors.sub },
+  chevronText: { fontSize: 14 },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   chip: {
     borderRadius: 999,
     paddingHorizontal: 12,
     paddingVertical: 6,
-    backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: colors.line,
   },
-  chipOn: { backgroundColor: colors.accent, borderColor: colors.accent },
 });

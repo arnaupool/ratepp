@@ -11,7 +11,8 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { scoresApi } from '../api/scores';
-import { colors, hashSeed } from '../theme/colors';
+import { hashSeed } from '../theme/palettes';
+import { useTheme } from '../theme/ThemeContext';
 import { type } from '../theme/typography';
 import PhotoStripe from '../components/PhotoStripe';
 import TagChip from '../components/TagChip';
@@ -26,14 +27,15 @@ import CoverPickerOverlay from '../components/CoverPickerOverlay';
 import PhotoLightbox from '../components/PhotoLightbox';
 import EditableFieldRow from '../components/EditableFieldRow';
 import LocationPickerOverlay from '../components/LocationPickerOverlay';
-import AnimatedSheet from '../components/AnimatedSheet';
+import ConfirmDialog from '../components/ConfirmDialog';
 import { formatDate } from '../components/DateField';
-import { FIELD_DEFS, QUICK_FIELD_DEFS, MORE_FIELD_DEFS, defaultFieldValue, DEFAULT_CATEGORIES } from '../constants/fieldDefs';
+import { FIELD_DEFS, QUICK_FIELD_DEFS, defaultFieldValue, DEFAULT_CATEGORIES } from '../constants/fieldDefs';
 import { animateNext } from '../utils/animate';
 import { pickImage } from '../utils/pickImage';
 import { api } from '../api/client';
 
 export default function DetailScreen({ route, navigation }) {
+  const { colors } = useTheme();
   const { scoreId } = route.params;
   const insets = useSafeAreaInsets();
   const [score, setScore] = useState(null);
@@ -42,11 +44,12 @@ export default function DetailScreen({ route, navigation }) {
   const [activeIndex, setActiveIndex] = useState(0);
   const [editingId, setEditingId] = useState(null);
   const [editMode, setEditMode] = useState(false);
-  const [fieldSheetOpen, setFieldSheetOpen] = useState(false);
   const [lightboxUri, setLightboxUri] = useState(null);
   const [coverPickerOpen, setCoverPickerOpen] = useState(false);
   const [locationFieldId, setLocationFieldId] = useState(null);
   const [categorySuggestions, setCategorySuggestions] = useState(DEFAULT_CATEGORIES);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -186,7 +189,6 @@ export default function DetailScreen({ route, navigation }) {
       });
       animateNext();
       setScore((s) => ({ ...s, fields: [...s.fields, field] }));
-      setFieldSheetOpen(false);
     } catch (e) {
       setError(e.message || 'No se pudo añadir el campo');
     }
@@ -297,9 +299,21 @@ export default function DetailScreen({ route, navigation }) {
   const openCoverSearch = () => setCoverPickerOpen(true);
   const openLocationPicker = (fieldId) => setLocationFieldId(fieldId);
 
+  const onDelete = async () => {
+    setDeleting(true);
+    try {
+      await scoresApi.remove(scoreId);
+      navigation.goBack();
+    } catch (e) {
+      setError(e.message || 'No se pudo eliminar la puntuación');
+      setDeleting(false);
+      setDeleteConfirmOpen(false);
+    }
+  };
+
   if (loading) {
     return (
-      <View style={[styles.screen, styles.center]}>
+      <View style={[styles.screen, styles.center, { backgroundColor: colors.bg }]}>
         <ActivityIndicator color={colors.accent} size="large" />
       </View>
     );
@@ -307,7 +321,7 @@ export default function DetailScreen({ route, navigation }) {
 
   if (error && !score) {
     return (
-      <View style={[styles.screen, styles.center]}>
+      <View style={[styles.screen, styles.center, { backgroundColor: colors.bg }]}>
         <Text style={{ fontFamily: 'Poppins_700Bold', color: colors.sub }}>{error}</Text>
       </View>
     );
@@ -319,15 +333,15 @@ export default function DetailScreen({ route, navigation }) {
   const editingLocationField = score.fields.find((f) => f.id === locationFieldId);
 
   return (
-    <View style={styles.screen}>
+    <View style={[styles.screen, { backgroundColor: colors.bg }]}>
       <ScrollView bounces={false} contentContainerStyle={{ paddingBottom: 40 }}>
         {editMode ? (
-          <View style={[styles.editHero, { paddingTop: insets.top + 14 }]}>
+          <View style={[styles.editHero, { backgroundColor: colors.surface, paddingTop: insets.top + 14 }]}>
             <View style={styles.editHeroHead}>
-              <Pressable style={styles.backBtnDark} onPress={() => navigation.goBack()} accessibilityLabel="Volver">
-                <View style={styles.backArrow} />
+              <Pressable style={[styles.backBtnDark, { backgroundColor: 'rgba(128,128,128,0.15)' }]} onPress={() => navigation.goBack()} accessibilityLabel="Volver">
+                <View style={[styles.backArrow, { borderColor: colors.ink }]} />
               </Pressable>
-              <Pressable style={styles.doneBtn} onPress={() => setEditMode(false)}>
+              <Pressable style={[styles.doneBtn, { backgroundColor: colors.accent }]} onPress={() => setEditMode(false)}>
                 <Text style={[type.chip, { color: colors.white }]}>Listo</Text>
               </Pressable>
             </View>
@@ -348,7 +362,7 @@ export default function DetailScreen({ route, navigation }) {
               onPress={() => navigation.goBack()}
               accessibilityLabel="Volver"
             >
-              <View style={styles.backArrow} />
+              <View style={[styles.backArrow, { borderColor: colors.ink }]} />
             </Pressable>
             <Pressable
               style={[styles.editModeBtn, { top: insets.top + 14 }]}
@@ -356,6 +370,13 @@ export default function DetailScreen({ route, navigation }) {
               accessibilityLabel="Editar puntuación"
             >
               <Text style={{ fontSize: 14 }}>✎</Text>
+            </Pressable>
+            <Pressable
+              style={[styles.deleteBtn, { top: insets.top + 56 }]}
+              onPress={() => setDeleteConfirmOpen(true)}
+              accessibilityLabel="Eliminar puntuación"
+            >
+              <Text style={{ fontSize: 14 }}>🗑</Text>
             </Pressable>
           </View>
         )}
@@ -415,7 +436,7 @@ export default function DetailScreen({ route, navigation }) {
           </View>
 
           <View style={{ marginTop: 16 }}>
-            <Text style={[type.scoreLabel, { color: colors.sub }]}>Puntuaciones de otras personas</Text>
+            <Text style={[type.scoreLabel, { color: colors.sub }]}>Nota adicional</Text>
             {editMode ? (
               <PeopleScoresEditor
                 people={otherPeople}
@@ -432,7 +453,7 @@ export default function DetailScreen({ route, navigation }) {
                 {otherPeople.map((p) => (
                   <View key={p.id} style={styles.readOnlyPerson}>
                     <Text style={[type.personName, { color: colors.sub }]}>{p.name}</Text>
-                    <ScoreBadge value={p.value} size={40} />
+                    <ScoreBadge value={p.value} size={44} />
                   </View>
                 ))}
               </View>
@@ -443,7 +464,7 @@ export default function DetailScreen({ route, navigation }) {
         </View>
 
         {(score.fields.length > 0 || editMode) && (
-          <View style={styles.fieldsCard}>
+          <View style={[styles.fieldsCard, { backgroundColor: colors.surface }]}>
             {score.fields.map((f, idx) =>
               editMode ? (
                 <EditableFieldRow
@@ -476,37 +497,16 @@ export default function DetailScreen({ route, navigation }) {
             {editMode && (
               <View style={styles.addFieldRow}>
                 {QUICK_FIELD_DEFS.map((def) => (
-                  <Pressable key={def.id} style={styles.quickChip} onPress={() => onAddField(def)}>
+                  <Pressable key={def.id} style={[styles.quickChip, { backgroundColor: colors.bg, borderColor: colors.line }]} onPress={() => onAddField(def)}>
                     <FieldIcon type={def.icon} size={15} color={colors.accent} />
                     <Text style={[type.quickChip, { color: colors.ink }]}>{def.label}</Text>
                   </Pressable>
                 ))}
-                <Pressable style={styles.quickChip} onPress={() => setFieldSheetOpen(true)}>
-                  <Text style={{ fontSize: 15, color: colors.ink }}>···</Text>
-                  <Text style={[type.quickChip, { color: colors.ink }]}>Más campos</Text>
-                </Pressable>
               </View>
             )}
           </View>
         )}
       </ScrollView>
-
-      <AnimatedSheet visible={fieldSheetOpen} onClose={() => setFieldSheetOpen(false)}>
-        <Pressable style={styles.sheet} onPress={() => {}}>
-          <View style={styles.sheetGrab} />
-          <Text style={[type.sheetTitle, { color: colors.ink }]}>Más campos</Text>
-          <View style={styles.sheetGrid}>
-            {MORE_FIELD_DEFS.map((def) => (
-              <Pressable key={def.id} style={styles.sheetItem} onPress={() => onAddField(def)}>
-                <View style={styles.ficonWrap}>
-                  <FieldIcon type={def.icon} size={18} color={colors.white} />
-                </View>
-                <Text style={[type.sheetItemLabel, { color: colors.ink }]}>{def.label}</Text>
-              </Pressable>
-            ))}
-          </View>
-        </Pressable>
-      </AnimatedSheet>
 
       <LocationPickerOverlay
         visible={!!editingLocationField}
@@ -529,16 +529,26 @@ export default function DetailScreen({ route, navigation }) {
       />
 
       <PhotoLightbox visible={!!lightboxUri} uri={lightboxUri} onClose={() => setLightboxUri(null)} />
+
+      <ConfirmDialog
+        visible={deleteConfirmOpen}
+        title="¿Eliminar esta puntuación?"
+        message="Se borrará para siempre, junto con sus fotos y campos. No se puede deshacer."
+        confirmLabel={deleting ? 'Eliminando...' : 'Eliminar'}
+        onConfirm={onDelete}
+        onCancel={() => setDeleteConfirmOpen(false)}
+      />
     </View>
   );
 }
 
 function DetailFieldRow({ field, isLast, onPhotoPress }) {
+  const { colors } = useTheme();
   const def = FIELD_DEFS.find((d) => d.id === field.type);
   return (
-    <View style={[styles.fieldRow, !isLast && styles.fieldRowDivider]}>
+    <View style={[styles.fieldRow, !isLast && { borderBottomWidth: 1, borderBottomColor: colors.line }]}>
       <View style={styles.fieldHead}>
-        <View style={styles.ficonWrapSm}>
+        <View style={[styles.ficonWrapSm, { backgroundColor: colors.accent2 }]}>
           <FieldIcon type={def?.icon} size={13} color={colors.white} />
         </View>
         <Text style={[type.detailFieldLabel, styles.fieldHeadLabel, { color: colors.sub }]}>{field.label}</Text>
@@ -598,17 +608,16 @@ function DetailFieldRow({ field, isLast, onPhotoPress }) {
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: colors.bg },
+  screen: { flex: 1 },
   center: { alignItems: 'center', justifyContent: 'center' },
   heroWrap: { width: '100%' },
   hero: { width: '100%', aspectRatio: 4 / 3 },
-  editHero: { paddingHorizontal: 18, paddingBottom: 8, backgroundColor: colors.surface },
+  editHero: { paddingHorizontal: 18, paddingBottom: 8 },
   editHeroHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   backBtnDark: {
     width: 34,
     height: 34,
     borderRadius: 17,
-    backgroundColor: 'rgba(0,0,0,0.06)',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -616,7 +625,6 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     paddingHorizontal: 16,
     paddingVertical: 8,
-    backgroundColor: colors.accent,
   },
   backBtn: {
     position: 'absolute',
@@ -638,13 +646,22 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  deleteBtn: {
+    position: 'absolute',
+    right: 14,
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: 'rgba(255,255,255,0.85)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   backArrow: {
     width: 8,
     height: 8,
     marginLeft: 3,
     borderLeftWidth: 2.5,
     borderBottomWidth: 2.5,
-    borderColor: colors.ink,
     transform: [{ rotate: '45deg' }],
   },
   thumbRow: { flexDirection: 'row', gap: 6, paddingHorizontal: 18, paddingTop: 14 },
@@ -662,17 +679,14 @@ const styles = StyleSheet.create({
     marginTop: 18,
     borderRadius: 20,
     overflow: 'hidden',
-    backgroundColor: colors.surface,
   },
   fieldRow: { padding: 13, paddingHorizontal: 16, gap: 5 },
-  fieldRowDivider: { borderBottomWidth: 1, borderBottomColor: colors.line },
   fieldHead: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   fieldHeadLabel: { flex: 1 },
   ficonWrapSm: {
     width: 24,
     height: 24,
     borderRadius: 7,
-    backgroundColor: colors.accent2,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -689,37 +703,6 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     paddingHorizontal: 12,
     paddingVertical: 9,
-    backgroundColor: colors.bg,
     borderWidth: 1,
-    borderColor: colors.line,
-  },
-  ficonWrap: {
-    width: 34,
-    height: 34,
-    borderRadius: 10,
-    backgroundColor: colors.accent2,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  sheet: {
-    borderTopLeftRadius: 26,
-    borderTopRightRadius: 26,
-    paddingHorizontal: 18,
-    paddingTop: 10,
-    paddingBottom: 30,
-    backgroundColor: colors.surface,
-    gap: 14,
-  },
-  sheetGrab: { width: 36, height: 5, borderRadius: 3, backgroundColor: 'rgba(0,0,0,0.15)', alignSelf: 'center' },
-  sheetGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
-  sheetItem: {
-    width: '47%',
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    padding: 12,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: colors.line,
   },
 });

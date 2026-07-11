@@ -1,12 +1,14 @@
 import React from 'react';
 import { LinearGradient } from 'expo-linear-gradient';
-import { photoStripeColors } from '../theme/colors';
+import { photoStripeColors } from '../theme/palettes';
+import { useTheme } from '../theme/ThemeContext';
 
 // Approximates the design's `repeating-linear-gradient(115deg, c1 0 Npx, c2 Npx 2Npx)`
 // diagonal-stripe placeholder (used before a real photo is uploaded) with a
 // banded LinearGradient — RN has no repeating-gradient primitive.
 export default function PhotoStripe({ seed, style, bands = 6 }) {
-  const [c1, c2] = photoStripeColors(seed);
+  const { dark } = useTheme();
+  const [c1, c2] = photoStripeColors(seed, dark);
   const colors = [];
   const locations = [];
   for (let i = 0; i < bands; i++) {

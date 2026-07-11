@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, Pressable, StyleSheet } from 'react-native';
 import * as Location from 'expo-location';
-import { colors } from '../theme/colors';
+import { useTheme } from '../theme/ThemeContext';
 import { type } from '../theme/typography';
 import AnimatedSheet from './AnimatedSheet';
 
@@ -9,6 +9,7 @@ import AnimatedSheet from './AnimatedSheet';
 // web; this fallback (used by the local web preview / e2e tests) just
 // captures a free-text label plus optionally the browser's own geolocation.
 export default function LocationPickerOverlay({ visible, initialValue, onClose, onConfirm }) {
+  const { colors } = useTheme();
   const [label, setLabel] = useState(initialValue?.label || '');
   const [coords, setCoords] = useState(
     initialValue?.lat != null ? { lat: initialValue.lat, lng: initialValue.lng } : null
@@ -27,11 +28,11 @@ export default function LocationPickerOverlay({ visible, initialValue, onClose, 
 
   return (
     <AnimatedSheet visible={visible} onClose={onClose}>
-      <Pressable style={styles.sheet} onPress={() => {}}>
+      <Pressable style={[styles.sheet, { backgroundColor: colors.surface }]} onPress={() => {}}>
         <View style={styles.sheetGrab} />
         <Text style={[type.sheetTitle, { color: colors.ink }]}>Elegir ubicación</Text>
         <TextInput
-          style={styles.input}
+          style={[styles.input, { backgroundColor: colors.bg, borderColor: colors.line, color: colors.ink }]}
           placeholder="Ej. Calle Mayor 12, Madrid"
           placeholderTextColor={colors.sub}
           value={label}
@@ -47,7 +48,7 @@ export default function LocationPickerOverlay({ visible, initialValue, onClose, 
             <Text style={[type.loginBtn, { color: colors.sub }]}>Cancelar</Text>
           </Pressable>
           <Pressable
-            style={[styles.confirmBtn, !label.trim() && styles.confirmBtnDisabled]}
+            style={[styles.confirmBtn, { backgroundColor: colors.accent }, !label.trim() && styles.confirmBtnDisabled]}
             disabled={!label.trim()}
             onPress={() => onConfirm({ label: label.trim(), lat: coords?.lat ?? null, lng: coords?.lng ?? null })}
           >
@@ -66,7 +67,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 18,
     paddingTop: 10,
     paddingBottom: 30,
-    backgroundColor: colors.surface,
     gap: 12,
   },
   sheetGrab: { width: 36, height: 5, borderRadius: 3, backgroundColor: 'rgba(0,0,0,0.15)', alignSelf: 'center' },
@@ -74,16 +74,13 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     paddingHorizontal: 12,
     paddingVertical: 10,
-    backgroundColor: colors.bg,
     borderWidth: 1,
-    borderColor: colors.line,
     fontFamily: 'Poppins_600SemiBold',
     fontSize: 14,
-    color: colors.ink,
   },
   currentBtn: { alignSelf: 'flex-start' },
   actions: { flexDirection: 'row', gap: 10, marginTop: 4 },
   cancelBtn: { flex: 1, paddingVertical: 13, alignItems: 'center', justifyContent: 'center' },
-  confirmBtn: { flex: 2, borderRadius: 14, paddingVertical: 13, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.accent },
+  confirmBtn: { flex: 2, borderRadius: 14, paddingVertical: 13, alignItems: 'center', justifyContent: 'center' },
   confirmBtnDisabled: { opacity: 0.5 },
 });

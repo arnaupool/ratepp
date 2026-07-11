@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, Image, Pressable, StyleSheet, ScrollView, ActivityIndicator, Keyboard } from 'react-native';
 import { api } from '../api/client';
 import { pickImage } from '../utils/pickImage';
-import { colors } from '../theme/colors';
+import { useTheme } from '../theme/ThemeContext';
 import { type } from '../theme/typography';
 import { animateNext } from '../utils/animate';
 
@@ -19,6 +19,7 @@ import { animateNext } from '../utils/animate';
 // renders that overlay at the top level instead; onOpenCoverSearch just
 // asks it to open.
 export default function PhotoGalleryEditor({ photos, onChange, onError, onOpenCoverSearch }) {
+  const { colors } = useTheme();
   const [uploading, setUploading] = useState(false);
 
   const addUrl = (url) => {
@@ -65,10 +66,10 @@ export default function PhotoGalleryEditor({ photos, onChange, onError, onOpenCo
         <View style={{ flexDirection: 'row', gap: 8 }}>
           {photos.map((url, idx) => (
             <View key={`${url}-${idx}`} style={styles.thumbWrap}>
-              <Image source={{ uri: url }} style={styles.thumb} />
+              <Image source={{ uri: url }} style={[styles.thumb, { backgroundColor: colors.surface }]} />
               {idx === 0 && (
-                <View style={styles.coverBadge}>
-                  <Text style={styles.coverBadgeText}>PORTADA</Text>
+                <View style={[styles.coverBadge, { backgroundColor: colors.accent }]}>
+                  <Text style={[styles.coverBadgeText, { color: colors.white }]}>PORTADA</Text>
                 </View>
               )}
               <Pressable style={styles.removeBtn} onPress={() => remove(idx)} accessibilityLabel="Quitar foto">
@@ -78,28 +79,28 @@ export default function PhotoGalleryEditor({ photos, onChange, onError, onOpenCo
                 <Pressable
                   disabled={idx === 0}
                   onPress={() => move(idx, -1)}
-                  style={[styles.moveBtn, idx === 0 && styles.moveBtnDisabled]}
+                  style={[styles.moveBtn, { backgroundColor: colors.surface, borderColor: colors.line }, idx === 0 && styles.moveBtnDisabled]}
                   accessibilityLabel="Mover foto a la izquierda"
                 >
-                  <Text style={styles.moveBtnText}>‹</Text>
+                  <Text style={[styles.moveBtnText, { color: colors.sub }]}>‹</Text>
                 </Pressable>
                 <Pressable
                   disabled={idx === photos.length - 1}
                   onPress={() => move(idx, 1)}
-                  style={[styles.moveBtn, idx === photos.length - 1 && styles.moveBtnDisabled]}
+                  style={[styles.moveBtn, { backgroundColor: colors.surface, borderColor: colors.line }, idx === photos.length - 1 && styles.moveBtnDisabled]}
                   accessibilityLabel="Mover foto a la derecha"
                 >
-                  <Text style={styles.moveBtnText}>›</Text>
+                  <Text style={[styles.moveBtnText, { color: colors.sub }]}>›</Text>
                 </Pressable>
               </View>
             </View>
           ))}
-          <Pressable style={styles.addTile} onPress={uploadFromDevice} accessibilityLabel="Añadir foto a la galería">
-            {uploading ? <ActivityIndicator color={colors.sub} /> : <Text style={styles.addTilePlus}>+</Text>}
+          <Pressable style={[styles.addTile, { borderColor: colors.line }]} onPress={uploadFromDevice} accessibilityLabel="Añadir foto a la galería">
+            {uploading ? <ActivityIndicator color={colors.sub} /> : <Text style={[styles.addTilePlus, { color: colors.sub }]}>+</Text>}
           </Pressable>
         </View>
       </ScrollView>
-      <Pressable style={styles.searchBtn} onPress={openSearch}>
+      <Pressable style={[styles.searchBtn, { backgroundColor: colors.surface, borderColor: colors.line }]} onPress={openSearch}>
         <Text style={[type.quickChip, { color: colors.ink }]}>Buscar carátula</Text>
       </Pressable>
     </View>
@@ -110,17 +111,16 @@ const THUMB = 84;
 
 const styles = StyleSheet.create({
   thumbWrap: { width: THUMB, gap: 4 },
-  thumb: { width: THUMB, height: THUMB, borderRadius: 12, backgroundColor: colors.surface },
+  thumb: { width: THUMB, height: THUMB, borderRadius: 12 },
   coverBadge: {
     position: 'absolute',
     left: 4,
     top: 4,
-    backgroundColor: colors.accent,
     borderRadius: 6,
     paddingHorizontal: 5,
     paddingVertical: 2,
   },
-  coverBadgeText: { fontFamily: 'Poppins_800ExtraBold', fontSize: 8, color: colors.white, letterSpacing: 0.3 },
+  coverBadgeText: { fontFamily: 'Poppins_800ExtraBold', fontSize: 8, letterSpacing: 0.3 },
   removeBtn: {
     position: 'absolute',
     right: 4,
@@ -132,7 +132,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  removeBtnText: { fontSize: 9, fontWeight: '700', color: colors.white, lineHeight: 10 },
+  removeBtnText: { fontSize: 9, fontWeight: '700', color: '#fff', lineHeight: 10 },
   moveRow: { flexDirection: 'row', justifyContent: 'space-between' },
   moveBtn: {
     width: 26,
@@ -140,30 +140,25 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: colors.line,
   },
   moveBtnDisabled: { opacity: 0.35 },
-  moveBtnText: { fontSize: 13, fontWeight: '800', color: colors.sub, lineHeight: 14 },
+  moveBtnText: { fontSize: 13, fontWeight: '800', lineHeight: 14 },
   addTile: {
     width: THUMB,
     height: THUMB,
     borderRadius: 12,
     borderWidth: 1.5,
-    borderColor: colors.line,
     borderStyle: 'dashed',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  addTilePlus: { fontSize: 22, fontWeight: '800', color: colors.sub, lineHeight: 24, marginTop: -1 },
+  addTilePlus: { fontSize: 22, fontWeight: '800', lineHeight: 24, marginTop: -1 },
   searchBtn: {
     alignSelf: 'flex-start',
     borderRadius: 12,
     paddingHorizontal: 12,
     paddingVertical: 9,
-    backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: colors.line,
   },
 });

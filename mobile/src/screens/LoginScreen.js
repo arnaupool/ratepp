@@ -11,10 +11,11 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { useAuth } from '../context/AuthContext';
-import { colors } from '../theme/colors';
+import { useTheme } from '../theme/ThemeContext';
 import { type } from '../theme/typography';
 
 export default function LoginScreen() {
+  const { colors } = useTheme();
   const { login, register } = useAuth();
   const [mode, setMode] = useState('login');
   const [email, setEmail] = useState('');
@@ -51,13 +52,13 @@ export default function LoginScreen() {
   };
 
   return (
-    <View style={styles.screen}>
+    <View style={[styles.screen, { backgroundColor: colors.bg }]}>
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
         <ScrollView contentContainerStyle={styles.wrap} keyboardShouldPersistTaps="handled">
-          <View style={styles.logo}>
+          <View style={[styles.logo, { backgroundColor: colors.accent }]}>
             <Text style={[type.logoLetter, { color: colors.white }]}>P</Text>
           </View>
 
@@ -73,7 +74,7 @@ export default function LoginScreen() {
           <View style={styles.field}>
             <Text style={[type.loginLabel, { color: colors.sub }]}>Email</Text>
             <TextInput
-              style={styles.input}
+              style={[styles.input, { backgroundColor: colors.surface, borderColor: colors.line, color: colors.ink }]}
               placeholder="tucorreo@email.com"
               placeholderTextColor={colors.sub}
               autoCapitalize="none"
@@ -87,7 +88,7 @@ export default function LoginScreen() {
           <View style={styles.field}>
             <Text style={[type.loginLabel, { color: colors.sub }]}>Contraseña</Text>
             <TextInput
-              style={styles.input}
+              style={[styles.input, { backgroundColor: colors.surface, borderColor: colors.line, color: colors.ink }]}
               placeholder="••••••••"
               placeholderTextColor={colors.sub}
               secureTextEntry
@@ -100,7 +101,7 @@ export default function LoginScreen() {
             <View style={styles.field}>
               <Text style={[type.loginLabel, { color: colors.sub }]}>Confirmar contraseña</Text>
               <TextInput
-                style={styles.input}
+                style={[styles.input, { backgroundColor: colors.surface, borderColor: colors.line, color: colors.ink }]}
                 placeholder="••••••••"
                 placeholderTextColor={colors.sub}
                 secureTextEntry
@@ -112,7 +113,7 @@ export default function LoginScreen() {
 
           {!!error && <Text style={styles.error}>{error}</Text>}
 
-          <Pressable style={styles.btn} onPress={submit} disabled={submitting}>
+          <Pressable style={[styles.btn, { backgroundColor: colors.accent }]} onPress={submit} disabled={submitting}>
             {submitting ? (
               <ActivityIndicator color={colors.white} />
             ) : (
@@ -138,13 +139,12 @@ export default function LoginScreen() {
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: colors.bg },
+  screen: { flex: 1 },
   wrap: { flexGrow: 1, justifyContent: 'center', paddingHorizontal: 30, gap: 20, paddingVertical: 40 },
   logo: {
     width: 60,
     height: 60,
     borderRadius: 18,
-    backgroundColor: colors.accent,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -155,16 +155,12 @@ const styles = StyleSheet.create({
     paddingVertical: 13,
     fontFamily: 'Poppins_600SemiBold',
     fontSize: 15,
-    backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: colors.line,
-    color: colors.ink,
   },
   btn: {
     borderRadius: 14,
     paddingVertical: 15,
     marginTop: 4,
-    backgroundColor: colors.accent,
     alignItems: 'center',
     justifyContent: 'center',
   },

@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Animated, Pressable, StyleSheet, Easing, Keyboard } from 'react-native';
+import { Animated, Pressable, StyleSheet, Easing, Keyboard, KeyboardAvoidingView, Platform } from 'react-native';
 
 // Shared bottom-sheet chrome (backdrop fade + slide-up) for every inline
 // overlay in the app ("Más campos", cover search, location picker) — a
@@ -34,7 +34,13 @@ export default function AnimatedSheet({ visible, onClose, children }) {
   return (
     <Animated.View style={[styles.backdrop, { opacity: backdropOpacity }]}>
       <Pressable style={StyleSheet.absoluteFillObject} onPress={onClose} />
-      <Animated.View style={{ transform: [{ translateY }] }}>{children}</Animated.View>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={{ width: '100%' }}
+        pointerEvents="box-none"
+      >
+        <Animated.View style={{ transform: [{ translateY }] }}>{children}</Animated.View>
+      </KeyboardAvoidingView>
     </Animated.View>
   );
 }

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, Pressable, StyleSheet, Platform } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { colors } from '../theme/colors';
+import { useTheme } from '../theme/ThemeContext';
 import { type } from '../theme/typography';
 
 const MONTHS = [
@@ -18,6 +18,7 @@ export function formatDate(iso) {
 // value/onChange work with plain 'YYYY-MM-DD' strings (date-only, no time
 // or timezone concerns since this is just "when did this happen").
 export default function DateField({ value, onChange }) {
+  const { colors } = useTheme();
   const [showPicker, setShowPicker] = useState(false);
   const dateObj = value ? new Date(`${value}T00:00:00`) : new Date();
 
@@ -27,7 +28,7 @@ export default function DateField({ value, onChange }) {
         type="date"
         value={value || ''}
         onChange={(e) => onChange(e.target.value || null)}
-        style={webInputStyle}
+        style={{ ...webInputStyle, color: colors.ink }}
       />
     );
   }
@@ -59,7 +60,7 @@ export default function DateField({ value, onChange }) {
             onChange={onPickerChange}
           />
           {Platform.OS === 'ios' && (
-            <Pressable style={styles.doneBtn} onPress={() => setShowPicker(false)}>
+            <Pressable style={[styles.doneBtn, { backgroundColor: colors.accent }]} onPress={() => setShowPicker(false)}>
               <Text style={[type.chip, { color: colors.white }]}>Listo</Text>
             </Pressable>
           )}
@@ -72,7 +73,6 @@ export default function DateField({ value, onChange }) {
 const webInputStyle = {
   fontFamily: 'Poppins_600SemiBold',
   fontSize: 14.5,
-  color: colors.ink,
   border: 'none',
   outline: 'none',
   background: 'transparent',
@@ -88,6 +88,5 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     paddingHorizontal: 18,
     paddingVertical: 8,
-    backgroundColor: colors.accent,
   },
 });

@@ -1,12 +1,13 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { colors } from '../theme/colors';
+import { useTheme } from '../theme/ThemeContext';
 import { type } from '../theme/typography';
 
 export default function TagChip({ label, style }) {
+  const { colors } = useTheme();
   if (!label) return null;
   return (
-    <View style={[styles.chip, style]}>
+    <View style={[styles.chip, { backgroundColor: colors.surface, borderColor: colors.line }, style]}>
       <Text style={[type.tagChip, { color: colors.sub }]}>{label}</Text>
     </View>
   );
@@ -18,8 +19,6 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     paddingHorizontal: 9,
     paddingVertical: 3,
-    backgroundColor: '#ffffff',
     borderWidth: 1,
-    borderColor: colors.line,
   },
 });
