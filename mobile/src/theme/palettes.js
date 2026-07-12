@@ -23,7 +23,9 @@ export const darkColors = {
   bg: oklchToHex(0.17, 0.014, 75),
   surface: oklchToHex(0.23, 0.014, 70),
   ink: oklchToHex(0.94, 0.01, 60),
-  sub: oklchToHex(0.68, 0.015, 60),
+  // Bumped from 0.68 — that read as too washed-out/low-contrast on a real
+  // OLED screen despite passing WCAG contrast math on paper.
+  sub: oklchToHex(0.80, 0.015, 60),
   accent: oklchToHex(0.68, 0.17, 42),
   accent2: oklchToHex(0.72, 0.14, 85),
   accentInk: '#ffffff',
