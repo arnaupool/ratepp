@@ -13,8 +13,28 @@ const colorsRoutes = require('./routes/colors');
 
 const app = express();
 
+// JWT_SECRET signs every auth token; a missing or well-known placeholder
+// value would let anyone forge a valid token for any user. This only warns
+// (doesn't refuse to start) so an already-running deployment isn't broken
+// by this check — but it makes the risk impossible to miss in the logs.
+const INSECURE_JWT_SECRETS = new Set(['change-this-to-a-long-random-string', '']);
+if (!process.env.JWT_SECRET || INSECURE_JWT_SECRETS.has(process.env.JWT_SECRET)) {
+  console.warn(
+    '\n[AVISO DE SEGURIDAD] JWT_SECRET no está definido o usa el valor de ejemplo por defecto.\n' +
+    'Cualquiera que conozca ese valor podría falsificar tokens de sesión válidos para cualquier usuario.\n' +
+    'Define una variable de entorno JWT_SECRET propia y aleatoria (por ejemplo: openssl rand -hex 32).\n'
+  );
+}
+
 app.use(cors());
 app.use(express.json({ limit: '2mb' }));
+// Cheap hardening: stops browsers from guessing content-types and
+// executing an uploaded file as something other than the image it was
+// validated as. No effect on legitimate requests/responses.
+app.use((req, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  next();
+});
 app.use('/uploads', express.static(process.env.UPLOADS_DIR || path.join(__dirname, '../uploads')));
 
 app.get('/health', (req, res) => res.json({ ok: true }));

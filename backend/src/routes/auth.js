@@ -7,6 +7,30 @@ const asyncHandler = require('../middleware/asyncHandler');
 
 const router = express.Router();
 
+// Throttles brute-force/credential-stuffing attempts against login and
+// registration without needing an extra dependency. Limit is generous
+// (won't affect normal use, including a few mistyped passwords) but caps
+// automated guessing. Keyed per-IP, in-memory — resets on server restart,
+// which is fine for a self-hosted single-instance deployment.
+const attemptsByIp = new Map();
+const RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000;
+const RATE_LIMIT_MAX = 30;
+
+function rateLimitAuth(req, res, next) {
+  const ip = req.ip || req.socket?.remoteAddress || 'unknown';
+  const now = Date.now();
+  const entry = attemptsByIp.get(ip);
+  if (!entry || now - entry.windowStart > RATE_LIMIT_WINDOW_MS) {
+    attemptsByIp.set(ip, { windowStart: now, count: 1 });
+    return next();
+  }
+  entry.count += 1;
+  if (entry.count > RATE_LIMIT_MAX) {
+    return res.status(429).json({ error: 'Demasiados intentos, inténtalo de nuevo más tarde' });
+  }
+  next();
+}
+
 function signToken(userId) {
   return jwt.sign({ sub: userId }, process.env.JWT_SECRET, { expiresIn: '30d' });
 }
@@ -15,7 +39,7 @@ function publicUser(row) {
   return { id: row.id, email: row.email, name: row.name };
 }
 
-router.post('/register', asyncHandler(async (req, res) => {
+router.post('/register', rateLimitAuth, asyncHandler(async (req, res) => {
   const { email, password, name } = req.body || {};
   if (!email || !password || !name) {
     return res.status(400).json({ error: 'email, password y name son obligatorios' });
@@ -37,7 +61,7 @@ router.post('/register', asyncHandler(async (req, res) => {
   res.status(201).json({ token: signToken(user.id), user: publicUser(user) });
 }));
 
-router.post('/login', asyncHandler(async (req, res) => {
+router.post('/login', rateLimitAuth, asyncHandler(async (req, res) => {
   const { email, password } = req.body || {};
   if (!email || !password) {
     return res.status(400).json({ error: 'email y password son obligatorios' });
