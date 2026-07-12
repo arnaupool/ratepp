@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { View, Text, Pressable, StyleSheet, Platform, Modal } from 'react-native';
+import React, { useEffect, useRef, useState } from 'react';
+import { View, Text, Pressable, StyleSheet, Platform, Modal, Animated, Easing } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { useTheme } from '../theme/ThemeContext';
 import { type } from '../theme/typography';
@@ -23,7 +23,34 @@ export function formatDate(iso) {
 export default function DateField({ value, onChange, label }) {
   const { colors, dark } = useTheme();
   const [showPicker, setShowPicker] = useState(false);
+  const [mounted, setMounted] = useState(false);
+  const translateY = useRef(new Animated.Value(320)).current;
+  const backdropOpacity = useRef(new Animated.Value(0)).current;
   const dateObj = value ? new Date(`${value}T00:00:00`) : new Date();
+
+  // Same slide-up + fade the rest of the app's sheets use (see
+  // AnimatedSheet), driven manually instead of the Modal's own
+  // animationType="slide" — that has a known Android bug where a
+  // transparent Modal's backdrop renders solid black during/after the
+  // native slide transition. animationType="none" here sidesteps it
+  // entirely since the Modal itself no longer animates, only its content.
+  useEffect(() => {
+    if (showPicker) {
+      setMounted(true);
+      translateY.setValue(320);
+      backdropOpacity.setValue(0);
+      Animated.parallel([
+        Animated.timing(backdropOpacity, { toValue: 1, duration: 180, useNativeDriver: true }),
+        Animated.timing(translateY, { toValue: 0, duration: 260, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
+      ]).start();
+    } else if (mounted) {
+      Animated.parallel([
+        Animated.timing(backdropOpacity, { toValue: 0, duration: 150, useNativeDriver: true }),
+        Animated.timing(translateY, { toValue: 320, duration: 180, easing: Easing.in(Easing.cubic), useNativeDriver: true }),
+      ]).start(() => setMounted(false));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showPicker]);
 
   if (Platform.OS === 'web') {
     return (
@@ -59,20 +86,16 @@ export default function DateField({ value, onChange, label }) {
           Modal always overlays the full window regardless of nesting. The
           title also makes it obvious which field ("Desde"/"Hasta") is being
           edited when there's more than one. */}
-      {/* animationType="fade" + statusBarTranslucent: "slide" on Android has
-          a known issue where a transparent Modal renders its backdrop as
-          solid black instead of the translucent color we set, specifically
-          during/after the slide transition. fade doesn't have this problem. */}
       <Modal
-        visible={showPicker}
+        visible={mounted}
         transparent
-        animationType="fade"
+        animationType="none"
         statusBarTranslucent
         onRequestClose={() => setShowPicker(false)}
       >
-        <View style={styles.backdrop}>
+        <Animated.View style={[styles.backdrop, { opacity: backdropOpacity }]}>
           <Pressable style={StyleSheet.absoluteFillObject} onPress={() => setShowPicker(false)} />
-          <View style={[styles.sheet, { backgroundColor: colors.surface }]}>
+          <Animated.View style={[styles.sheet, { backgroundColor: colors.surface, transform: [{ translateY }] }]}>
             <Text style={[type.sheetTitle, { color: colors.ink }]}>
               {label ? `Elegir fecha — ${label}` : 'Elegir fecha'}
             </Text>
@@ -88,8 +111,8 @@ export default function DateField({ value, onChange, label }) {
             <Pressable style={[styles.doneBtn, { backgroundColor: colors.accent }]} onPress={() => setShowPicker(false)}>
               <Text style={[type.loginBtn, { color: colors.white }]}>Listo</Text>
             </Pressable>
-          </View>
-        </View>
+          </Animated.View>
+        </Animated.View>
       </Modal>
     </View>
   );

@@ -7,9 +7,10 @@ import { animateNext } from '../utils/animate';
 // A section hidden behind a tap by default — used for the card color
 // picker, which doesn't need to compete for attention with the fields most
 // people fill in every time.
-export default function CollapsibleSection({ title, children, defaultOpen = false }) {
+export default function CollapsibleSection({ title, children, defaultOpen = false, subColor }) {
   const { colors } = useTheme();
   const [open, setOpen] = useState(defaultOpen);
+  const sub = subColor || colors.sub;
 
   return (
     <View style={styles.section}>
@@ -21,8 +22,8 @@ export default function CollapsibleSection({ title, children, defaultOpen = fals
         }}
         accessibilityLabel={`${open ? 'Ocultar' : 'Mostrar'} ${title}`}
       >
-        <Text style={[type.scoreLabel, { color: colors.sub }]}>{title}</Text>
-        <Text style={{ fontSize: 12, color: colors.sub }}>{open ? '▴' : '▾'}</Text>
+        <Text style={[type.scoreLabel, { color: sub }]}>{title}</Text>
+        <Text style={{ fontSize: 12, color: sub }}>{open ? '▴' : '▾'}</Text>
       </Pressable>
       {open && <View style={{ marginTop: 8 }}>{children}</View>}
     </View>

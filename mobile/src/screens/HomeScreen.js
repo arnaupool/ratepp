@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -9,6 +9,7 @@ import {
   Pressable,
   StyleSheet,
   ActivityIndicator,
+  Animated,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
@@ -16,6 +17,7 @@ import { scoresApi } from '../api/scores';
 import { categoriesApi } from '../api/categories';
 import { tagsApi } from '../api/tags';
 import { categoryTint, hashSeed } from '../theme/palettes';
+import { contrastTextColors } from '../theme/colorUtils';
 import { useTheme } from '../theme/ThemeContext';
 import { type } from '../theme/typography';
 import PhotoStripe from '../components/PhotoStripe';
@@ -44,6 +46,19 @@ export default function HomeScreen({ navigation }) {
   const [dateTo, setDateTo] = useState(null);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  // Morphs the hamburger icon into an X in step with SideMenu's own
+  // slide-in timing, so the tap visually connects to the panel that
+  // follows it instead of the icon just sitting there static.
+  const menuIconAnim = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    Animated.timing(menuIconAnim, {
+      toValue: menuOpen ? 1 : 0,
+      duration: menuOpen ? 240 : 180,
+      // Interpolates the third bar's width below, which layout properties
+      // can't do on the native driver.
+      useNativeDriver: false,
+    }).start();
+  }, [menuOpen, menuIconAnim]);
 
   const activeFilterCount = (tagFilter ? 1 : 0) + (dateFrom || dateTo ? 1 : 0);
 
@@ -107,10 +122,33 @@ export default function HomeScreen({ navigation }) {
     <SafeAreaView style={[styles.screen, { backgroundColor: colors.bg }]} edges={['top']}>
       <DismissKeyboardView>
         <View style={styles.head}>
-          <Pressable style={styles.menuBtn} onPress={() => setMenuOpen(true)} accessibilityLabel="Abrir menú" hitSlop={6}>
-            <View style={[styles.menuBar, { backgroundColor: colors.ink }]} />
-            <View style={[styles.menuBar, { backgroundColor: colors.ink }]} />
-            <View style={[styles.menuBar, { backgroundColor: colors.ink, width: 12 }]} />
+          <Pressable style={styles.menuBtn} onPress={() => setMenuOpen((v) => !v)} accessibilityLabel="Abrir menú" hitSlop={6}>
+            <Animated.View
+              style={[
+                styles.menuBar,
+                {
+                  backgroundColor: colors.ink,
+                  transform: [
+                    { translateY: menuIconAnim.interpolate({ inputRange: [0, 1], outputRange: [0, 6.5] }) },
+                    { rotate: menuIconAnim.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '45deg'] }) },
+                  ],
+                },
+              ]}
+            />
+            <Animated.View style={[styles.menuBar, { backgroundColor: colors.ink, opacity: menuIconAnim.interpolate({ inputRange: [0, 1], outputRange: [1, 0] }) }]} />
+            <Animated.View
+              style={[
+                styles.menuBar,
+                {
+                  backgroundColor: colors.ink,
+                  width: menuIconAnim.interpolate({ inputRange: [0, 1], outputRange: [12, 20] }),
+                  transform: [
+                    { translateY: menuIconAnim.interpolate({ inputRange: [0, 1], outputRange: [0, -6.5] }) },
+                    { rotate: menuIconAnim.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '-45deg'] }) },
+                  ],
+                },
+              ]}
+            />
           </Pressable>
           <Text style={[type.screenTitle, { color: colors.ink }]}>Tus puntuaciones</Text>
         </View>
@@ -292,6 +330,10 @@ export default function HomeScreen({ navigation }) {
 function ScoreCard({ item, dark, onPress }) {
   const { colors } = useTheme();
   const tint = item.cardColor || categoryTint(item.categories?.[0], dark);
+  // categoryTint() is already theme-aware (its dark variant pairs with
+  // colors.ink), but a user-picked card color can land light or dark
+  // independent of the current theme, so it needs its own contrast check.
+  const titleColor = item.cardColor ? contrastTextColors(tint)?.ink || colors.ink : colors.ink;
   return (
     <Pressable style={[styles.card, { backgroundColor: tint }]} onPress={onPress} accessibilityLabel={`Ver ${item.title}`}>
       {item.photoUrls?.[0] ? (
@@ -301,7 +343,7 @@ function ScoreCard({ item, dark, onPress }) {
       )}
       <View style={styles.cardBody}>
         <View style={styles.cardTop}>
-          <Text style={[type.cardTitle, styles.cardTitleText, { color: colors.ink }]} numberOfLines={2}>
+          <Text style={[type.cardTitle, styles.cardTitleText, { color: titleColor }]} numberOfLines={2}>
             {item.title}
           </Text>
           {item.ratings.length <= 1 ? (

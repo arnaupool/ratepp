@@ -13,10 +13,12 @@ import {
   Keyboard,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Feather } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { scoresApi } from '../api/scores';
 import { colorsApi } from '../api/colors';
 import { hashSeed } from '../theme/palettes';
+import { contrastTextColors } from '../theme/colorUtils';
 import { useTheme } from '../theme/ThemeContext';
 import { type } from '../theme/typography';
 import PhotoStripe from '../components/PhotoStripe';
@@ -427,6 +429,13 @@ export default function DetailScreen({ route, navigation }) {
   // soon as a swatch is tapped rather than only after the API commit
   // resolves or after navigating back to Home.
   const pageBg = score.cardColor || colors.bg;
+  // A user-picked card color can land light or dark independent of the
+  // current theme (e.g. picked in light mode, viewed in dark mode where
+  // "ink" text turns white) — text sitting directly on it needs its own
+  // contrast decision instead of the theme's fixed ink/sub.
+  const bgText = score.cardColor ? contrastTextColors(pageBg) : null;
+  const contentInk = bgText ? bgText.ink : colors.ink;
+  const contentSub = bgText ? bgText.sub : colors.sub;
 
   return (
     <View style={[styles.screen, { backgroundColor: pageBg }]}>
@@ -481,14 +490,14 @@ export default function DetailScreen({ route, navigation }) {
               onPress={() => setEditMode(true)}
               accessibilityLabel="Editar puntuación"
             >
-              <Text style={{ fontSize: 19 }}>✎</Text>
+              <Feather name="edit-2" size={16} color="#2a2a2a" />
             </Pressable>
             <Pressable
               style={[styles.deleteBtn, { top: insets.top + 56 }]}
               onPress={() => setDeleteConfirmOpen(true)}
               accessibilityLabel="Eliminar puntuación"
             >
-              <Text style={{ fontSize: 14 }}>🗑</Text>
+              <Feather name="trash-2" size={16} color="#2a2a2a" />
             </Pressable>
           </View>
         )}
@@ -511,13 +520,13 @@ export default function DetailScreen({ route, navigation }) {
         <View style={styles.content}>
           {editMode ? (
             <TextInput
-              style={[type.detailTitle, styles.titleInput, { color: colors.ink }]}
+              style={[type.detailTitle, styles.titleInput, { color: contentInk }]}
               value={score.title}
               onChangeText={onTitleChange}
               onBlur={onTitleCommit}
             />
           ) : (
-            <Text style={[type.detailTitle, { color: colors.ink }]}>{score.title}</Text>
+            <Text style={[type.detailTitle, { color: contentInk }]}>{score.title}</Text>
           )}
 
           {editMode ? (
@@ -542,7 +551,7 @@ export default function DetailScreen({ route, navigation }) {
           {!!error && <Text style={styles.errorBanner}>{error}</Text>}
 
           <View style={styles.ownerRow}>
-            <Text style={[type.scoreLabel, { color: colors.sub }]}>Tu puntuación</Text>
+            <Text style={[type.scoreLabel, { color: contentSub }]}>Tu puntuación</Text>
             {ownerRating && (
               editMode ? (
                 <View style={styles.ownerScoreRow}>
@@ -558,7 +567,7 @@ export default function DetailScreen({ route, navigation }) {
           </View>
 
           <View style={{ marginTop: 16 }}>
-            <Text style={[type.scoreLabel, { color: colors.sub }]}>Nota adicional</Text>
+            <Text style={[type.scoreLabel, { color: contentSub }]}>Nota adicional</Text>
             {editMode ? (
               <PeopleScoresEditor
                 people={otherPeople}
@@ -569,18 +578,19 @@ export default function DetailScreen({ route, navigation }) {
                 onRenameCommit={onRenameCommit}
                 onRemove={onRemove}
                 onAdd={onAddPerson}
+                subColor={contentSub}
               />
             ) : otherPeople.length > 0 ? (
               <View style={styles.readOnlyPeopleRow}>
                 {otherPeople.map((p) => (
                   <View key={p.id} style={styles.readOnlyPerson}>
-                    <Text style={[type.personName, { color: colors.sub }]}>{p.name}</Text>
+                    <Text style={[type.personName, { color: contentSub }]}>{p.name}</Text>
                     <ScoreBadge value={p.value} size={44} />
                   </View>
                 ))}
               </View>
             ) : (
-              <Text style={[type.editContext, { color: colors.sub, marginTop: 8 }]}>Nadie más ha puntuado esto todavía.</Text>
+              <Text style={[type.editContext, { color: contentSub, marginTop: 8 }]}>Nadie más ha puntuado esto todavía.</Text>
             )}
           </View>
         </View>
@@ -631,7 +641,7 @@ export default function DetailScreen({ route, navigation }) {
 
         {editMode && (
           <View style={styles.content}>
-            <CollapsibleSection title="Color de la card">
+            <CollapsibleSection title="Color de la card" subColor={contentSub}>
               <ColorPicker value={score.cardColor} onChange={onCardColorChange} suggestedColor={suggestedColor} />
             </CollapsibleSection>
           </View>

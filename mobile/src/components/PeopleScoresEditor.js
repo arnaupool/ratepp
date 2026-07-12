@@ -18,8 +18,13 @@ export default function PeopleScoresEditor({
   onRenameCommit,
   onRemove,
   onAdd,
+  subColor,
 }) {
   const { colors } = useTheme();
+  // Lets the parent screen override the muted text color when this editor
+  // sits directly on a user-picked card background instead of the theme's
+  // usual surface — see contrastTextColors in theme/colorUtils.
+  const sub = subColor || colors.sub;
   const editingPerson = people.find((p) => p.id === editingId);
 
   return (
@@ -28,17 +33,17 @@ export default function PeopleScoresEditor({
         {people.map((p) => (
           <View key={p.id} style={styles.person}>
             {p.isOwner ? (
-              <Text style={[type.personName, { color: colors.sub }]}>{p.name}</Text>
+              <Text style={[type.personName, { color: sub }]}>{p.name}</Text>
             ) : (
               <View style={styles.nameRow}>
                 <TextInput
                   value={p.name}
                   onChangeText={(v) => onRename(p.id, v)}
                   onBlur={() => onRenameCommit && onRenameCommit(p.id)}
-                  style={[type.personName, styles.nameInput, { color: colors.sub }]}
+                  style={[type.personName, styles.nameInput, { color: sub }]}
                 />
                 <Pressable onPress={() => onRemove(p.id)} style={[styles.removeBtn, { backgroundColor: 'rgba(128,128,128,0.15)' }]} hitSlop={6} accessibilityLabel="Quitar persona">
-                  <Text style={[styles.removeBtnText, { color: colors.sub }]}>✕</Text>
+                  <Text style={[styles.removeBtnText, { color: sub }]}>✕</Text>
                 </Pressable>
               </View>
             )}
@@ -47,15 +52,15 @@ export default function PeopleScoresEditor({
         ))}
         <View style={styles.person}>
           <Pressable style={[styles.addPerson, { borderColor: colors.line }]} onPress={onAdd} accessibilityLabel="Añadir persona">
-            <Text style={[styles.addPersonPlus, { color: colors.sub }]}>+</Text>
+            <Text style={[styles.addPersonPlus, { color: sub }]}>+</Text>
           </Pressable>
-          <Text style={[type.personName, { color: colors.sub }]}>Añadir</Text>
+          <Text style={[type.personName, { color: sub }]}>Añadir</Text>
         </View>
       </View>
 
       {editingPerson && (
         <View style={styles.editContext}>
-          <Text style={[type.editContext, { color: colors.sub }]}>
+          <Text style={[type.editContext, { color: sub }]}>
             Editando puntuación de {editingPerson.name}
           </Text>
           <View style={{ marginTop: 10 }}>

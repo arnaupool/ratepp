@@ -51,3 +51,21 @@ export function pastelize(hex) {
   const hsl = rgbToHsl(rgb);
   return hslToHex({ h: hsl.h, s: Math.min(Math.max(hsl.s, 0.25), 0.55), l: 0.88 });
 }
+
+// A user-picked card color can be light or dark independent of the current
+// light/dark theme (e.g. a pastel picked in light mode, then viewed in dark
+// mode where "ink" text turns white) — so text sitting directly on that
+// color needs its own contrast decision instead of the theme's fixed ink.
+// Standard WCAG relative luminance picks readable near-black/near-white.
+export function contrastTextColors(hex) {
+  const rgb = hexToRgb(hex);
+  if (!rgb) return null;
+  const lin = (v) => {
+    const c = v / 255;
+    return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+  };
+  const luminance = 0.2126 * lin(rgb.r) + 0.7152 * lin(rgb.g) + 0.0722 * lin(rgb.b);
+  return luminance > 0.5
+    ? { ink: '#241f1a', sub: 'rgba(36,31,26,0.68)' }
+    : { ink: '#f7f4f0', sub: 'rgba(247,244,240,0.75)' };
+}

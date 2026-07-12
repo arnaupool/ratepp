@@ -15,18 +15,22 @@ export default function SideMenu({ visible, onClose, onNavigate }) {
   const translateX = useRef(new Animated.Value(-PANEL_WIDTH)).current;
   const backdropOpacity = useRef(new Animated.Value(0)).current;
 
+  // Backdrop and panel now share the same duration/easing as each other
+  // (and as the hamburger icon's own morph in HomeScreen) so the whole
+  // open/close reads as one continuous motion instead of two separately
+  // timed pieces landing at different moments.
   useEffect(() => {
     if (visible) {
       setMounted(true);
       translateX.setValue(-PANEL_WIDTH);
       backdropOpacity.setValue(0);
       Animated.parallel([
-        Animated.timing(backdropOpacity, { toValue: 1, duration: 180, useNativeDriver: true }),
+        Animated.timing(backdropOpacity, { toValue: 1, duration: 240, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
         Animated.timing(translateX, { toValue: 0, duration: 240, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
       ]).start();
     } else if (mounted) {
       Animated.parallel([
-        Animated.timing(backdropOpacity, { toValue: 0, duration: 150, useNativeDriver: true }),
+        Animated.timing(backdropOpacity, { toValue: 0, duration: 180, easing: Easing.in(Easing.cubic), useNativeDriver: true }),
         Animated.timing(translateX, { toValue: -PANEL_WIDTH, duration: 180, easing: Easing.in(Easing.cubic), useNativeDriver: true }),
       ]).start(() => setMounted(false));
     }

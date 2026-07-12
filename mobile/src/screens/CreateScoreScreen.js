@@ -16,6 +16,7 @@ import { scoresApi } from '../api/scores';
 import { colorsApi } from '../api/colors';
 import { api } from '../api/client';
 import { useTheme } from '../theme/ThemeContext';
+import { contrastTextColors } from '../theme/colorUtils';
 import { type } from '../theme/typography';
 import { QUICK_FIELD_DEFS, defaultFieldValue, DEFAULT_CATEGORIES } from '../constants/fieldDefs';
 import NumberPillRow from '../components/NumberPillRow';
@@ -235,9 +236,16 @@ export default function CreateScoreScreen({ navigation }) {
   };
 
   const editingLocationField = fields.find((f) => f.id === locationFieldId);
+  const pageBg = cardColor || colors.bg;
+  // Same reasoning as DetailScreen: a user-picked card color needs its own
+  // text-contrast decision, since it can land light or dark independent of
+  // the current theme.
+  const bgText = cardColor ? contrastTextColors(pageBg) : null;
+  const contentInk = bgText ? bgText.ink : colors.ink;
+  const contentSub = bgText ? bgText.sub : colors.sub;
 
   return (
-    <SafeAreaView style={[styles.screen, { backgroundColor: colors.bg }]} edges={['top']}>
+    <SafeAreaView style={[styles.screen, { backgroundColor: pageBg }]} edges={['top']}>
       <View style={styles.head}>
         <Pressable style={[styles.backBtn, { backgroundColor: 'rgba(128,128,128,0.15)' }]} onPress={() => navigation.goBack()} accessibilityLabel="Volver">
           <View style={[styles.backArrow, { borderColor: colors.ink }]} />
@@ -261,20 +269,20 @@ export default function CreateScoreScreen({ navigation }) {
         <ScrollView contentContainerStyle={Platform.OS === 'web' ? styles.body : undefined} keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag">
         <DismissKeyboardView style={styles.body}>
           <TextInput
-            style={[styles.titleInput, { color: colors.ink }]}
+            style={[styles.titleInput, { color: contentInk }]}
             placeholder="Título *"
-            placeholderTextColor={colors.sub}
+            placeholderTextColor={contentSub}
             value={title}
             onChangeText={setTitle}
           />
 
           <View style={styles.section}>
-            <Text style={[type.scoreLabel, { color: colors.sub }]}>Fotos</Text>
+            <Text style={[type.scoreLabel, { color: contentSub }]}>Fotos</Text>
             <PhotoGalleryEditor photos={photos} onChange={setPhotos} onError={setError} onOpenCoverSearch={openCoverSearch} />
           </View>
 
           <View style={styles.section}>
-            <Text style={[type.scoreLabel, { color: colors.sub }]}>Categorías</Text>
+            <Text style={[type.scoreLabel, { color: contentSub }]}>Categorías</Text>
             <CategoryEditor
               categories={categories}
               suggestions={categorySuggestions}
@@ -284,12 +292,12 @@ export default function CreateScoreScreen({ navigation }) {
           </View>
 
           <View style={styles.section}>
-            <Text style={[type.scoreLabel, { color: colors.sub }]}>Nota *</Text>
+            <Text style={[type.scoreLabel, { color: contentSub }]}>Nota *</Text>
             <NumberPillRow value={ownerValue} onSelect={(n) => onSelectNumber('owner', n)} />
           </View>
 
           <View style={styles.section}>
-            <Text style={[type.scoreLabel, { color: colors.sub }]}>Nota adicional</Text>
+            <Text style={[type.scoreLabel, { color: contentSub }]}>Nota adicional</Text>
             <PeopleScoresEditor
               people={others.map((o) => ({ ...o, isOwner: false }))}
               editingId={editingId}
@@ -298,6 +306,7 @@ export default function CreateScoreScreen({ navigation }) {
               onRename={renameOther}
               onRemove={removeOther}
               onAdd={addOther}
+              subColor={contentSub}
             />
           </View>
 
@@ -322,7 +331,7 @@ export default function CreateScoreScreen({ navigation }) {
             />
           ))}
 
-          <Text style={[type.scoreLabel, { color: colors.sub }]}>Añadir campo</Text>
+          <Text style={[type.scoreLabel, { color: contentSub }]}>Añadir campo</Text>
           <View style={styles.quickRow}>
             {QUICK_FIELD_DEFS.map((def) => (
               <Pressable key={def.id} style={[styles.quickChip, { backgroundColor: colors.surface, borderColor: colors.line }]} onPress={() => addField(def)}>
@@ -332,7 +341,7 @@ export default function CreateScoreScreen({ navigation }) {
             ))}
           </View>
 
-          <CollapsibleSection title="Color de la card">
+          <CollapsibleSection title="Color de la card" subColor={contentSub}>
             <ColorPicker value={cardColor} onChange={setCardColor} suggestedColor={suggestedColor} />
           </CollapsibleSection>
 

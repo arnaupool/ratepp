@@ -2,6 +2,7 @@ import React, { useCallback, useState } from 'react';
 import { View, Text, Pressable, StyleSheet, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
+import { Feather } from '@expo/vector-icons';
 import { categoriesApi } from '../api/categories';
 import { tagsApi } from '../api/tags';
 import { useTheme } from '../theme/ThemeContext';
@@ -90,7 +91,7 @@ export default function ManageLabelsScreen({ navigation }) {
                   accessibilityLabel={`Eliminar categoría ${c}`}
                   hitSlop={6}
                 >
-                  <Text style={{ fontSize: 16 }}>🗑</Text>
+                  <Feather name="trash-2" size={16} color={colors.sub} />
                 </Pressable>
               </View>
             ))}
@@ -112,7 +113,7 @@ export default function ManageLabelsScreen({ navigation }) {
                   accessibilityLabel={`Eliminar etiqueta ${t}`}
                   hitSlop={6}
                 >
-                  <Text style={{ fontSize: 16 }}>🗑</Text>
+                  <Feather name="trash-2" size={16} color={colors.sub} />
                 </Pressable>
               </View>
             ))}
