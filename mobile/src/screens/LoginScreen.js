@@ -13,6 +13,8 @@ import {
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../theme/ThemeContext';
 import { type } from '../theme/typography';
+import CollapsibleSection from '../components/CollapsibleSection';
+import ServerConfigEditor from '../components/ServerConfigEditor';
 
 export default function LoginScreen() {
   const { colors } = useTheme();
@@ -132,6 +134,17 @@ export default function LoginScreen() {
               {isRegister ? 'Inicia sesión' : 'Regístrate'}
             </Text>
           </Text>
+
+          {/* Settings (where this used to live exclusively) is only reachable
+              once logged in — if the configured server is unreachable (e.g.
+              away from home without VPN), that was a dead end with no way to
+              fix the address before logging in. */}
+          <CollapsibleSection title="Configurar servidor">
+            <ServerConfigEditor
+              description="¿No consigues conectar? Actualiza aquí la dirección de tu servidor autoalojado."
+              onSaved={() => setError('')}
+            />
+          </CollapsibleSection>
         </ScrollView>
       </KeyboardAvoidingView>
     </View>
