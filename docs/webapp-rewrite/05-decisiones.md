@@ -46,3 +46,12 @@ Prevalecen sobre los docs 01–04 donde se contradigan.
   recarga sin conexión se comprueba solo en Chromium (el WebKit de Playwright
   en Windows aborta cualquier navegación offline); hay que verificarla a mano
   en el iPhone.
+- **Layout de escritorio** (pedido por el usuario el 2026-11-02, sustituye a
+  "no hace falta un layout de escritorio" del doc 03): por debajo de 600 px
+  nada cambia. Desde 600 px, Principal usa una rejilla automática (hasta
+  1200 px de ancho) y los formularios van en columna centrada (760 px).
+  Desde 900 px, Detalle va en dos columnas (fotos | información) y las hojas
+  se muestran como diálogos centrados. Reglas en `web/src/styles/desktop.css`.
+- **Teselas de OSM**: llevan `referrerPolicy="strict-origin-when-cross-origin"`
+  (envían el origen de la app). Con la política global `same-origin` salían
+  sin `Referer` y OSM respondía "Access blocked".

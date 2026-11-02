@@ -30,10 +30,18 @@ export default defineConfig({
     {
       name: 'chromium',
       use: { ...devices['Pixel 7'], browserName: 'chromium', viewport: { width: 390, height: 844 } },
+      testIgnore: /10-desktop/,
     },
     {
       name: 'webkit-iphone',
       use: { ...devices['iPhone 15'] },
+      testIgnore: /10-desktop/,
+    },
+    {
+      // Computer browser: the wide layout, plus the whole journey on it.
+      name: 'desktop',
+      use: { ...devices['Desktop Chrome'], viewport: { width: 1440, height: 900 } },
+      testMatch: /(09-full-flow|10-desktop)\.spec\.ts/,
     },
   ],
   webServer: external

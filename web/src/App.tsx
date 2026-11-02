@@ -11,6 +11,8 @@ import LocationsMapScreen from './screens/LocationsMapScreen';
 import ManageLabelsScreen from './screens/ManageLabelsScreen';
 import { useKeyboardDismiss } from './hooks/useKeyboardDismiss';
 import UpdateBanner from './components/UpdateBanner';
+// Last, so its media queries win over each screen's own styles.
+import './styles/desktop.css';
 
 function Boot() {
   const { status } = useAuth();

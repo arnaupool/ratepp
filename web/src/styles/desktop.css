@@ -1,0 +1,184 @@
+/* Wider screens (computer, tablet). Below 600 px nothing here applies, so the
+   phone layout stays exactly as designed. */
+
+@media (min-width: 600px) {
+  #root {
+    max-width: none;
+  }
+
+  .side-menu {
+    max-width: none;
+  }
+
+  /* Principal: wider column, as many card columns as fit. */
+  .home-screen {
+    width: 100%;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding-left: 8px;
+    padding-right: 8px;
+  }
+
+  .home-search-row {
+    max-width: 760px;
+  }
+
+  .home-grid {
+    grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+    gap: 16px;
+  }
+
+  .home-fab {
+    right: max(24px, calc((100vw - 1200px) / 2 + 24px));
+    bottom: calc(32px + env(safe-area-inset-bottom));
+  }
+
+  .login-wrap {
+    width: 100%;
+    max-width: 440px;
+    margin: 0 auto;
+  }
+
+  .create-screen,
+  .detail-edit {
+    width: 100%;
+    max-width: 760px;
+    margin: 0 auto;
+  }
+
+  .settings-screen,
+  .labels-screen {
+    width: 100%;
+    max-width: 640px;
+    margin: 0 auto;
+  }
+
+  .detail-layout {
+    max-width: 760px;
+    margin: 0 auto;
+    padding: calc(env(safe-area-inset-top) + 16px) 18px 0;
+  }
+
+  .detail-hero-wrap {
+    border-radius: 20px;
+    overflow: hidden;
+  }
+
+  .detail-thumbs {
+    padding: 14px 0 0;
+  }
+
+  .detail-info .detail-content {
+    padding: 16px 0 0;
+  }
+
+  .detail-info .detail-fields {
+    margin: 18px 0 0;
+  }
+
+  .detail-thumb {
+    max-width: 120px;
+  }
+
+  /* On a phone the ten pills fill the row; on a wide form they'd grow huge. */
+  .num-pill {
+    max-width: 46px;
+  }
+}
+
+/* Computer: Detalle in two columns and sheets as centered dialogs. */
+@media (min-width: 900px) {
+  .detail-layout {
+    max-width: 1180px;
+    display: grid;
+    grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+    gap: 40px;
+    align-items: start;
+    padding: calc(env(safe-area-inset-top) + 28px) 32px 0;
+  }
+
+  .detail-media {
+    position: sticky;
+    top: 24px;
+  }
+
+  .detail-hero-wrap {
+    border-radius: 20px;
+    overflow: hidden;
+  }
+
+  .detail-thumbs {
+    padding: 14px 0 0;
+  }
+
+  .detail-info .detail-content {
+    padding: 0;
+  }
+
+  .detail-info .detail-fields {
+    margin: 18px 0 0;
+  }
+
+  .detail-title {
+    font-size: 26px;
+  }
+
+  .sheet-root {
+    max-width: none;
+    justify-content: center;
+    align-items: center;
+  }
+
+  .sheet-panel {
+    width: min(520px, calc(100% - 48px));
+    max-height: calc(100% - 80px);
+    border-radius: 26px;
+    padding-bottom: 24px;
+    opacity: 0;
+    transform: translateY(16px) scale(0.98);
+    transition:
+      transform 180ms cubic-bezier(0.32, 0, 0.67, 0),
+      opacity 150ms ease-in;
+  }
+
+  .sheet-root.shown .sheet-panel {
+    opacity: 1;
+    transform: none;
+    transition:
+      transform 240ms cubic-bezier(0.33, 1, 0.68, 1),
+      opacity 180ms ease-out;
+  }
+
+  .cover-sheet {
+    width: min(640px, calc(100% - 48px));
+  }
+
+  .update-banner {
+    bottom: 32px;
+  }
+}
+
+/* Mouse and trackpad: a little feedback on what can be clicked. */
+@media (hover: hover) and (pointer: fine) {
+  .score-card {
+    transition:
+      transform 160ms ease,
+      box-shadow 160ms ease;
+  }
+
+  .score-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 24px -12px rgba(40, 20, 10, 0.35);
+  }
+
+  .filter-chip:hover,
+  .select-chip:hover,
+  .quick-chip:hover,
+  .filters-tag:hover {
+    border-color: var(--accent);
+  }
+
+  .side-menu-item:hover {
+    color: var(--accent);
+  }
+}

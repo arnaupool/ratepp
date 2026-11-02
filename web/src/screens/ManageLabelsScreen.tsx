@@ -81,7 +81,7 @@ export default function ManageLabelsScreen() {
   const loading = categories.isPending || tags.isPending;
 
   return (
-    <div className="screen">
+    <div className="screen labels-screen">
       <ScreenHeader title="Categorías y etiquetas" />
       {loading ? (
         <div className="labels-loading">

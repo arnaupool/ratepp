@@ -178,7 +178,7 @@ function ScoreCard({ item, onOpen }: { item: ScoreSummary; onOpen: () => void })
   return (
     <button type="button" className="score-card" style={{ background: tint }} onClick={onOpen} aria-label={`Ver ${item.title}`}>
       {cover ? (
-        <Photo url={cover} thumb sizes="(max-width: 430px) 50vw, 215px" className="score-card-photo" />
+        <Photo url={cover} thumb sizes="(min-width: 600px) 260px, 50vw" className="score-card-photo" />
       ) : (
         <PhotoStripe id={item.id} className="score-card-photo" stripe={14} />
       )}

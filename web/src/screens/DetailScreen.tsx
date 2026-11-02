@@ -94,84 +94,91 @@ function Detail({ serverScore }: { serverScore: ScoreDetail }) {
 
   return (
     <div className="detail-screen" style={{ background: pageBg }}>
-      <div className="detail-hero-wrap">
-        {heroUrl ? (
-          <button type="button" className="detail-hero-btn" onClick={() => setLightbox(heroUrl)} aria-label="Ampliar foto">
-            <Photo url={heroUrl} className="detail-hero" loading="eager" />
-          </button>
-        ) : (
-          <PhotoStripe id={score.id} className="detail-hero" />
-        )}
-        <button type="button" className="detail-hero-back" onClick={goBack} aria-label="Volver">
-          <span className="back-arrow light" />
-        </button>
-        <button type="button" className="detail-hero-action edit" onClick={() => setEditMode(true)} aria-label="Editar puntuación">
-          <EditIcon size={16} color="#2a2a2a" />
-        </button>
-        <button type="button" className="detail-hero-action delete" onClick={() => setConfirmDelete(true)} aria-label="Eliminar puntuación">
-          <TrashIcon size={16} color="#2a2a2a" />
-        </button>
-      </div>
-
-      {photos.length > 1 && (
-        <div className="detail-thumbs">
-          {photos.map((url, idx) => (
-            <Thumb key={`${url}-${idx}`} url={url} active={idx === activeIndex} onSelect={() => setActiveIndex(idx)} onLongPress={() => setLightbox(url)} />
-          ))}
-        </div>
-      )}
-
-      <div className="detail-content">
-        <h1 className="detail-title" style={inkStyle}>
-          {score.title}
-        </h1>
-        {score.categories.length > 0 && (
-          <div className="detail-categories">
-            {score.categories.map((c) => (
-              <TagChip key={c} label={c} />
-            ))}
+      {/* Stacked on phones; two columns (photos | info) on wide screens. */}
+      <div className="detail-layout">
+        <div className="detail-media">
+          <div className="detail-hero-wrap">
+            {heroUrl ? (
+              <button type="button" className="detail-hero-btn" onClick={() => setLightbox(heroUrl)} aria-label="Ampliar foto">
+                <Photo url={heroUrl} className="detail-hero" loading="eager" />
+              </button>
+            ) : (
+              <PhotoStripe id={score.id} className="detail-hero" />
+            )}
+            <button type="button" className="detail-hero-back" onClick={goBack} aria-label="Volver">
+              <span className="back-arrow light" />
+            </button>
+            <button type="button" className="detail-hero-action edit" onClick={() => setEditMode(true)} aria-label="Editar puntuación">
+              <EditIcon size={16} color="#2a2a2a" />
+            </button>
+            <button type="button" className="detail-hero-action delete" onClick={() => setConfirmDelete(true)} aria-label="Eliminar puntuación">
+              <TrashIcon size={16} color="#2a2a2a" />
+            </button>
           </div>
-        )}
 
-        {!!error && <p className="detail-error-banner">{error}</p>}
-
-        <div className="detail-owner">
-          <span className="t-section-label" style={subStyle}>
-            Tu puntuación
-          </span>
-          {owner && <ScoreBadge value={owner.value} size={40} />}
-        </div>
-
-        <div className="detail-people-section">
-          <span className="t-section-label" style={subStyle}>
-            Nota adicional
-          </span>
-          {others.length > 0 ? (
-            <div className="detail-people">
-              {others.map((p) => (
-                <div key={p.id} className="detail-person">
-                  <span className="detail-person-name" style={subStyle}>
-                    {p.personName}
-                  </span>
-                  <ScoreBadge value={p.value} size={44} />
-                </div>
+          {photos.length > 1 && (
+            <div className="detail-thumbs">
+              {photos.map((url, idx) => (
+                <Thumb key={`${url}-${idx}`} url={url} active={idx === activeIndex} onSelect={() => setActiveIndex(idx)} onLongPress={() => setLightbox(url)} />
               ))}
             </div>
-          ) : (
-            <p className="detail-nobody" style={subStyle}>
-              Nadie más ha puntuado esto todavía.
-            </p>
+          )}
+        </div>
+
+        <div className="detail-info">
+          <div className="detail-content">
+            <h1 className="detail-title" style={inkStyle}>
+              {score.title}
+            </h1>
+            {score.categories.length > 0 && (
+              <div className="detail-categories">
+                {score.categories.map((c) => (
+                  <TagChip key={c} label={c} />
+                ))}
+              </div>
+            )}
+
+            {!!error && <p className="detail-error-banner">{error}</p>}
+
+            <div className="detail-owner">
+              <span className="t-section-label" style={subStyle}>
+                Tu puntuación
+              </span>
+              {owner && <ScoreBadge value={owner.value} size={40} />}
+            </div>
+
+            <div className="detail-people-section">
+              <span className="t-section-label" style={subStyle}>
+                Nota adicional
+              </span>
+              {others.length > 0 ? (
+                <div className="detail-people">
+                  {others.map((p) => (
+                    <div key={p.id} className="detail-person">
+                      <span className="detail-person-name" style={subStyle}>
+                        {p.personName}
+                      </span>
+                      <ScoreBadge value={p.value} size={44} />
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="detail-nobody" style={subStyle}>
+                  Nadie más ha puntuado esto todavía.
+                </p>
+              )}
+            </div>
+          </div>
+
+          {score.fields.length > 0 && (
+            <div className="detail-fields">
+              {score.fields.map((f) => (
+                <DetailFieldRow key={f.id} field={f} onPhoto={setLightbox} />
+              ))}
+            </div>
           )}
         </div>
       </div>
-
-      {score.fields.length > 0 && (
-        <div className="detail-fields">
-          {score.fields.map((f) => (
-            <DetailFieldRow key={f.id} field={f} onPhoto={setLightbox} />
-          ))}
-        </div>
-      )}
 
       <PhotoLightbox url={lightbox} onClose={() => setLightbox(null)} />
 

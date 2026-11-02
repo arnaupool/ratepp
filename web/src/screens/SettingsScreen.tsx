@@ -5,7 +5,7 @@ import './SettingsScreen.css';
 export default function SettingsScreen() {
   const { dark, setDark } = useTheme();
   return (
-    <div className="screen">
+    <div className="screen settings-screen">
       <ScreenHeader title="Ajustes" />
       <label className="settings-row">
         <span className="settings-row-label">Modo oscuro</span>
