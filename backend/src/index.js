@@ -1,7 +1,9 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
-const path = require('path');
+const config = require('./config');
+const { securityHeaders } = require('./middleware/securityHeaders');
+const { mountWebApp } = require('./webApp');
 
 const authRoutes = require('./routes/auth');
 const scoresRoutes = require('./routes/scores');
@@ -10,6 +12,7 @@ const tagsRoutes = require('./routes/tags');
 const categoriesRoutes = require('./routes/categories');
 const coversRoutes = require('./routes/covers');
 const colorsRoutes = require('./routes/colors');
+const configRoutes = require('./routes/config');
 
 const app = express();
 
@@ -26,16 +29,24 @@ if (!process.env.JWT_SECRET || INSECURE_JWT_SECRETS.has(process.env.JWT_SECRET))
   );
 }
 
+// Behind a reverse proxy (tailscale serve, Caddy, NPM, Cloudflare Tunnel)
+// req.ip is the proxy's address unless this is set, and every user would
+// share one rate-limit counter.
+if (config.trustProxy !== null) app.set('trust proxy', config.trustProxy);
+
+// The Expo app's web build calls the API cross-origin. The PWA is same-origin
+// and doesn't need this; keep it only while the Expo app is in use.
 app.use(cors());
 app.use(express.json({ limit: '2mb' }));
-// Cheap hardening: stops browsers from guessing content-types and
-// executing an uploaded file as something other than the image it was
-// validated as. No effect on legitimate requests/responses.
-app.use((req, res, next) => {
-  res.setHeader('X-Content-Type-Options', 'nosniff');
-  next();
-});
-app.use('/uploads', express.static(process.env.UPLOADS_DIR || path.join(__dirname, '../uploads')));
+app.use(securityHeaders(config));
+// Upload filenames are random UUIDs and never overwritten, so a cached copy
+// can never go stale.
+app.use('/uploads', express.static(config.uploadsDir, {
+  index: false,
+  setHeaders(res) {
+    res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+  },
+}));
 
 app.get('/health', (req, res) => res.json({ ok: true }));
 
@@ -46,6 +57,9 @@ app.use('/api/tags', tagsRoutes);
 app.use('/api/categories', categoriesRoutes);
 app.use('/api/covers', coversRoutes);
 app.use('/api/color', colorsRoutes);
+app.use('/api/config', configRoutes);
+
+mountWebApp(app, config.webDistDir);
 
 app.use((req, res) => res.status(404).json({ error: 'No encontrado' }));
 
@@ -60,5 +74,5 @@ app.use((err, req, res, next) => {
   res.status(500).json({ error: 'Error interno del servidor' });
 });
 
-const port = process.env.PORT || 4000;
+const port = config.port;
 app.listen(port, () => console.log(`Puntuaciones API escuchando en :${port}`));

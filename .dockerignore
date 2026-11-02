@@ -1,0 +1,11 @@
+**/node_modules
+**/.env
+**/npm-debug.log
+.git
+backend/uploads
+web/dist
+mobile
+e2e
+docs
+project
+chats

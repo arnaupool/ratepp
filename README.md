@@ -23,6 +23,49 @@ project/             original Claude Design export (reference only)
 chats/               design conversation transcript (reference only)
 ```
 
+## Web app (in progress)
+
+The Expo app is being rebuilt as a PWA in `web/` (React + TypeScript + Vite),
+served by the same Express server as the API. See `docs/webapp-rewrite/`.
+The single Docker image (`Dockerfile` at the repo root) builds `web/` and
+bundles it with the API; the compose service is still called `api` and the
+volumes are still `pgdata` and `uploads`.
+
+### Backup before deploying a new version
+
+Run these from the folder with `docker-compose.yml` (or the Portainer stack's
+console) before every upgrade:
+
+```bash
+docker compose exec db pg_dump -U puntuaciones puntuaciones > backup-$(date +%F).sql
+docker run --rm -v <project>_uploads:/data -v "$PWD":/backup alpine tar czf /backup/uploads-$(date +%F).tgz -C /data .
+```
+
+`<project>` is the compose project (Portainer stack) name; `docker volume ls`
+shows the exact volume name. The database dump without the photos is an
+incomplete backup.
+
+### New environment variables
+
+| Variable | Default | Use |
+|---|---|---|
+| `ALLOW_REGISTRATION` | `true` | `false` closes sign-ups (403) and hides "Regístrate" |
+| `TRUST_PROXY` | empty | Express `trust proxy` value when a reverse proxy sits in front |
+| `MAP_TILE_URL` | OpenStreetMap | Tile template for the maps; the CSP is built from it |
+| `GEOCODER_URL` | public Nominatim | Nominatim-compatible geocoder base URL |
+| `APP_PORT` | `4000` | Host port published by compose |
+
+### Local development without Docker
+
+```bash
+cd dev && npm install && node db.mjs          # throwaway Postgres 16 on :5433
+cd backend && npm install && node src/migrate.js && node src/index.js
+cd web && npm install && npm run dev           # http://localhost:5173, proxies /api
+```
+
+The backend needs `DATABASE_URL=postgres://puntuaciones:puntuaciones@localhost:5433/puntuaciones`,
+`JWT_SECRET`, `UPLOADS_DIR` and, to serve the built web app, `WEB_DIST_DIR=../web/dist`.
+
 ## Running the backend
 
 Requires Docker + Docker Compose.

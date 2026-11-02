@@ -14,8 +14,12 @@ services:
       timeout: 5s
       retries: 10
 
+  # Keeps the name "api" so the stack looks the same in Portainer, but it now
+  # also serves the web app (see Dockerfile at the repo root).
   api:
-    build: ./backend
+    build:
+      context: .
+      dockerfile: Dockerfile
     restart: unless-stopped
     depends_on:
       db:
@@ -28,10 +32,25 @@ services:
       PUBLIC_URL: ${PUBLIC_URL:-http://localhost:4000}
       TMDB_API_KEY: ${TMDB_API_KEY:-}
       RAWG_API_KEY: ${RAWG_API_KEY:-}
+      # false closes sign-ups (the login screen hides "Regístrate").
+      ALLOW_REGISTRATION: ${ALLOW_REGISTRATION:-true}
+      # Set when a reverse proxy sits in front (tailscale serve, Caddy, NPM,
+      # Cloudflare Tunnel) so rate limits see the real client IP. Examples:
+      # "loopback", "1", "172.16.0.0/12". Empty = trust no proxy.
+      TRUST_PROXY: ${TRUST_PROXY:-}
+      # Map tiles and geocoding default to OpenStreetMap/Nominatim (light use only).
+      MAP_TILE_URL: ${MAP_TILE_URL:-}
+      GEOCODER_URL: ${GEOCODER_URL:-}
     ports:
-      - "4000:4000"
+      - "${APP_PORT:-4000}:4000"
     volumes:
       - uploads:/app/uploads
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:4000/health > /dev/null || exit 1"]
+      interval: 30s
+      timeout: 5s
+      start_period: 20s
+      retries: 3
 
 volumes:
   pgdata:

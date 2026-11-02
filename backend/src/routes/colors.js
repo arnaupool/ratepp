@@ -3,10 +3,13 @@ const fs = require('fs/promises');
 const path = require('path');
 const { requireAuth } = require('../middleware/auth');
 const asyncHandler = require('../middleware/asyncHandler');
+const { rateLimit } = require('../middleware/rateLimit');
 const { extractDominantColor } = require('../utils/dominantColor');
 
 const router = express.Router();
 router.use(requireAuth);
+// Decoding a photo is CPU-heavy and external URLs are fetched server-side.
+router.use(rateLimit({ windowMs: 15 * 60 * 1000, max: 300, keyBy: 'user' }));
 
 const MAX_BYTES = 8 * 1024 * 1024;
 const uploadsDir = path.resolve(process.env.UPLOADS_DIR || path.join(__dirname, '../../uploads'));
@@ -20,10 +23,13 @@ const MIME_BY_EXT = { '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.png': 'imag
 // silently breaking color suggestions for the user's own uploaded photos.
 // Reading by filename sidesteps that entirely, and has no SSRF surface
 // (the resolved path is verified to stay inside uploadsDir).
+//
+// Relative paths ("/uploads/<file>", what the web app sends after normalizing
+// photo URLs) resolve against a dummy base and take the same path.
 function readOwnUpload(url) {
   let u;
   try {
-    u = new URL(url);
+    u = new URL(url, 'http://relative.invalid');
   } catch {
     return null;
   }

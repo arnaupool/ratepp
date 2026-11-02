@@ -1,9 +1,12 @@
 const express = require('express');
 const { requireAuth } = require('../middleware/auth');
 const asyncHandler = require('../middleware/asyncHandler');
+const { rateLimit } = require('../middleware/rateLimit');
 
 const router = express.Router();
 router.use(requireAuth);
+// Each search calls a third-party API with the server's own key.
+router.use(rateLimit({ windowMs: 15 * 60 * 1000, max: 150, keyBy: 'user' }));
 
 async function searchMovieOrTv(kind, query) {
   const key = process.env.TMDB_API_KEY;

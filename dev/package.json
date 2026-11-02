@@ -1,0 +1,12 @@
+{
+  "name": "puntuaciones-dev",
+  "private": true,
+  "type": "module",
+  "description": "Local-only tooling: a throwaway Postgres for development and e2e runs.",
+  "scripts": {
+    "db": "node db.mjs"
+  },
+  "devDependencies": {
+    "embedded-postgres": "^16.15.0-beta.19"
+  }
+}
