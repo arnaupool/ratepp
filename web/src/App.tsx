@@ -6,6 +6,7 @@ import HomeScreen from './screens/HomeScreen';
 import SettingsScreen from './screens/SettingsScreen';
 import PlaceholderScreen from './screens/PlaceholderScreen';
 import OfflineScreen from './screens/OfflineScreen';
+import DetailScreen from './screens/DetailScreen';
 import { useKeyboardDismiss } from './hooks/useKeyboardDismiss';
 
 function Boot() {
@@ -47,7 +48,7 @@ const router = createBrowserRouter([
         children: [
           { path: '/', element: <HomeScreen /> },
           { path: '/nueva', element: <PlaceholderScreen title="Crear puntuación" /> },
-          { path: '/p/:id', element: <PlaceholderScreen title="Detalle" /> },
+          { path: '/p/:id', element: <DetailScreen /> },
           { path: '/mapa', element: <PlaceholderScreen title="Mapa de ubicaciones" /> },
           { path: '/etiquetas', element: <PlaceholderScreen title="Categorías y etiquetas" /> },
           { path: '/ajustes', element: <SettingsScreen /> },

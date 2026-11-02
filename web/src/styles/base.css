@@ -184,3 +184,9 @@ html.scroll-locked body {
 .no-scrollbar::-webkit-scrollbar {
   display: none;
 }
+
+html.custom-page-bg,
+html.custom-page-bg body,
+html.custom-page-bg #root {
+  background: var(--page-bg);
+}
