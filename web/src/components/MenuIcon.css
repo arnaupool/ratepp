@@ -1,0 +1,39 @@
+.menu-icon {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 4px;
+}
+
+.menu-bar {
+  display: block;
+  width: 20px;
+  height: 2.5px;
+  border-radius: 2px;
+  background: var(--ink);
+  transition-property: transform, opacity, width;
+  transition-duration: 180ms;
+  transition-timing-function: cubic-bezier(0.32, 0, 0.67, 0);
+}
+
+.menu-bar.b3 {
+  width: 12px;
+}
+
+.menu-icon.open .menu-bar {
+  transition-duration: 240ms;
+  transition-timing-function: cubic-bezier(0.33, 1, 0.68, 1);
+}
+
+.menu-icon.open .b1 {
+  transform: translateY(6.5px) rotate(45deg);
+}
+
+.menu-icon.open .b2 {
+  opacity: 0;
+}
+
+.menu-icon.open .b3 {
+  width: 20px;
+  transform: translateY(-6.5px) rotate(-45deg);
+}

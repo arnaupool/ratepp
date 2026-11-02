@@ -1,0 +1,345 @@
+/* Ported from `.ficon.t-*` in project/Puntuaciones App.dc.html. */
+.ficon-wrap {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  background: var(--accent2);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.ficon-wrap-sm {
+  width: 24px;
+  height: 24px;
+  border-radius: 7px;
+  background: var(--accent2);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.ficon {
+  --stroke: 2px;
+  width: 18px;
+  height: 18px;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 13px;
+  line-height: 1;
+  color: currentColor;
+  flex-shrink: 0;
+}
+
+.ficon.t-text {
+  background: repeating-linear-gradient(to bottom, currentColor 0 2.5px, transparent 2.5px 6.5px);
+  border-radius: 1px;
+  width: 15px;
+  height: 15px;
+}
+
+.ficon.t-date {
+  width: 15px;
+  height: 15px;
+  border: var(--stroke) solid currentColor;
+  border-radius: 3px;
+}
+
+.ficon.t-date::after {
+  content: '';
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.ficon.t-location {
+  width: 15px;
+  height: 15px;
+  border: var(--stroke) solid currentColor;
+  border-radius: 50%;
+}
+
+.ficon.t-location::after {
+  content: '';
+  position: absolute;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.ficon.t-photo {
+  width: 16px;
+  height: 13px;
+  border: var(--stroke) solid currentColor;
+  border-radius: 3px;
+}
+
+.ficon.t-photo::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: -2px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.ficon.t-gallery {
+  width: 13px;
+  height: 13px;
+}
+
+.ficon.t-gallery::before,
+.ficon.t-gallery::after {
+  content: '';
+  position: absolute;
+  width: 13px;
+  height: 13px;
+  border: var(--stroke) solid currentColor;
+  border-radius: 3px;
+}
+
+.ficon.t-gallery::before {
+  left: -3px;
+  top: -3px;
+}
+
+.ficon.t-gallery::after {
+  right: -3px;
+  bottom: -3px;
+}
+
+.ficon.t-tag {
+  width: 12px;
+  height: 12px;
+  border: var(--stroke) solid currentColor;
+  transform: rotate(45deg);
+}
+
+/* Small variant (24 px tile in Detalle). */
+.ficon-sm {
+  --stroke: 1.5px;
+  width: 13px;
+  height: 13px;
+  font-size: 10px;
+}
+
+.ficon-sm.t-text {
+  width: 11px;
+  height: 11px;
+  background: repeating-linear-gradient(to bottom, currentColor 0 2px, transparent 2px 4.5px);
+}
+
+.ficon-sm.t-date,
+.ficon-sm.t-location {
+  width: 11px;
+  height: 11px;
+}
+
+.ficon-sm.t-date::after {
+  width: 4px;
+  height: 4px;
+  top: -1.5px;
+  right: -1.5px;
+}
+
+.ficon-sm.t-location::after {
+  width: 3.5px;
+  height: 3.5px;
+}
+
+.ficon-sm.t-photo {
+  width: 12px;
+  height: 10px;
+}
+
+.ficon-sm.t-photo::after {
+  width: 4px;
+  height: 4px;
+}
+
+.ficon-sm.t-gallery,
+.ficon-sm.t-gallery::before,
+.ficon-sm.t-gallery::after {
+  width: 9px;
+  height: 9px;
+}
+
+.ficon-sm.t-gallery::before {
+  left: -2px;
+  top: -2px;
+}
+
+.ficon-sm.t-gallery::after {
+  right: -2px;
+  bottom: -2px;
+}
+
+.ficon-sm.t-tag {
+  width: 9px;
+  height: 9px;
+}
+
+/* Inline in the add-field chips, in the accent color. */
+.ficon-chip {
+  --stroke: 1.5px;
+  width: 15px;
+  height: 15px;
+  font-size: 12.5px;
+  color: var(--accent);
+}
+
+.ficon-chip.t-text {
+  width: 13px;
+  height: 13px;
+  background: repeating-linear-gradient(to bottom, currentColor 0 2px, transparent 2px 5.5px);
+}
+
+.ficon-chip.t-date,
+.ficon-chip.t-location {
+  width: 13px;
+  height: 13px;
+}
+
+.ficon-chip.t-date::after {
+  width: 5px;
+  height: 5px;
+}
+
+.ficon-chip.t-location::after {
+  width: 4px;
+  height: 4px;
+}
+
+.ficon-chip.t-gallery,
+.ficon-chip.t-gallery::before,
+.ficon-chip.t-gallery::after {
+  width: 11px;
+  height: 11px;
+}
+
+.ficon-chip.t-gallery::before {
+  left: -2px;
+  top: -2px;
+}
+
+.ficon-chip.t-gallery::after {
+  right: -2px;
+  bottom: -2px;
+}
+
+.ficon-chip.t-tag {
+  width: 10px;
+  height: 10px;
+}
+
+/* Shapes for the newer field types, in the same style. */
+.ficon.t-clock {
+  width: 15px;
+  height: 15px;
+  border: var(--stroke) solid currentColor;
+  border-radius: 50%;
+}
+
+.ficon.t-clock::before,
+.ficon.t-clock::after {
+  content: '';
+  position: absolute;
+  left: calc(50% - 1px);
+  bottom: 50%;
+  width: 2px;
+  background: currentColor;
+  border-radius: 1px;
+  transform-origin: 50% 100%;
+}
+
+.ficon.t-clock::before {
+  height: 35%;
+}
+
+.ficon.t-clock::after {
+  height: 28%;
+  transform: rotate(90deg);
+}
+
+.ficon.t-bowl {
+  width: 16px;
+  height: 8px;
+  margin-top: 5px;
+  border: var(--stroke) solid currentColor;
+  border-top: none;
+  border-radius: 0 0 9px 9px;
+}
+
+.ficon.t-bowl::before {
+  content: '';
+  position: absolute;
+  top: -2px;
+  left: -4px;
+  right: -4px;
+  height: var(--stroke);
+  background: currentColor;
+  border-radius: 1px;
+}
+
+.ficon.t-bars {
+  width: 15px;
+  height: 13px;
+  background:
+    linear-gradient(currentColor, currentColor) 0 100% / 3.5px 40% no-repeat,
+    linear-gradient(currentColor, currentColor) 50% 100% / 3.5px 70% no-repeat,
+    linear-gradient(currentColor, currentColor) 100% 100% / 3.5px 100% no-repeat;
+}
+
+.ficon.t-link {
+  width: 16px;
+  height: 16px;
+  transform: rotate(-45deg);
+}
+
+.ficon.t-link::before,
+.ficon.t-link::after {
+  content: '';
+  position: absolute;
+  top: 5px;
+  width: 9px;
+  height: 6px;
+  border: var(--stroke) solid currentColor;
+  border-radius: 4px;
+}
+
+.ficon.t-link::before {
+  left: -1px;
+}
+
+.ficon.t-link::after {
+  right: -1px;
+}
+
+.ficon-sm.t-clock,
+.ficon-sm.t-bowl,
+.ficon-sm.t-bars,
+.ficon-sm.t-link,
+.ficon-chip.t-clock,
+.ficon-chip.t-bowl,
+.ficon-chip.t-bars,
+.ficon-chip.t-link {
+  zoom: 0.8;
+}
+
+.ficon-sm.t-link {
+  zoom: 0.7;
+}

@@ -1,0 +1,43 @@
+.locations-screen {
+  height: 100dvh;
+  min-height: 0;
+}
+
+.locations-status {
+  margin: 20px 0 0;
+  padding: 0 30px;
+  text-align: center;
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--sub);
+  display: flex;
+  justify-content: center;
+}
+
+.locations-map-wrap {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+}
+
+.locations-map {
+  position: absolute;
+  inset: 0;
+}
+
+.locations-empty {
+  position: absolute;
+  top: 16px;
+  left: 18px;
+  right: 18px;
+  z-index: 1000;
+  margin: 0;
+  border-radius: 14px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  padding: 12px 14px;
+  text-align: center;
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--sub);
+}

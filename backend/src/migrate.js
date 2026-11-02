@@ -3,7 +3,24 @@ const path = require('path');
 require('dotenv').config();
 const { pool } = require('./db');
 
+// Postgres can accept connections a moment before it is ready ("the
+// database system is starting up", 57P03) or refuse them while it boots:
+// wait up to ~30 s instead of failing the container start.
+async function waitForDatabase() {
+  for (let attempt = 1; ; attempt++) {
+    try {
+      await pool.query('SELECT 1');
+      return;
+    } catch (err) {
+      const transient = err.code === '57P03' || err.code === 'ECONNREFUSED';
+      if (!transient || attempt >= 30) throw err;
+      await new Promise((r) => setTimeout(r, 1000));
+    }
+  }
+}
+
 async function migrate() {
+  await waitForDatabase();
   // Tracks which migration files have already run so each one applies
   // exactly once — the container re-runs this on every boot (not just the
   // first), and migrations that DROP a column aren't safe to replay blind.

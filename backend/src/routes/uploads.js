@@ -4,6 +4,7 @@ const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 const { requireAuth } = require('../middleware/auth');
+const { rateLimit } = require('../middleware/rateLimit');
 
 const router = express.Router();
 
@@ -37,12 +38,16 @@ const upload = multer({
   },
 });
 
-router.post('/', requireAuth, (req, res) => {
+// Generous per-user cap on disk writes; normal use never gets near it.
+const uploadLimit = rateLimit({ windowMs: 60 * 60 * 1000, max: 300, keyBy: 'user' });
+
+router.post('/', requireAuth, uploadLimit, (req, res) => {
   upload.single('photo')(req, res, (err) => {
     if (err) return res.status(400).json({ error: err.message || 'No se pudo subir el archivo' });
     if (!req.file) return res.status(400).json({ error: 'Falta el archivo "photo"' });
-    const base = process.env.PUBLIC_URL || `${req.protocol}://${req.get('host')}`;
-    res.status(201).json({ url: `${base}/uploads/${req.file.filename}` });
+    // Relative: the app and the photos share one origin, whatever host or
+    // proxy it is reached through.
+    res.status(201).json({ url: `/uploads/${req.file.filename}` });
   });
 });
 

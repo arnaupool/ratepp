@@ -6,14 +6,9 @@ node_modules/
 backend/uploads/*
 !backend/uploads/.gitkeep
 
-# mobile (Expo)
-mobile/.expo/
-mobile/dist/
-mobile/web-build/
-
 # e2e artifacts
-e2e/shots/
-e2e/test-photo.jpg
+test-results/
+playwright-report/
 
 *.log
 .DS_Store

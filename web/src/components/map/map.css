@@ -1,0 +1,103 @@
+.leaflet-container {
+  font-family: var(--font);
+  background: var(--bg);
+}
+
+.leaflet-control-attribution {
+  font-size: 9px;
+}
+
+.map-pin-icon {
+  background: none;
+  border: none;
+}
+
+.map-pin {
+  display: block;
+  width: 26px;
+  height: 26px;
+  border-radius: 50% 50% 50% 0;
+  background: var(--accent);
+  border: 3px solid #fff;
+  transform: rotate(-45deg);
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.3);
+}
+
+/* Callout of the Mapa de ubicaciones screen. */
+.map-popup .leaflet-popup-content-wrapper {
+  border-radius: 14px;
+  padding: 0;
+  background: var(--surface);
+  color: var(--ink);
+  border: 1px solid var(--line);
+}
+
+.map-popup .leaflet-popup-content {
+  margin: 0;
+  width: 220px !important;
+}
+
+.map-popup .leaflet-popup-content-wrapper {
+  overflow: hidden;
+}
+
+.map-popup .leaflet-popup-tip {
+  background: var(--surface);
+}
+
+.map-callout {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  text-align: left;
+  color: var(--ink);
+}
+
+.map-callout-photo {
+  display: block;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  background: var(--bg);
+}
+
+.map-callout-body {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px 12px;
+}
+
+.map-callout-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.map-callout-title {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  font-weight: 800;
+  font-size: 14px;
+  line-height: 18px;
+}
+
+.map-callout-label {
+  display: block;
+  margin-top: 2px;
+  font-weight: 700;
+  font-size: 11px;
+  color: var(--sub);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Leaflet's panes and controls use z-index 400-1000. Each map gets its own
+   stacking context so it can never paint over sheets, menus or the viewer. */
+.map-preview,
+.location-map,
+.locations-map-wrap {
+  isolation: isolate;
+}

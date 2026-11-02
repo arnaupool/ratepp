@@ -1,0 +1,44 @@
+/* Design tokens ported from Puntuaciones App.dc.html (.theme) and
+   mobile/src/theme/palettes.js. Dark mode is chosen in Ajustes, never from
+   the system preference. */
+:root {
+  --bg: oklch(0.97 0.014 75);
+  --surface: oklch(0.99 0.006 65);
+  --ink: oklch(0.22 0.02 40);
+  --sub: oklch(0.48 0.02 40);
+  --accent: oklch(0.62 0.17 42);
+  --accent2: oklch(0.66 0.15 85);
+  --accent-ink: #fff;
+  --line: oklch(0.88 0.02 50);
+  --fab-shadow: oklch(0.62 0.17 42 / 0.55);
+  --extra-badge: rgba(0, 0, 0, 0.55);
+  --error: #c0392b;
+  --scrim: rgba(0, 0, 0, 0.35);
+  --soft-btn: rgba(128, 128, 128, 0.15);
+
+  --tint-restaurantes: oklch(0.92 0.045 40);
+  --tint-peliculas: oklch(0.92 0.035 265);
+  --tint-recuerdos: oklch(0.92 0.045 160);
+  --tint-default: oklch(0.92 0.02 50);
+
+  --font: 'Poppins', -apple-system, system-ui, sans-serif;
+  color-scheme: light;
+}
+
+[data-theme='dark'] {
+  --bg: oklch(0.17 0.014 75);
+  --surface: oklch(0.23 0.014 70);
+  --ink: oklch(0.94 0.01 60);
+  /* 0.80, not 0.68: the lower value read too faint on the user's iPhone. */
+  --sub: oklch(0.8 0.015 60);
+  --accent: oklch(0.68 0.17 42);
+  --accent2: oklch(0.72 0.14 85);
+  --line: oklch(0.34 0.02 60);
+  --fab-shadow: oklch(0.68 0.17 42 / 0.55);
+
+  --tint-restaurantes: oklch(0.3 0.045 40);
+  --tint-peliculas: oklch(0.3 0.035 265);
+  --tint-recuerdos: oklch(0.3 0.045 160);
+  --tint-default: oklch(0.3 0.02 50);
+  color-scheme: dark;
+}

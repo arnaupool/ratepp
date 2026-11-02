@@ -1,0 +1,78 @@
+.map-preview {
+  position: relative;
+  width: 100%;
+  border-radius: 12px;
+  overflow: hidden;
+  background: var(--surface);
+}
+
+.map-preview-static {
+  border: 1px solid var(--line);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 10px 44px;
+  text-align: center;
+}
+
+.map-preview-pin {
+  font-size: 22px;
+}
+
+.map-preview-static-label {
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--ink);
+}
+
+.map-preview-label {
+  position: absolute;
+  left: 8px;
+  right: 44px;
+  bottom: 8px;
+  z-index: 500;
+  border-radius: 8px;
+  padding: 5px 8px;
+  background: rgba(255, 255, 255, 0.92);
+  color: #2a2420;
+  font-weight: 600;
+  font-size: 14px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.map-preview-nav {
+  position: absolute;
+  right: 8px;
+  bottom: 8px;
+  z-index: 500;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: #fff;
+  font-size: 15px;
+  font-weight: 800;
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.map-preview-map {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+/* Leaflet stacks its panes at z-index 400+; keep the overlays above them. */
+.map-preview .leaflet-control-container {
+  pointer-events: none;
+}
+
+.map-preview {
+  isolation: isolate;
+}

@@ -1,0 +1,95 @@
+.labels-loading {
+  display: flex;
+  justify-content: center;
+  margin-top: 30px;
+}
+
+.labels-body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 0 18px calc(30px + env(safe-area-inset-bottom));
+}
+
+.labels-second {
+  margin-top: 20px;
+}
+
+.labels-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.labels-empty {
+  margin: 0;
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--sub);
+}
+
+.labels-error {
+  margin: 0;
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--error);
+}
+
+.labels-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  padding: 12px 14px;
+  max-height: 80px;
+  overflow: hidden;
+  transition: opacity 200ms ease, transform 200ms ease, max-height 200ms ease, padding 200ms ease, margin 200ms ease;
+}
+
+/* Deleted rows fade and collapse instead of vanishing. */
+.labels-item.leaving {
+  opacity: 0;
+  transform: translateX(-12px);
+  max-height: 0;
+  padding-top: 0;
+  padding-bottom: 0;
+  margin-bottom: -8px;
+}
+
+.labels-item-name {
+  flex: 1;
+  min-width: 0;
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+
+.labels-item-delete {
+  color: var(--sub);
+  padding: 4px;
+  margin: -4px;
+  display: flex;
+}
+
+.labels-space {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.labels-space.titled + .labels-space.titled {
+  margin-top: 28px;
+  padding-top: 20px;
+  border-top: 1px solid var(--line);
+}
+
+.labels-space-title {
+  margin: 0 0 4px;
+  font-weight: 900;
+  font-size: 17px;
+  color: var(--ink);
+}

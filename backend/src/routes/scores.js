@@ -2,66 +2,102 @@ const express = require('express');
 const { pool } = require('../db');
 const { requireAuth } = require('../middleware/auth');
 const asyncHandler = require('../middleware/asyncHandler');
+const { HttpError, accessibleScore, canManage, groupRole, isUuid, spaceCondition } = require('../access');
 
 const router = express.Router();
 router.use(requireAuth);
 
-const FIELD_TYPES = ['text_long', 'number', 'date', 'location', 'photo', 'gallery', 'list', 'tag'];
+// Must match the CHECK constraint (migration 006).
+const FIELD_TYPES = [
+  'text_long', 'number', 'date', 'location', 'photo', 'gallery', 'list', 'tag',
+  'price', 'criteria', 'duration', 'link', 'boolean', 'ingredients', 'steps', 'difficulty',
+];
 
-function mapRating(r) {
-  return { id: r.id, personName: r.person_name, isOwner: r.is_owner, value: r.value, sortOrder: r.sort_order };
+const NOT_FOUND = 'Puntuación no encontrada';
+
+// Ratings made with an account show that account's name; the free-named
+// "Nota adicional" ones keep the typed name. formerMember: the rater has
+// since left (or been removed from) the note's group.
+const RATINGS_SQL = `
+  SELECT sr.*, u.name AS user_name,
+    (s.group_id IS NOT NULL AND sr.user_id IS NOT NULL AND gm.user_id IS NULL) AS former_member
+  FROM score_ratings sr
+  JOIN scores s ON s.id = sr.score_id
+  LEFT JOIN users u ON u.id = sr.user_id
+  LEFT JOIN group_members gm ON gm.group_id = s.group_id AND gm.user_id = sr.user_id`;
+
+function mapRating(r, userId) {
+  return {
+    id: r.id,
+    personName: r.user_id && r.user_name ? r.user_name : r.person_name,
+    isOwner: r.is_owner,
+    value: r.value,
+    sortOrder: r.sort_order,
+    userId: r.user_id || null,
+    isMe: !!r.user_id && r.user_id === userId,
+    formerMember: !!r.former_member,
+  };
 }
 
 function mapField(f) {
   return { id: f.id, type: f.type, label: f.label, value: f.value, sortOrder: f.sort_order };
 }
 
-async function loadScore(scoreId, userId, { withFields } = {}) {
-  const scoreRes = await pool.query(
-    'SELECT * FROM scores WHERE id = $1 AND owner_id = $2',
-    [scoreId, userId]
-  );
-  const score = scoreRes.rows[0];
-  if (!score) return null;
-
-  const ratingsRes = await pool.query(
-    'SELECT * FROM score_ratings WHERE score_id = $1 ORDER BY sort_order ASC, created_at ASC',
-    [scoreId]
-  );
-
-  const dto = {
-    id: score.id,
-    title: score.title,
-    categories: score.categories || [],
-    photoUrls: score.photo_urls || [],
-    cardColor: score.card_color || null,
-    createdAt: score.created_at,
-    updatedAt: score.updated_at,
-    ratings: ratingsRes.rows.map(mapRating),
+function mapScore(s, ratings, userId) {
+  return {
+    id: s.id,
+    title: s.title,
+    categories: s.categories || [],
+    photoUrls: s.photo_urls || [],
+    cardColor: s.card_color || null,
+    createdAt: s.created_at,
+    updatedAt: s.updated_at,
+    groupId: s.group_id || null,
+    groupName: s.group_name || null,
+    authorId: s.owner_id,
+    authorName: s.author_name || null,
+    // Delete it, or move it to another space: its author or a group admin.
+    canManage: s.owner_id === userId || s.my_role === 'admin',
+    ratings,
   };
-
-  if (withFields) {
-    const fieldsRes = await pool.query(
-      'SELECT * FROM score_fields WHERE score_id = $1 ORDER BY sort_order ASC, created_at ASC',
-      [scoreId]
-    );
-    dto.fields = fieldsRes.rows.map(mapField);
-  }
-
-  return dto;
 }
 
-async function assertOwnedScore(scoreId, userId) {
-  const res = await pool.query('SELECT id FROM scores WHERE id = $1 AND owner_id = $2', [scoreId, userId]);
-  return res.rowCount > 0;
+async function loadScore(scoreId, userId) {
+  const access = await accessibleScore(scoreId, userId);
+  if (!access) return null;
+  const s = (
+    await pool.query(
+      `SELECT s.*, g.name AS group_name, u.name AS author_name, $2::text AS my_role
+       FROM scores s LEFT JOIN groups g ON g.id = s.group_id LEFT JOIN users u ON u.id = s.owner_id
+       WHERE s.id = $1`,
+      [scoreId, access.my_role]
+    )
+  ).rows[0];
+  const ratings = await pool.query(`${RATINGS_SQL} WHERE sr.score_id = $1 ORDER BY sr.sort_order ASC, sr.created_at ASC`, [scoreId]);
+  const fields = await pool.query('SELECT * FROM score_fields WHERE score_id = $1 ORDER BY sort_order ASC, created_at ASC', [scoreId]);
+  return {
+    ...mapScore(s, ratings.rows.map((r) => mapRating(r, userId)), userId),
+    fields: fields.rows.map(mapField),
+  };
+}
+
+/** The note row if the user can access it; otherwise answers 404. */
+async function requireScore(req, res) {
+  const score = await accessibleScore(req.params.id, req.userId);
+  if (!score) res.status(404).json({ error: NOT_FOUND });
+  return score;
+}
+
+async function touch(scoreId, db = pool) {
+  await db.query('UPDATE scores SET updated_at = now() WHERE id = $1', [scoreId]);
 }
 
 // ---------- scores ----------
 
 router.get('/', asyncHandler(async (req, res) => {
-  const { search = '', category = '', tag = '', dateFrom = '', dateTo = '' } = req.query;
-  const params = [req.userId];
-  let where = 'owner_id = $1';
+  const { search = '', category = '', tag = '', dateFrom = '', dateTo = '', space = 'all' } = req.query;
+  const params = [];
+  let where = spaceCondition(String(space), req.userId, params);
   if (search) {
     params.push(`%${search}%`);
     const idx = params.length;
@@ -79,9 +115,7 @@ router.get('/', asyncHandler(async (req, res) => {
     where += ` AND $${params.length} = ANY(categories)`;
   }
   if (tag) {
-    // Free-text search over jsonb already substring-matches tag values, but
-    // that requires knowing the exact spelling — this is an exact-match
-    // filter driven by picking a tag from the list of ones actually in use.
+    // Exact-match filter driven by picking a tag from the list in use.
     params.push(tag);
     where += ` AND EXISTS (
       SELECT 1 FROM score_fields sf
@@ -106,38 +140,35 @@ router.get('/', asyncHandler(async (req, res) => {
         AND ${conditions.join(' AND ')}
     )`;
   }
+  params.push(req.userId);
+  const me = `$${params.length}`;
   const scoresRes = await pool.query(
-    `SELECT * FROM scores WHERE ${where} ORDER BY created_at DESC`,
+    `SELECT scores.*, g.name AS group_name, u.name AS author_name, gm.role AS my_role
+     FROM scores
+     LEFT JOIN groups g ON g.id = scores.group_id
+     LEFT JOIN users u ON u.id = scores.owner_id
+     LEFT JOIN group_members gm ON gm.group_id = scores.group_id AND gm.user_id = ${me}
+     WHERE ${where}
+     ORDER BY scores.created_at DESC`,
     params
   );
-  const ids = scoresRes.rows.map(s => s.id);
-  let ratingsByScore = {};
+  const ids = scoresRes.rows.map((s) => s.id);
+  const ratingsByScore = {};
   if (ids.length > 0) {
-    const ratingsRes = await pool.query(
-      'SELECT * FROM score_ratings WHERE score_id = ANY($1) ORDER BY sort_order ASC, created_at ASC',
-      [ids]
-    );
+    const ratingsRes = await pool.query(`${RATINGS_SQL} WHERE sr.score_id = ANY($1) ORDER BY sr.sort_order ASC, sr.created_at ASC`, [ids]);
     for (const r of ratingsRes.rows) {
-      (ratingsByScore[r.score_id] ||= []).push(mapRating(r));
+      (ratingsByScore[r.score_id] ||= []).push(mapRating(r, req.userId));
     }
   }
-  const items = scoresRes.rows.map(s => ({
-    id: s.id,
-    title: s.title,
-    categories: s.categories || [],
-    photoUrls: s.photo_urls || [],
-    cardColor: s.card_color || null,
-    createdAt: s.created_at,
-    updatedAt: s.updated_at,
-    ratings: ratingsByScore[s.id] || [],
-  }));
-  res.json({ items });
+  res.json({ items: scoresRes.rows.map((s) => mapScore(s, ratingsByScore[s.id] || [], req.userId)) });
 }));
 
-// Flattened list of every location-type field value across all of the
-// user's scores, for the "map of all notes" screen — one row per location
-// (a score can have more than one location field).
+// Flattened list of every location-type field value across the notes of a
+// space, for the "map of all notes" screen — one row per location (a score
+// can have more than one location field).
 router.get('/locations', asyncHandler(async (req, res) => {
+  const params = [];
+  const where = spaceCondition(String(req.query.space || 'all'), req.userId, params, 's');
   const result = await pool.query(
     `SELECT
        s.id AS score_id,
@@ -147,12 +178,12 @@ router.get('/locations', asyncHandler(async (req, res) => {
        (SELECT AVG(sr.value) FROM score_ratings sr WHERE sr.score_id = s.id) AS avg_score
      FROM score_fields sf
      JOIN scores s ON s.id = sf.score_id
-     WHERE s.owner_id = $1
+     WHERE ${where}
        AND sf.type = 'location'
        AND sf.value IS NOT NULL
        AND sf.value->>'lat' IS NOT NULL
        AND sf.value->>'lng' IS NOT NULL`,
-    [req.userId]
+    params
   );
   const locations = result.rows.map((r) => ({
     scoreId: r.score_id,
@@ -167,8 +198,8 @@ router.get('/locations', asyncHandler(async (req, res) => {
 }));
 
 router.get('/:id', asyncHandler(async (req, res) => {
-  const score = await loadScore(req.params.id, req.userId, { withFields: true });
-  if (!score) return res.status(404).json({ error: 'Puntuación no encontrada' });
+  const score = await loadScore(req.params.id, req.userId);
+  if (!score) return res.status(404).json({ error: NOT_FOUND });
   res.json({ score });
 }));
 
@@ -192,8 +223,17 @@ function normalizeCardColor(cardColor) {
   return undefined; // signals "invalid, ignore" to the caller
 }
 
+// A target space for a note: null (personal) or a group the user belongs to.
+async function targetGroup(groupId, userId) {
+  if (groupId === undefined || groupId === null || groupId === '') return null;
+  if (!isUuid(groupId) || !(await groupRole(groupId, userId))) {
+    throw new HttpError(403, 'No perteneces a ese grupo');
+  }
+  return groupId;
+}
+
 router.post('/', asyncHandler(async (req, res) => {
-  const { title, categories, photoUrls, cardColor, ownerValue, ratings = [], fields = [] } = req.body || {};
+  const { title, categories, photoUrls, cardColor, ownerValue, ratings = [], fields = [], groupId } = req.body || {};
   if (!title || !String(title).trim()) {
     return res.status(400).json({ error: 'El título es obligatorio' });
   }
@@ -208,19 +248,21 @@ router.post('/', asyncHandler(async (req, res) => {
   }
   const color = cardColor === undefined ? null : normalizeCardColor(cardColor);
   if (color === undefined) return res.status(400).json({ error: 'Color de card inválido' });
+  const group = await targetGroup(groupId, req.userId);
 
   const client = await pool.connect();
+  let scoreId;
   try {
     await client.query('BEGIN');
     const scoreRes = await client.query(
-      'INSERT INTO scores (owner_id, title, categories, photo_urls, card_color) VALUES ($1, $2, $3, $4, $5) RETURNING *',
-      [req.userId, String(title).trim(), normalizeCategories(categories), normalizePhotoUrls(photoUrls), color]
+      'INSERT INTO scores (owner_id, title, categories, photo_urls, card_color, group_id) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id',
+      [req.userId, String(title).trim(), normalizeCategories(categories), normalizePhotoUrls(photoUrls), color, group]
     );
-    const score = scoreRes.rows[0];
+    scoreId = scoreRes.rows[0].id;
 
     await client.query(
-      'INSERT INTO score_ratings (score_id, person_name, is_owner, value, sort_order) VALUES ($1, $2, true, $3, 0)',
-      [score.id, 'Tú', ownerScore]
+      "INSERT INTO score_ratings (score_id, person_name, is_owner, value, sort_order, user_id) VALUES ($1, 'Tú', true, $2, 0, $3)",
+      [scoreId, ownerScore, req.userId]
     );
 
     let sortOrder = 1;
@@ -228,7 +270,7 @@ router.post('/', asyncHandler(async (req, res) => {
       if (!p.personName || !Number.isInteger(p.value) || p.value < 1 || p.value > 10) continue;
       await client.query(
         'INSERT INTO score_ratings (score_id, person_name, is_owner, value, sort_order) VALUES ($1, $2, false, $3, $4)',
-        [score.id, p.personName, p.value, sortOrder++]
+        [scoreId, p.personName, p.value, sortOrder++]
       );
     }
 
@@ -236,25 +278,24 @@ router.post('/', asyncHandler(async (req, res) => {
     for (const f of fields) {
       await client.query(
         'INSERT INTO score_fields (score_id, type, label, value, sort_order) VALUES ($1, $2, $3, $4, $5)',
-        [score.id, f.type, f.label || f.type, JSON.stringify(f.value ?? null), fieldOrder++]
+        [scoreId, f.type, f.label || f.type, JSON.stringify(f.value ?? null), fieldOrder++]
       );
     }
 
     await client.query('COMMIT');
-    const full = await loadScore(score.id, req.userId, { withFields: true });
-    res.status(201).json({ score: full });
   } catch (err) {
     await client.query('ROLLBACK');
     throw err;
   } finally {
     client.release();
   }
+  res.status(201).json({ score: await loadScore(scoreId, req.userId) });
 }));
 
 router.patch('/:id', asyncHandler(async (req, res) => {
-  const owned = await assertOwnedScore(req.params.id, req.userId);
-  if (!owned) return res.status(404).json({ error: 'Puntuación no encontrada' });
-  const { title, categories, photoUrls, cardColor } = req.body || {};
+  const current = await requireScore(req, res);
+  if (!current) return;
+  const { title, categories, photoUrls, cardColor, groupId } = req.body || {};
   const fieldsSet = [];
   const values = [];
   if (title !== undefined) { values.push(title); fieldsSet.push(`title = $${values.length}`); }
@@ -266,53 +307,104 @@ router.patch('/:id', asyncHandler(async (req, res) => {
     values.push(color);
     fieldsSet.push(`card_color = $${values.length}`);
   }
-  if (fieldsSet.length === 0) {
-    const score = await loadScore(req.params.id, req.userId, { withFields: true });
-    return res.json({ score });
+  if (groupId !== undefined) {
+    // Moving between spaces: its author or a group admin. Taken out of a
+    // group, a note goes back to its author as personal.
+    const target = await targetGroup(groupId, req.userId);
+    if (target !== (current.group_id || null)) {
+      if (!canManage(current, req.userId)) {
+        return res.status(403).json({ error: 'Solo su autor o un admin del grupo puede moverla' });
+      }
+      values.push(target);
+      fieldsSet.push(`group_id = $${values.length}`);
+    }
   }
-  fieldsSet.push('updated_at = now()');
-  values.push(req.params.id);
-  await pool.query(`UPDATE scores SET ${fieldsSet.join(', ')} WHERE id = $${values.length}`, values);
-  const score = await loadScore(req.params.id, req.userId, { withFields: true });
+  if (fieldsSet.length > 0) {
+    fieldsSet.push('updated_at = now()');
+    values.push(req.params.id);
+    await pool.query(`UPDATE scores SET ${fieldsSet.join(', ')} WHERE id = $${values.length}`, values);
+  }
+  const score = await loadScore(req.params.id, req.userId);
+  // An admin who moved someone else's note out of the group loses access.
+  if (!score) return res.status(204).end();
   res.json({ score });
 }));
 
 router.delete('/:id', asyncHandler(async (req, res) => {
-  const owned = await assertOwnedScore(req.params.id, req.userId);
-  if (!owned) return res.status(404).json({ error: 'Puntuación no encontrada' });
+  const current = await requireScore(req, res);
+  if (!current) return;
+  if (!canManage(current, req.userId)) {
+    return res.status(403).json({ error: 'Solo su autor o un admin del grupo puede eliminarla' });
+  }
   await pool.query('DELETE FROM scores WHERE id = $1', [req.params.id]);
   res.status(204).end();
 }));
 
 // ---------- ratings (per-person scores) ----------
 
+async function loadRating(scoreId, ratingId, userId) {
+  const r = await pool.query(`${RATINGS_SQL} WHERE sr.id = $1 AND sr.score_id = $2`, [ratingId, scoreId]);
+  return r.rows[0] ? { row: r.rows[0], dto: mapRating(r.rows[0], userId) } : null;
+}
+
+// A free-named "Nota adicional" for someone without an account.
 router.post('/:id/ratings', asyncHandler(async (req, res) => {
-  const owned = await assertOwnedScore(req.params.id, req.userId);
-  if (!owned) return res.status(404).json({ error: 'Puntuación no encontrada' });
+  if (!(await requireScore(req, res))) return;
   const { personName = 'Nuevo', value = 5 } = req.body || {};
   if (!Number.isInteger(value) || value < 1 || value > 10) {
     return res.status(400).json({ error: 'La puntuación debe estar entre 1 y 10' });
   }
   const countRes = await pool.query('SELECT COUNT(*)::int AS c FROM score_ratings WHERE score_id = $1', [req.params.id]);
   const rating = await pool.query(
-    'INSERT INTO score_ratings (score_id, person_name, is_owner, value, sort_order) VALUES ($1, $2, false, $3, $4) RETURNING *',
+    'INSERT INTO score_ratings (score_id, person_name, is_owner, value, sort_order) VALUES ($1, $2, false, $3, $4) RETURNING id',
     [req.params.id, personName, value, countRes.rows[0].c]
   );
-  await pool.query('UPDATE scores SET updated_at = now() WHERE id = $1', [req.params.id]);
-  res.status(201).json({ rating: mapRating(rating.rows[0]) });
+  await touch(req.params.id);
+  res.status(201).json({ rating: (await loadRating(req.params.id, rating.rows[0].id, req.userId)).dto });
+}));
+
+// The caller's own score on a note (created if missing): how members of a
+// group score each other's notes with their own account.
+router.put('/:id/ratings/me', asyncHandler(async (req, res) => {
+  if (!(await requireScore(req, res))) return;
+  const { value } = req.body || {};
+  if (!Number.isInteger(value) || value < 1 || value > 10) {
+    return res.status(400).json({ error: 'La puntuación debe estar entre 1 y 10' });
+  }
+  const existing = await pool.query('SELECT id FROM score_ratings WHERE score_id = $1 AND user_id = $2', [req.params.id, req.userId]);
+  let ratingId = existing.rows[0]?.id;
+  if (ratingId) {
+    await pool.query('UPDATE score_ratings SET value = $1 WHERE id = $2', [value, ratingId]);
+  } else {
+    const me = await pool.query('SELECT name FROM users WHERE id = $1', [req.userId]);
+    const countRes = await pool.query('SELECT COUNT(*)::int AS c FROM score_ratings WHERE score_id = $1', [req.params.id]);
+    const inserted = await pool.query(
+      'INSERT INTO score_ratings (score_id, person_name, is_owner, value, sort_order, user_id) VALUES ($1, $2, false, $3, $4, $5) RETURNING id',
+      [req.params.id, me.rows[0]?.name || 'Miembro', value, countRes.rows[0].c, req.userId]
+    );
+    ratingId = inserted.rows[0].id;
+  }
+  await touch(req.params.id);
+  res.json({ rating: (await loadRating(req.params.id, ratingId, req.userId)).dto });
 }));
 
 router.patch('/:id/ratings/:ratingId', asyncHandler(async (req, res) => {
-  const owned = await assertOwnedScore(req.params.id, req.userId);
-  if (!owned) return res.status(404).json({ error: 'Puntuación no encontrada' });
+  if (!(await requireScore(req, res))) return;
   const { personName, value } = req.body || {};
   if (value !== undefined && (!Number.isInteger(value) || value < 1 || value > 10)) {
     return res.status(400).json({ error: 'La puntuación debe estar entre 1 y 10' });
   }
-  const existing = await pool.query('SELECT * FROM score_ratings WHERE id = $1 AND score_id = $2', [req.params.ratingId, req.params.id]);
-  if (existing.rowCount === 0) return res.status(404).json({ error: 'Puntuación de persona no encontrada' });
-  if (existing.rows[0].is_owner && personName !== undefined) {
+  const found = await loadRating(req.params.id, req.params.ratingId, req.userId);
+  if (!found) return res.status(404).json({ error: 'Puntuación de persona no encontrada' });
+  const { row } = found;
+  if (row.is_owner && personName !== undefined) {
     return res.status(400).json({ error: 'No se puede renombrar tu propia puntuación' });
+  }
+  if (row.user_id && row.user_id !== req.userId) {
+    return res.status(403).json({ error: 'Solo esa persona puede cambiar su puntuación' });
+  }
+  if (row.user_id && personName !== undefined) {
+    return res.status(400).json({ error: 'El nombre viene de su cuenta' });
   }
   const sets = [];
   const values = [];
@@ -321,28 +413,29 @@ router.patch('/:id/ratings/:ratingId', asyncHandler(async (req, res) => {
   if (sets.length > 0) {
     values.push(req.params.ratingId);
     await pool.query(`UPDATE score_ratings SET ${sets.join(', ')} WHERE id = $${values.length}`, values);
-    await pool.query('UPDATE scores SET updated_at = now() WHERE id = $1', [req.params.id]);
+    await touch(req.params.id);
   }
-  const updated = await pool.query('SELECT * FROM score_ratings WHERE id = $1', [req.params.ratingId]);
-  res.json({ rating: mapRating(updated.rows[0]) });
+  res.json({ rating: (await loadRating(req.params.id, req.params.ratingId, req.userId)).dto });
 }));
 
 router.delete('/:id/ratings/:ratingId', asyncHandler(async (req, res) => {
-  const owned = await assertOwnedScore(req.params.id, req.userId);
-  if (!owned) return res.status(404).json({ error: 'Puntuación no encontrada' });
-  const existing = await pool.query('SELECT * FROM score_ratings WHERE id = $1 AND score_id = $2', [req.params.ratingId, req.params.id]);
-  if (existing.rowCount === 0) return res.status(404).json({ error: 'Puntuación de persona no encontrada' });
-  if (existing.rows[0].is_owner) return res.status(400).json({ error: 'No se puede eliminar tu propia puntuación' });
+  if (!(await requireScore(req, res))) return;
+  const found = await loadRating(req.params.id, req.params.ratingId, req.userId);
+  if (!found) return res.status(404).json({ error: 'Puntuación de persona no encontrada' });
+  const { row } = found;
+  if (row.is_owner) return res.status(400).json({ error: 'No se puede eliminar tu propia puntuación' });
+  if (row.user_id && row.user_id !== req.userId) {
+    return res.status(403).json({ error: 'Solo esa persona puede quitar su puntuación' });
+  }
   await pool.query('DELETE FROM score_ratings WHERE id = $1', [req.params.ratingId]);
-  await pool.query('UPDATE scores SET updated_at = now() WHERE id = $1', [req.params.id]);
+  await touch(req.params.id);
   res.status(204).end();
 }));
 
 // ---------- dynamic fields ----------
 
 router.post('/:id/fields', asyncHandler(async (req, res) => {
-  const owned = await assertOwnedScore(req.params.id, req.userId);
-  if (!owned) return res.status(404).json({ error: 'Puntuación no encontrada' });
+  if (!(await requireScore(req, res))) return;
   const { type, label, value } = req.body || {};
   if (!FIELD_TYPES.includes(type)) return res.status(400).json({ error: 'Tipo de campo inválido' });
   const countRes = await pool.query('SELECT COUNT(*)::int AS c FROM score_fields WHERE score_id = $1', [req.params.id]);
@@ -350,13 +443,12 @@ router.post('/:id/fields', asyncHandler(async (req, res) => {
     'INSERT INTO score_fields (score_id, type, label, value, sort_order) VALUES ($1, $2, $3, $4, $5) RETURNING *',
     [req.params.id, type, label || type, JSON.stringify(value ?? null), countRes.rows[0].c]
   );
-  await pool.query('UPDATE scores SET updated_at = now() WHERE id = $1', [req.params.id]);
+  await touch(req.params.id);
   res.status(201).json({ field: mapField(field.rows[0]) });
 }));
 
 router.patch('/:id/fields/:fieldId', asyncHandler(async (req, res) => {
-  const owned = await assertOwnedScore(req.params.id, req.userId);
-  if (!owned) return res.status(404).json({ error: 'Puntuación no encontrada' });
+  if (!(await requireScore(req, res))) return;
   const { label, value } = req.body || {};
   const sets = [];
   const values = [];
@@ -369,21 +461,19 @@ router.patch('/:id/fields/:fieldId', asyncHandler(async (req, res) => {
     values
   );
   if (result.rowCount === 0) return res.status(404).json({ error: 'Campo no encontrado' });
-  await pool.query('UPDATE scores SET updated_at = now() WHERE id = $1', [req.params.id]);
+  await touch(req.params.id);
   res.json({ field: mapField(result.rows[0]) });
 }));
 
 router.delete('/:id/fields/:fieldId', asyncHandler(async (req, res) => {
-  const owned = await assertOwnedScore(req.params.id, req.userId);
-  if (!owned) return res.status(404).json({ error: 'Puntuación no encontrada' });
+  if (!(await requireScore(req, res))) return;
   await pool.query('DELETE FROM score_fields WHERE id = $1 AND score_id = $2', [req.params.fieldId, req.params.id]);
-  await pool.query('UPDATE scores SET updated_at = now() WHERE id = $1', [req.params.id]);
+  await touch(req.params.id);
   res.status(204).end();
 }));
 
 router.post('/:id/fields/reorder', asyncHandler(async (req, res) => {
-  const owned = await assertOwnedScore(req.params.id, req.userId);
-  if (!owned) return res.status(404).json({ error: 'Puntuación no encontrada' });
+  if (!(await requireScore(req, res))) return;
   const { order } = req.body || {};
   if (!Array.isArray(order) || order.length === 0) {
     return res.status(400).json({ error: 'Falta el orden de campos' });
@@ -397,7 +487,7 @@ router.post('/:id/fields/reorder', asyncHandler(async (req, res) => {
         [i, order[i], req.params.id]
       );
     }
-    await client.query('UPDATE scores SET updated_at = now() WHERE id = $1', [req.params.id]);
+    await touch(req.params.id, client);
     await client.query('COMMIT');
   } catch (err) {
     await client.query('ROLLBACK');

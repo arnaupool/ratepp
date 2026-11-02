@@ -1,0 +1,36 @@
+<?xml version="1.0"?>
+<Container version="2">
+  <Name>puntuaciones</Name>
+  <Repository>ghcr.io/arnaupool/ratepp:latest</Repository>
+  <Registry>https://github.com/arnaupool/ratepp/pkgs/container/ratepp</Registry>
+  <Network>apool-net</Network>
+  <MyIP/>
+  <Shell>sh</Shell>
+  <Privileged>false</Privileged>
+  <Support>https://github.com/arnaupool/ratepp/issues</Support>
+  <Project>https://github.com/arnaupool/ratepp</Project>
+  <Overview>Puntuaciones: puntúa cualquier cosa del 1 al 10 (restaurantes, pelis, recetas, viajes...) con fotos, campos propios, mapa y grupos compartidos. Web app instalable en el iPhone (PWA) servida por este contenedor: la API, las fotos y la web en el mismo puerto.[br][br]Necesita PostgreSQL 14 o superior (DATABASE_URL). Las migraciones se aplican solas al arrancar.[br][br]Para instalarla en el iPhone y usar "mi ubicación" hace falta HTTPS delante (por ejemplo tailscale serve). Copia de seguridad: la carpeta de fotos y la base de datos.</Overview>
+  <Category>Tools: Productivity: Other:</Category>
+  <WebUI>http://[IP]:[PORT:4000]/</WebUI>
+  <TemplateURL/>
+  <Icon>http://192.168.1.150:4000/icons/icon-512.png</Icon>
+  <ExtraParams>--memory=512m</ExtraParams>
+  <PostArgs/>
+  <CPUset/>
+  <DonateText/>
+  <DonateLink/>
+  <Requires>PostgreSQL 14+ reachable from this container (same custom Docker network), with a database and user for Puntuaciones.</Requires>
+  <Config Name="WebUI" Target="4000" Default="4000" Mode="tcp" Description="Puerto en el que se abre la app." Type="Port" Display="always" Required="true" Mask="false">4000</Config>
+  <Config Name="Fotos" Target="/app/uploads" Default="/mnt/user/appdata/puntuaciones/uploads" Mode="rw" Description="Fotos subidas (y su caché de miniaturas). Haz copia de seguridad." Type="Path" Display="always" Required="true" Mask="false">/mnt/user/appdata/puntuaciones/uploads</Config>
+  <Config Name="Base de datos (DATABASE_URL)" Target="DATABASE_URL" Default="postgres://puntuaciones:CAMBIA_ESTO@postgresql14:5432/puntuaciones" Mode="" Description="Conexión a PostgreSQL. El host es el nombre del contenedor de Postgres en la misma red." Type="Variable" Display="always" Required="true" Mask="true">postgres://puntuaciones:CAMBIA_ESTO@postgresql14:5432/puntuaciones</Config>
+  <Config Name="Secreto de sesión (JWT_SECRET)" Target="JWT_SECRET" Default="" Mode="" Description="Cadena larga y aleatoria (openssl rand -hex 32). Si cambia, se cierran todas las sesiones." Type="Variable" Display="always" Required="true" Mask="true"/>
+  <Config Name="Dirección externa (PUBLIC_URL)" Target="PUBLIC_URL" Default="" Mode="" Description="Dirección con la que se abre la app desde fuera, p. ej. https://anas.tail899c15.ts.net. Los enlaces de invitación a grupos la usan." Type="Variable" Display="always" Required="false" Mask="false"/>
+  <Config Name="Permitir registro (ALLOW_REGISTRATION)" Target="ALLOW_REGISTRATION" Default="true" Mode="" Description="false cierra el registro de cuentas nuevas." Type="Variable" Display="always" Required="false" Mask="false">true</Config>
+  <Config Name="TMDB_API_KEY" Target="TMDB_API_KEY" Default="" Mode="" Description="Opcional: buscar carátulas de películas y series (themoviedb.org, gratis)." Type="Variable" Display="always" Required="false" Mask="true"/>
+  <Config Name="RAWG_API_KEY" Target="RAWG_API_KEY" Default="" Mode="" Description="Opcional: buscar carátulas de videojuegos (rawg.io, gratis)." Type="Variable" Display="always" Required="false" Mask="true"/>
+  <Config Name="Proxy de confianza (TRUST_PROXY)" Target="TRUST_PROXY" Default="" Mode="" Description="Con un proxy inverso delante (tailscale serve, NPM, Cloudflare): uniquelocal. Vacío sin proxy." Type="Variable" Display="advanced" Required="false" Mask="false"/>
+  <Config Name="Teselas del mapa (MAP_TILE_URL)" Target="MAP_TILE_URL" Default="" Mode="" Description="Vacío = OpenStreetMap." Type="Variable" Display="advanced" Required="false" Mask="false"/>
+  <Config Name="Geocodificador (GEOCODER_URL)" Target="GEOCODER_URL" Default="" Mode="" Description="Vacío = Nominatim público." Type="Variable" Display="advanced" Required="false" Mask="false"/>
+  <Config Name="Carpeta de fotos interna (UPLOADS_DIR)" Target="UPLOADS_DIR" Default="/app/uploads" Mode="" Description="Ruta dentro del contenedor. Déjala así." Type="Variable" Display="advanced" Required="true" Mask="false">/app/uploads</Config>
+  <Config Name="TZ" Target="TZ" Default="Europe/Madrid" Mode="" Description="Zona horaria." Type="Variable" Display="advanced" Required="false" Mask="false">Europe/Madrid</Config>
+</Container>

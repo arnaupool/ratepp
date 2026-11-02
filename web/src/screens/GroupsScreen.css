@@ -1,0 +1,158 @@
+.groups-body {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 0 18px calc(40px + env(safe-area-inset-bottom));
+}
+
+.groups-intro {
+  margin: 0;
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--sub);
+}
+
+.groups-create {
+  display: flex;
+  gap: 8px;
+  margin: 0;
+}
+
+.groups-create-btn {
+  min-height: 0;
+  padding: 0 18px;
+  flex-shrink: 0;
+}
+
+.groups-status {
+  margin: 12px 0 0;
+  text-align: center;
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--sub);
+  display: flex;
+  justify-content: center;
+}
+
+.groups-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.groups-item,
+.groups-member {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  padding: 12px 14px;
+  text-align: left;
+  color: var(--ink);
+}
+
+.groups-item-name {
+  flex: 1;
+  min-width: 0;
+  font-weight: 700;
+  font-size: 14px;
+  overflow-wrap: anywhere;
+}
+
+.groups-item-meta {
+  font-weight: 600;
+  font-size: 12px;
+  color: var(--sub);
+}
+
+.groups-item-chevron {
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--sub);
+}
+
+.groups-member-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.groups-role {
+  height: 22px;
+  padding: 0 8px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--accent-ink);
+  font-weight: 800;
+  font-size: 10.5px;
+  display: inline-flex;
+  align-items: center;
+}
+
+.groups-member-actions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.select-chip.danger {
+  color: var(--error);
+  border-color: color-mix(in oklch, var(--error) 40%, transparent);
+}
+
+.groups-section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.groups-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.groups-invite {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.groups-invite .editor-input {
+  flex: 1 1 200px;
+  font-size: 12.5px;
+}
+
+.groups-notice {
+  margin: 0;
+  font-weight: 700;
+  font-size: 12.5px;
+  color: var(--accent);
+}
+
+.groups-danger {
+  flex-direction: row;
+  margin-top: 24px;
+}
+
+.groups-danger > * {
+  flex: 1;
+}
+
+.groups-join-title {
+  margin: 8px 0 0;
+  font-weight: 900;
+  font-size: 20px;
+  color: var(--ink);
+}
+
+.groups-delete-all {
+  flex: none;
+}
