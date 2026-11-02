@@ -1,0 +1,10 @@
+.offline-title {
+  margin: 0;
+  font-weight: 800;
+  font-size: 15px;
+  color: var(--ink);
+}
+
+.offline-retry {
+  min-width: 180px;
+}

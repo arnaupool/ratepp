@@ -17,3 +17,5 @@ e2e/test-photo.jpg
 
 *.log
 .DS_Store
+test-results/
+playwright-report/

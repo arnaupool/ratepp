@@ -1,0 +1,56 @@
+import { createBrowserRouter, Navigate, Outlet } from 'react-router';
+import { RouterProvider } from 'react-router/dom';
+import { useAuth } from './auth/AuthContext';
+import LoginScreen from './screens/LoginScreen';
+import HomeScreen from './screens/HomeScreen';
+import SettingsScreen from './screens/SettingsScreen';
+import PlaceholderScreen from './screens/PlaceholderScreen';
+import OfflineScreen from './screens/OfflineScreen';
+
+function Boot() {
+  const { status } = useAuth();
+  if (status === 'checking') {
+    return (
+      <div className="center-fill">
+        <span className="spinner" role="status" aria-label="Cargando" />
+      </div>
+    );
+  }
+  if (status === 'offline') return <OfflineScreen />;
+  return <Outlet />;
+}
+
+function RequireAuth() {
+  const { status } = useAuth();
+  return status === 'signedIn' ? <Outlet /> : <Navigate to="/login" replace />;
+}
+
+function GuestOnly() {
+  const { status } = useAuth();
+  return status === 'signedIn' ? <Navigate to="/" replace /> : <Outlet />;
+}
+
+const router = createBrowserRouter([
+  {
+    element: <Boot />,
+    children: [
+      { element: <GuestOnly />, children: [{ path: '/login', element: <LoginScreen /> }] },
+      {
+        element: <RequireAuth />,
+        children: [
+          { path: '/', element: <HomeScreen /> },
+          { path: '/nueva', element: <PlaceholderScreen title="Crear puntuación" /> },
+          { path: '/p/:id', element: <PlaceholderScreen title="Detalle" /> },
+          { path: '/mapa', element: <PlaceholderScreen title="Mapa de ubicaciones" /> },
+          { path: '/etiquetas', element: <PlaceholderScreen title="Categorías y etiquetas" /> },
+          { path: '/ajustes', element: <SettingsScreen /> },
+        ],
+      },
+      { path: '*', element: <Navigate to="/" replace /> },
+    ],
+  },
+]);
+
+export default function App() {
+  return <RouterProvider router={router} />;
+}

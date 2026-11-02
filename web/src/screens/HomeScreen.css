@@ -1,0 +1,11 @@
+.home-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 6px 18px 14px;
+}
+
+.home-menu-btn {
+  margin: -6px;
+  padding: 6px;
+}
