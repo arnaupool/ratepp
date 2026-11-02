@@ -4,6 +4,7 @@ const path = require('path');
 const sharp = require('sharp');
 const config = require('../config');
 const { rateLimit } = require('../middleware/rateLimit');
+const { sourceFile, thumbsDir } = require('../utils/uploadFiles');
 
 const router = express.Router();
 
@@ -14,7 +15,6 @@ const router = express.Router();
 router.use(rateLimit({ windowMs: 15 * 60 * 1000, max: 3000 }));
 
 const WIDTHS = [200, 400, 800];
-const thumbsDir = path.join(config.uploadsDir, '.thumbs');
 // A few concurrent resizes at most: a grid of fresh uploads shouldn't pin
 // every CPU core of a small home server.
 let active = 0;
@@ -33,22 +33,6 @@ function withSlot(fn) {
   });
 }
 
-function sourceFile(raw) {
-  if (typeof raw !== 'string') return null;
-  let u;
-  try {
-    u = new URL(raw, 'http://relative.invalid');
-  } catch {
-    return null;
-  }
-  const m = u.pathname.match(/^\/uploads\/([^/]+)$/);
-  if (!m) return null;
-  const name = decodeURIComponent(m[1]);
-  if (name.startsWith('.')) return null;
-  const filePath = path.resolve(config.uploadsDir, name);
-  if (path.dirname(filePath) !== config.uploadsDir) return null; // path traversal guard
-  return { name, filePath };
-}
 
 // GET /api/thumb?path=/uploads/<file>&w=400 -> resized JPEG, cached on disk.
 // Original files never change (random names, never overwritten), so the

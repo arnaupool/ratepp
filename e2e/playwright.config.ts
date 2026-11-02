@@ -75,6 +75,8 @@ export default defineConfig({
             GEOCODER_URL: 'http://localhost:4199',
             // Invitation links must use this, not the address the test opened.
             PUBLIC_URL: 'https://puntuaciones.example/',
+            // Site admin for the admin panel specs (14-admin-*).
+            ADMIN_EMAIL: 'admin@puntuaciones.test',
           },
         },
       ],

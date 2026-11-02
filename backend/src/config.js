@@ -42,7 +42,13 @@ const DEFAULT_GEOCODER_URL = 'https://nominatim.openstreetmap.org';
 
 const config = {
   port: Number(process.env.PORT) || 4000,
+  // Starting value; the admin panel can override it (settings.js).
   allowRegistration: parseBool(process.env.ALLOW_REGISTRATION, true),
+  // This account is always a site admin and the panel can't demote, disable
+  // or delete it: the way back in if the other admins lock you out.
+  adminEmail: (process.env.ADMIN_EMAIL || '').trim().toLowerCase() || null,
+  // Shown in the admin panel; set by the image build (Dockerfile).
+  appVersion: (process.env.APP_VERSION || '').trim() || null,
   // Login/register attempts per IP every 15 minutes.
   authRateLimitMax: Number(process.env.AUTH_RATE_LIMIT_MAX) || 30,
   trustProxy: parseTrustProxy(process.env.TRUST_PROXY),

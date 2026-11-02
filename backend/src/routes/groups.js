@@ -49,7 +49,8 @@ async function inTransaction(fn) {
 
 // A group always keeps an admin: when the last one leaves or is demoted,
 // the longest-standing member takes over. An empty group is deleted, its
-// notes going back to their authors.
+// notes going back to their authors (those whose author's account was
+// deleted have nobody to go back to and are deleted).
 async function ensureAdmin(client, groupId) {
   const admins = await client.query("SELECT 1 FROM group_members WHERE group_id = $1 AND role = 'admin'", [groupId]);
   if (admins.rowCount > 0) return;
@@ -57,6 +58,7 @@ async function ensureAdmin(client, groupId) {
   if (next.rowCount > 0) {
     await client.query("UPDATE group_members SET role = 'admin' WHERE group_id = $1 AND user_id = $2", [groupId, next.rows[0].user_id]);
   } else {
+    await client.query('DELETE FROM scores WHERE group_id = $1 AND owner_id IS NULL', [groupId]);
     await client.query('UPDATE scores SET group_id = NULL WHERE group_id = $1', [groupId]);
     await client.query('DELETE FROM groups WHERE id = $1', [groupId]);
   }
@@ -112,15 +114,19 @@ groups.patch('/:id', asyncHandler(async (req, res) => {
   res.json({ group: { id: req.params.id, name } });
 }));
 
-// ?notas=devolver gives every note back to its author as personal;
-// ?notas=borrar deletes them with the group.
+// ?notas=devolver gives every note back to its author as personal (the ones
+// whose author's account was deleted go with the group); ?notas=borrar
+// deletes them all with the group.
 groups.delete('/:id', asyncHandler(async (req, res) => {
   await requireRole(req, 'admin');
   const mode = req.query.notas;
   if (mode !== 'devolver' && mode !== 'borrar') throw new HttpError(400, 'Indica qué hacer con las notas del grupo');
   await inTransaction(async (client) => {
     if (mode === 'borrar') await client.query('DELETE FROM scores WHERE group_id = $1', [req.params.id]);
-    else await client.query('UPDATE scores SET group_id = NULL WHERE group_id = $1', [req.params.id]);
+    else {
+      await client.query('DELETE FROM scores WHERE group_id = $1 AND owner_id IS NULL', [req.params.id]);
+      await client.query('UPDATE scores SET group_id = NULL WHERE group_id = $1', [req.params.id]);
+    }
     await client.query('DELETE FROM groups WHERE id = $1', [req.params.id]);
   });
   res.status(204).end();
@@ -237,4 +243,4 @@ invites.post('/:token/accept', asyncHandler(async (req, res) => {
   res.json({ group: { id: inv.group_id, name: inv.name } });
 }));
 
-module.exports = { groups, invites };
+module.exports = { groups, invites, ensureAdmin };

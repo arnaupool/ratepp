@@ -20,7 +20,7 @@ const NOT_FOUND = 'Puntuación no encontrada';
 // since left (or been removed from) the note's group.
 const RATINGS_SQL = `
   SELECT sr.*, u.name AS user_name,
-    (s.group_id IS NOT NULL AND sr.user_id IS NOT NULL AND gm.user_id IS NULL) AS former_member
+    (s.group_id IS NOT NULL AND ((sr.user_id IS NOT NULL AND gm.user_id IS NULL) OR sr.former_user)) AS former_member
   FROM score_ratings sr
   JOIN scores s ON s.id = sr.score_id
   LEFT JOIN users u ON u.id = sr.user_id
@@ -317,6 +317,12 @@ router.patch('/:id', asyncHandler(async (req, res) => {
       }
       values.push(target);
       fieldsSet.push(`group_id = $${values.length}`);
+      // A note whose author's account was deleted can't go back to them:
+      // the group admin taking it out of the group keeps it.
+      if (target === null && !current.owner_id) {
+        values.push(req.userId);
+        fieldsSet.push(`owner_id = $${values.length}`);
+      }
     }
   }
   if (fieldsSet.length > 0) {

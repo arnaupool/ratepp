@@ -35,6 +35,11 @@ export default function SideMenu({ visible, onClose }: { visible: boolean; onClo
           <button className="side-menu-item" onClick={() => go('/ajustes')}>
             ⚙️&nbsp;&nbsp;Ajustes
           </button>
+          {user?.isAdmin && (
+            <button className="side-menu-item" onClick={() => go('/admin')}>
+              🛡️&nbsp;&nbsp;Administración
+            </button>
+          )}
           <button
             className="side-menu-item sub"
             onClick={() => {

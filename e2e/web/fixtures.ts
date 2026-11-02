@@ -31,6 +31,9 @@ export const test = base.extend<{ consoleErrors: string[]; offlineTiles: void }>
 
 export { expect };
 
+// Site admin of the e2e server (ADMIN_EMAIL in playwright.config.ts).
+export const ADMIN_EMAIL = 'admin@puntuaciones.test';
+
 let seq = 0;
 export function uniqueEmail() {
   return `e2e-${Date.now()}-${++seq}@test.com`;

@@ -18,6 +18,10 @@ RUN npm install --omit=dev
 COPY backend/ ./
 COPY --from=web /web/dist ./public
 
+# Commit the image was built from, shown in the admin panel.
+ARG APP_VERSION=""
+ENV APP_VERSION=$APP_VERSION
+
 RUN mkdir -p /app/uploads
 VOLUME ["/app/uploads"]
 

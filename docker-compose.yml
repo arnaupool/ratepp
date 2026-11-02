@@ -33,6 +33,7 @@ services:
       RAWG_API_KEY: ${RAWG_API_KEY:-}
       # false closes sign-ups (the login screen hides "Regístrate").
       ALLOW_REGISTRATION: ${ALLOW_REGISTRATION:-true}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-}
       # Address people use from outside, e.g. https://anas.tail899c15.ts.net.
       # Group invitation links use it; empty = the address the app was opened with.
       PUBLIC_URL: ${PUBLIC_URL:-}

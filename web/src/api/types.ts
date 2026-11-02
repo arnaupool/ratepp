@@ -2,6 +2,8 @@ export interface User {
   id: string;
   email: string;
   name: string;
+  /** Site admin: sees Administración in the side menu. */
+  isAdmin?: boolean;
 }
 
 export interface AuthResponse {
@@ -120,4 +122,38 @@ export interface LocationPin {
   label: string | null;
   lat: number;
   lng: number;
+}
+
+export interface AdminStats {
+  users: { total: number; new30d: number; active30d: number; disabled: number };
+  content: { notes: number; groupNotes: number; groups: number; photos: number };
+  storage: { photoFiles: number; photoBytes: number; thumbBytes: number; dbBytes: number };
+  system: {
+    version: string | null;
+    startedAt: string;
+    nodeVersion: string;
+    registrationOpen: boolean;
+    /** Changed from the panel instead of following ALLOW_REGISTRATION. */
+    registrationOverridden: boolean;
+    registrationDefault: boolean;
+    publicUrl: string | null;
+    adminEmail: string | null;
+    tmdb: boolean;
+    rawg: boolean;
+  };
+}
+
+export interface AdminUser {
+  id: string;
+  email: string;
+  name: string;
+  createdAt: string;
+  lastSeenAt: string | null;
+  isAdmin: boolean;
+  /** The ADMIN_EMAIL account: the panel can't change it. */
+  isProtected: boolean;
+  disabled: boolean;
+  notes: number;
+  groups: number;
+  isMe: boolean;
 }
