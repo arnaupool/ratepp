@@ -23,3 +23,26 @@ Prevalecen sobre los docs 01–04 donde se contradigan.
    (39.4699, -0.3763) con el texto "Todavía no has guardado ninguna ubicación en
    tus puntuaciones." encima. El selector de ubicación también arranca en
    València. (Sustituye a "centrado en Madrid".)
+
+## Notas de implementación (desviaciones respecto a los docs 01–04)
+
+- **URLs de imagen**: se normalizan al pintar (`web/src/utils/images.ts`), no
+  al leer de la API. Así nunca se escriben de vuelta en la BD URLs relativas
+  (por ejemplo al reordenar fotos), que la app Expo no sabría mostrar.
+- **CSP**: `style-src` admite `'unsafe-inline'` (WebKit inyecta una hoja de
+  estilos para los `<select>` nativos). `script-src` sigue siendo solo
+  `'self'`; el script de tema va en un archivo propio, sin hash ni nonce.
+- **Selector de fecha**: calendario propio dentro de la hoja que sube (mes y
+  año con `<select>` nativos, que en iOS abren la rueda), en vez de
+  `<input type="date">`.
+- **`AUTH_RATE_LIMIT_MAX`** (nueva, por defecto 30 como antes): solo para que
+  la suite e2e pueda registrar un usuario por test.
+- **Al borrar desde Detalle** se vuelve a la pantalla anterior (como
+  `goBack()` en la app móvil): si se abrió desde el mapa, al mapa.
+- **Ajustes** se adelantó a la fase 1 para poder probar el tema desde el
+  principio.
+- **Service worker** desactivado en el e2e salvo en la suite PWA: en WebKit,
+  los stubs de red de Playwright no ven el tráfico que pasa por el SW. La
+  recarga sin conexión se comprueba solo en Chromium (el WebKit de Playwright
+  en Windows aborta cualquier navegación offline); hay que verificarla a mano
+  en el iPhone.
