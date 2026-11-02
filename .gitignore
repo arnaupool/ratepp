@@ -12,3 +12,6 @@ playwright-report/
 
 *.log
 .DS_Store
+
+# Photos uploaded by the e2e suite.
+dev/uploads-e2e/

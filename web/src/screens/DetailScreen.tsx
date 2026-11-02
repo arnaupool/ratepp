@@ -164,7 +164,7 @@ function Detail({ serverScore }: { serverScore: ScoreDetail }) {
 
             {inGroup && (
               <p className="detail-group-line" style={subStyle}>
-                👥 {score.groupName} · {iAmAuthor ? 'creada por ti' : `creada por ${score.authorName ?? 'alguien'}`}
+                👥 {score.groupName} · {iAmAuthor ? 'creada por ti' : `creada por ${score.authorName ?? 'un antiguo miembro'}`}
               </p>
             )}
 

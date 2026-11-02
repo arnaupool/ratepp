@@ -1,5 +1,5 @@
 import { api } from './client';
-import type { Field, FieldType, GroupInvite, GroupMember, GroupSummary, LocationPin, Rating, ScoreDetail, ScoreSummary } from './types';
+import type { AdminStats, AdminUser, Field, FieldType, GroupInvite, GroupMember, GroupSummary, LocationPin, Rating, ScoreDetail, ScoreSummary } from './types';
 
 /** 'all' (personal + my groups), 'me' (personal) or a group id. */
 export type Space = string;
@@ -94,6 +94,18 @@ export const invitesApi = {
   preview: (token: string) =>
     api.get<{ group: { id: string; name: string }; alreadyMember: boolean }>(`/api/invites/${encodeURIComponent(token)}`),
   accept: (token: string) => api.post<{ group: { id: string; name: string } }>(`/api/invites/${encodeURIComponent(token)}/accept`),
+};
+
+export const adminApi = {
+  stats: () => api.get<AdminStats>('/api/admin/stats'),
+  users: () => api.get<{ users: AdminUser[] }>('/api/admin/users'),
+  update: (id: string, patch: { isAdmin?: boolean; disabled?: boolean }) => api.patch<{ user: AdminUser }>(`/api/admin/users/${id}`, patch),
+  resetPassword: (id: string) => api.post<{ password: string }>(`/api/admin/users/${id}/password`),
+  logout: (id: string) => api.post<null>(`/api/admin/users/${id}/logout`),
+  remove: (id: string) => api.del(`/api/admin/users/${id}`),
+  /** null goes back to the server's ALLOW_REGISTRATION. */
+  setRegistration: (allowRegistration: boolean | null) =>
+    api.put<{ registrationOpen: boolean; registrationOverridden: boolean }>('/api/admin/settings', { allowRegistration }),
 };
 
 export const colorsApi = {
