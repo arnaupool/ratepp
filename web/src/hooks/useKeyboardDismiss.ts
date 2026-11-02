@@ -35,10 +35,30 @@ export function useKeyboardDismiss() {
       }
     };
 
+    // A focused input near the bottom must not end up behind the keyboard:
+    // once the keyboard has opened (visual viewport shrunk), bring it into
+    // the visible area.
+    const onFocusIn = (e: FocusEvent) => {
+      const el = e.target;
+      if (!isTextEntry(el as Element)) return;
+      window.setTimeout(() => {
+        if (document.activeElement !== el) return;
+        const vv = window.visualViewport;
+        const rect = (el as HTMLElement).getBoundingClientRect();
+        const visibleTop = vv ? vv.offsetTop : 0;
+        const visibleBottom = vv ? vv.offsetTop + vv.height : window.innerHeight;
+        if (rect.bottom > visibleBottom - 16 || rect.top < visibleTop) {
+          (el as HTMLElement).scrollIntoView({ block: 'center', behavior: 'smooth' });
+        }
+      }, 350);
+    };
+
+    document.addEventListener('focusin', onFocusIn);
     document.addEventListener('pointerdown', onPointerDown, true);
     document.addEventListener('touchstart', onTouchStart, { passive: true });
     document.addEventListener('touchmove', onTouchMove, { passive: true });
     return () => {
+      document.removeEventListener('focusin', onFocusIn);
       document.removeEventListener('pointerdown', onPointerDown, true);
       document.removeEventListener('touchstart', onTouchStart);
       document.removeEventListener('touchmove', onTouchMove);

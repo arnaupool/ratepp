@@ -1,0 +1,25 @@
+.create-head {
+  padding: 22px 14px 4px;
+}
+
+.create-body {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 8px 18px calc(60px + env(safe-area-inset-bottom));
+}
+
+.create-title {
+  width: 100%;
+  padding: 0;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-weight: 900;
+  font-size: 24px;
+  color: var(--ink);
+}
+
+.create-save {
+  margin-top: 8px;
+}
