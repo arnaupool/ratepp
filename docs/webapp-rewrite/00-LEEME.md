@@ -37,15 +37,54 @@ diseño, mismo comportamiento. No es un rediseño.
 - `e2e/test.js` — test end-to-end con Playwright del flujo completo. Sirve como
   checklist de comportamiento y debe adaptarse a la nueva web app.
 
-## Prompt sugerido para el modelo
+## Prompt para el modelo
 
-> Vas a reconstruir la app "Puntuaciones" como una web app PWA autoalojada.
-> Lee primero todos los documentos de `docs/webapp-rewrite/` en orden, después
-> `project/Puntuaciones App.dc.html`, y usa `mobile/src/` como referencia de
-> comportamiento y medidas exactas. Reutiliza `backend/` sin romper su API.
-> Trabaja por las fases del documento 04, y al final de cada fase verifica los
-> criterios de aceptación de esa fase. Si algo es ambiguo, pregunta antes de
-> implementar. La interfaz está en español: copia los textos tal cual.
+Copiar y pegar tal cual al iniciar el trabajo:
+
+```
+Vas a reconstruir mi app "Puntuaciones" como una web app (PWA) que se sirve desde mi
+propio servidor, sustituyendo la app actual de React Native/Expo. Debe ser la misma
+aplicación (mismas pantallas, datos, diseño y comportamiento) en formato web, no un
+rediseño.
+
+Repositorio: https://github.com/arnaupool/ratepp (rama main)
+
+## Antes de escribir código
+1. Lee, en este orden y completos, los documentos de `docs/webapp-rewrite/`:
+   00-LEEME.md, 01-producto-y-pantallas.md, 02-api-y-datos.md, 03-diseno.md,
+   04-arquitectura-y-plan.md.
+2. Lee `project/Puntuaciones App.dc.html` (el prototipo de diseño original en HTML/CSS).
+3. Echa un vistazo a `mobile/src/` y `backend/src/`: `mobile/` es la referencia de
+   verdad para cualquier medida o comportamiento que los docs no detallen, y
+   `backend/` se reutiliza.
+4. Antes de empezar, dime en pocas líneas qué has entendido y pregúntame lo que no
+   esté claro. El doc 04 tiene 6 decisiones marcadas como [DECISIÓN] con la
+   recomendación ya elegida; si alguna te parece mal, dímelo ahora.
+
+## Reglas de trabajo
+- Trabaja en una rama nueva `webapp-rewrite`, nunca directamente en `main`: mi
+  servidor despliega desde main y no puede romperse mientras tanto.
+- Sigue las fases del doc 04 en orden. Al terminar cada fase:
+  verifica sus criterios de aceptación, haz commit, y dame un resumen corto de qué
+  has hecho, qué has probado y cómo puedo probarlo yo. Espera mi OK antes de pasar
+  a la siguiente fase.
+- No pierdas datos: tengo puntuaciones y fotos reales en producción. No renombres los
+  volúmenes de Docker (`pgdata`, `uploads`) ni el proyecto de compose. Cualquier
+  cambio en el backend tiene que ser compatible hacia atrás: la app Expo actual debe
+  seguir funcionando contra el mismo backend hasta que yo diga que se retira.
+- No borres `mobile/` ni toques `main` sin preguntarme.
+- La interfaz está en español: copia los textos de los docs tal cual.
+- Si algo es ambiguo o los docs se contradicen con el código, pregunta en vez de
+  suponer.
+- Pruébalo de verdad: además de compilar, ejecuta la app y el test e2e (Chromium y
+  WebKit con perfil de iPhone). Si algo falla, dímelo con el error, no lo escondas.
+- Yo lo voy a usar en un iPhone, instalado como PWA desde Safari, accediendo por
+  Tailscale. Ten eso en mente en cada decisión.
+
+## Contexto de mi servidor
+Unraid con Docker/Portainer, Postgres y la API ya desplegados con el
+`docker-compose.yml` del repo. Accedo desde fuera de casa por Tailscale.
+```
 
 ## Decisiones que el usuario puede querer revisar antes de empezar
 
