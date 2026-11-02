@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useAutoAnimate } from '@formkit/auto-animate/react';
 import { useQuery } from '@tanstack/react-query';
 import { tagsApi } from '../../api/endpoints';
 import { asStringArray } from '../../constants/fieldDefs';
@@ -9,6 +10,7 @@ export default function TagAutocomplete({ value, onChange }: { value: unknown; o
   const tags = asStringArray(value);
   const [draft, setDraft] = useState('');
   const [expanded, setExpanded] = useState(false);
+  const [rootRef] = useAutoAnimate<HTMLDivElement>();
   const { data } = useQuery({ queryKey: ['tags'], queryFn: tagsApi.list });
   const suggestions = (data?.tags ?? []).filter((t) => !tags.includes(t));
 
@@ -19,7 +21,7 @@ export default function TagAutocomplete({ value, onChange }: { value: unknown; o
   };
 
   return (
-    <div className="tag-editor">
+    <div className="tag-editor" ref={rootRef}>
       {tags.length > 0 && (
         <div className="chip-wrap tight">
           {tags.map((t) => (

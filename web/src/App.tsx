@@ -4,11 +4,11 @@ import { useAuth } from './auth/AuthContext';
 import LoginScreen from './screens/LoginScreen';
 import HomeScreen from './screens/HomeScreen';
 import SettingsScreen from './screens/SettingsScreen';
-import PlaceholderScreen from './screens/PlaceholderScreen';
 import OfflineScreen from './screens/OfflineScreen';
 import DetailScreen from './screens/DetailScreen';
 import CreateScreen from './screens/CreateScreen';
 import LocationsMapScreen from './screens/LocationsMapScreen';
+import ManageLabelsScreen from './screens/ManageLabelsScreen';
 import { useKeyboardDismiss } from './hooks/useKeyboardDismiss';
 
 function Boot() {
@@ -52,7 +52,7 @@ const router = createBrowserRouter([
           { path: '/nueva', element: <CreateScreen /> },
           { path: '/p/:id', element: <DetailScreen /> },
           { path: '/mapa', element: <LocationsMapScreen /> },
-          { path: '/etiquetas', element: <PlaceholderScreen title="Categorías y etiquetas" /> },
+          { path: '/etiquetas', element: <ManageLabelsScreen /> },
           { path: '/ajustes', element: <SettingsScreen /> },
         ],
       },

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useAutoAnimate } from '@formkit/auto-animate/react';
 import { useNavigate } from 'react-router';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { categoriesApi, scoresApi, tagsApi } from '../api/endpoints';
@@ -18,6 +19,7 @@ export default function HomeScreen() {
   const { searchInput, category, tag, dateFrom, dateTo } = useHomeFilters();
   const [menuOpen, setMenuOpen] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const [gridRef] = useAutoAnimate<HTMLDivElement>();
   // Matching happens server-side (title, categories and field values).
   const search = useDebounced(searchInput, 300);
 
@@ -99,7 +101,7 @@ export default function HomeScreen() {
           </p>
         </div>
       ) : (
-        <div className="home-grid">
+        <div className="home-grid" ref={gridRef}>
           {items.map((item) => (
             <ScoreCard key={item.id} item={item} onOpen={() => navigate(`/p/${item.id}`)} />
           ))}

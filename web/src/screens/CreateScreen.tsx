@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react';
+import { useAutoAnimate } from '@formkit/auto-animate/react';
 import { useNavigate } from 'react-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { errorMessage } from '../api/client';
@@ -40,6 +41,7 @@ export default function CreateScreen() {
   const [locationFieldId, setLocationFieldId] = useState<string | null>(null);
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
+  const [bodyRef] = useAutoAnimate<HTMLDivElement>();
   // Count of photo uploads in flight (gallery and gallery fields).
   const uploads = useRef(0);
   const [uploadingCount, setUploadingCount] = useState(0);
@@ -111,7 +113,7 @@ export default function CreateScreen() {
         <BackButton />
       </div>
 
-      <div className="create-body">
+      <div className="create-body" ref={bodyRef}>
         <input className="create-title" style={ink ? { color: ink } : undefined} placeholder="Título *" value={title} onChange={(e) => setTitle(e.target.value)} />
 
         <section className="editor-section">

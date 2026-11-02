@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useAutoAnimate } from '@formkit/auto-animate/react';
 import { errorMessage } from '../../api/client';
 import { pickImageFile, uploadImageFile } from '../../utils/upload';
 import { Photo, Spinner } from '../bits';
@@ -15,6 +16,7 @@ interface Props {
 // as soon as they are picked; the parent only ever gets URLs.
 export default function PhotoGalleryEditor({ photos, onChange, onError, onOpenCoverSearch, onUploadingChange }: Props) {
   const [uploading, setUploading] = useState(false);
+  const [rowRef] = useAutoAnimate<HTMLDivElement>();
 
   const upload = async () => {
     const file = await pickImageFile();
@@ -42,7 +44,7 @@ export default function PhotoGalleryEditor({ photos, onChange, onError, onOpenCo
 
   return (
     <div className="gallery-editor">
-      <div className="gallery-editor-row no-scrollbar">
+      <div className="gallery-editor-row no-scrollbar" ref={rowRef}>
         {photos.map((url, idx) => (
           <div key={`${url}-${idx}`} className="gallery-editor-item">
             <div className="gallery-editor-thumb">

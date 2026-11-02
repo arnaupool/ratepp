@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useAutoAnimate } from '@formkit/auto-animate/react';
 
 interface Props {
   categories: string[];
@@ -12,6 +13,7 @@ interface Props {
 export default function CategoryEditor({ categories, suggestions, onToggle, onAddCustom }: Props) {
   const [draft, setDraft] = useState('');
   const [expanded, setExpanded] = useState(false);
+  const [chipsRef] = useAutoAnimate<HTMLDivElement>();
   const visible = expanded ? suggestions : suggestions.filter((c) => categories.includes(c));
 
   const submit = () => {
@@ -47,7 +49,7 @@ export default function CategoryEditor({ categories, suggestions, onToggle, onAd
         </button>
       </div>
       {visible.length > 0 && (
-        <div className="chip-wrap">
+        <div className="chip-wrap" ref={chipsRef}>
           {visible.map((c) => {
             const on = categories.includes(c);
             return (

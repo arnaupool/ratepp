@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type Dispatch, type SetStateAction } from 'react';
+import { useAutoAnimate } from '@formkit/auto-animate/react';
 import { useBlocker } from 'react-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { errorMessage } from '../api/client';
@@ -38,6 +39,7 @@ export default function DetailEditMode({ score, setScore, onDone }: Props) {
   const goBack = useGoBack();
   const id = score.id;
   const [error, setError] = useState('');
+  const [fieldsRef] = useAutoAnimate<HTMLDivElement>();
   const [editingId, setEditingId] = useState<string | null>(null);
   const [coverOpen, setCoverOpen] = useState(false);
   const [locationFieldId, setLocationFieldId] = useState<string | null>(null);
@@ -333,7 +335,7 @@ export default function DetailEditMode({ score, setScore, onDone }: Props) {
         </div>
       </div>
 
-      <div className="detail-fields detail-fields-edit">
+      <div className="detail-fields detail-fields-edit" ref={fieldsRef}>
         {score.fields.map((f, idx) => (
           <EditableFieldRow
             key={f.id}

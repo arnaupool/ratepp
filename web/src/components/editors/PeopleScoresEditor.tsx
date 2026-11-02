@@ -1,4 +1,5 @@
 import { ScoreBadge } from '../bits';
+import { useAutoAnimate } from '@formkit/auto-animate/react';
 import NumberPillRow from './NumberPillRow';
 
 export interface PersonScore {
@@ -23,10 +24,11 @@ interface Props {
 // badge; tapping the badge opens a shared 1-10 row for that person.
 export default function PeopleScoresEditor({ people, editingId, onStartEdit, onSelectNumber, onRename, onRenameCommit, onRemove, onAdd, subColor }: Props) {
   const editing = people.find((p) => p.id === editingId);
+  const [rowRef] = useAutoAnimate<HTMLDivElement>();
   const sub = subColor ? { color: subColor } : undefined;
   return (
     <div>
-      <div className="people-row">
+      <div className="people-row" ref={rowRef}>
         {people.map((p) => (
           <div key={p.id} className="people-person">
             <div className="people-name-row">

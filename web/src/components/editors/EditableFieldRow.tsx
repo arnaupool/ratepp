@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useAutoAnimate } from '@formkit/auto-animate/react';
 import type { Field } from '../../api/types';
 import { asLocation, asStringArray, asText, fieldDef } from '../../constants/fieldDefs';
 import { errorMessage } from '../../api/client';
@@ -35,6 +36,8 @@ interface Props {
 export default function EditableFieldRow({ field, isFirst, isLast, onChange, onCommit, onRemove, onMove, onPickLocation, onError, onUploadingChange }: Props) {
   const def = fieldDef(field.type);
   const [uploading, setUploading] = useState(false);
+  const [listRef] = useAutoAnimate<HTMLDivElement>();
+  const [galleryRef] = useAutoAnimate<HTMLDivElement>();
   if (!def) return null;
 
   const setValue = (value: unknown, commit: boolean) => {
@@ -122,7 +125,7 @@ export default function EditableFieldRow({ field, isFirst, isLast, onChange, onC
         ))}
 
       {def.kind === 'list' && (
-        <div className="field-list">
+        <div className="field-list" ref={listRef}>
           {listItems.map((item, idx) => (
             <input
               key={idx}
@@ -144,7 +147,7 @@ export default function EditableFieldRow({ field, isFirst, isLast, onChange, onC
       )}
 
       {def.kind === 'gallery' && (
-        <div className="field-gallery">
+        <div className="field-gallery" ref={galleryRef}>
           {asStringArray(field.value).map((url, idx) => (
             <div key={`${url}-${idx}`} className="field-gallery-item">
               <Photo url={url} thumb sizes="120px" />
