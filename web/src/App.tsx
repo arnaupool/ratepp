@@ -10,6 +10,7 @@ import CreateScreen from './screens/CreateScreen';
 import LocationsMapScreen from './screens/LocationsMapScreen';
 import ManageLabelsScreen from './screens/ManageLabelsScreen';
 import { useKeyboardDismiss } from './hooks/useKeyboardDismiss';
+import UpdateBanner from './components/UpdateBanner';
 
 function Boot() {
   const { status } = useAuth();
@@ -26,6 +27,7 @@ function Boot() {
     <>
       <Outlet />
       <ScrollRestoration />
+      <UpdateBanner />
     </>
   );
 }

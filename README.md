@@ -1,40 +1,105 @@
 # Puntuaciones
 
-A mobile app for rating anything — restaurants, movies, memories — from 1 to 10,
-with freeform dynamic fields per score. Implemented from the Claude Design
-handoff in `project/Puntuaciones App.dc.html` (see `chats/chat1.md` for the
-full design conversation).
+A self-hosted app for rating anything (restaurants, movies, memories) from 1
+to 10, with photos, other people's scores and free-form fields per score.
 
-- **Mobile app**: React Native (Expo) — `mobile/`
-- **Backend**: Node/Express + PostgreSQL, containerized — `backend/`
+- **Web app (PWA)**: React + TypeScript + Vite, in `web/`. Installed on the
+  iPhone from Safari ("Añadir a pantalla de inicio").
+- **Backend**: Node/Express + PostgreSQL, in `backend/`. The same server
+  serves the API, the photos and the web app, from one origin.
+- **Legacy mobile app**: React Native/Expo, in `mobile/`. Still works against
+  the same backend while it is being retired.
+
+Design references: `project/Puntuaciones App.dc.html` (original prototype),
+`docs/webapp-rewrite/` (spec for the web app, decisions in `05-decisiones.md`).
 
 ## Repo layout
 
 ```
-backend/            Express API + Postgres migrations
-  src/routes/        auth, scores (+ ratings, fields), uploads
-  src/migrations/     SQL schema
-docker-compose.yml   Postgres + API, for self-hosting
-mobile/              Expo app
-  src/screens/        Login, Home, Create, Detail
-  src/components/     shared UI (score badges, field icons, pill selector...)
-  src/theme/           oklch->hex color port + typography, from the design tokens
-project/             original Claude Design export (reference only)
-chats/               design conversation transcript (reference only)
+Dockerfile           single image: builds web/, bundles it with the API
+docker-compose.yml   Postgres + app (+ optional daily backups)
+backend/             Express API, migrations, static serving of web/dist
+web/                 the PWA
+e2e/                 Playwright suites (web/ for the PWA, test.js for Expo)
+dev/                 local-only tooling (throwaway Postgres, icon generator)
+mobile/              legacy Expo app
 ```
 
-## Web app (in progress)
+## Deploying on Unraid (Portainer or docker compose)
 
-The Expo app is being rebuilt as a PWA in `web/` (React + TypeScript + Vite),
-served by the same Express server as the API. See `docs/webapp-rewrite/`.
-The single Docker image (`Dockerfile` at the repo root) builds `web/` and
-bundles it with the API; the compose service is still called `api` and the
-volumes are still `pgdata` and `uploads`.
+1. **Back up first** (see "Backups" below), every time you upgrade.
+2. Create the stack from this repository (Portainer: *Stacks > Add stack >
+   Repository*, branch `main`, compose path `docker-compose.yml`), or run
+   `docker compose up -d --build` in a checkout.
+3. Set the environment variables (Portainer: *Environment variables*):
 
-### Backup before deploying a new version
+| Variable | Default | What it does |
+|---|---|---|
+| `JWT_SECRET` | example value | **Set a real one** (`openssl rand -hex 32`). Signs sessions. |
+| `PUBLIC_URL` | `http://localhost:4000` | Base of the photo URLs the API stores (needed by the Expo app; the web app ignores the host part). |
+| `APP_PORT` | `4000` | Host port the app is published on. |
+| `ALLOW_REGISTRATION` | `true` | `false` closes sign-ups: 403 on register and no "Regístrate" link. |
+| `TRUST_PROXY` | empty | Set when a reverse proxy sits in front, so rate limits see real client IPs. With a proxy reaching the container over Docker's network, `uniquelocal` works. |
+| `MAP_TILE_URL` | OpenStreetMap | Map tile template. The CSP is built from it. |
+| `GEOCODER_URL` | public Nominatim | Nominatim-compatible geocoder for the location picker. |
+| `TMDB_API_KEY`, `RAWG_API_KEY` | empty | Optional: movie/series and game cover search. Books need no key. |
+| `AUTH_RATE_LIMIT_MAX` | `30` | Login/register attempts per IP every 15 minutes. |
+| `COMPOSE_PROFILES` | empty | `backup` enables the daily backup service. |
+| `BACKUP_DIR`, `BACKUP_KEEP_DAYS` | `./backups`, `14` | Where backups go and how many daily dumps to keep. |
 
-Run these from the folder with `docker-compose.yml` (or the Portainer stack's
-console) before every upgrade:
+The compose project name, the `api` service and the `pgdata`/`uploads`
+volumes keep their names: **don't rename them**, or Docker creates new empty
+volumes and it looks as if all data was lost.
+
+The container has a healthcheck (`GET /health`), shown in Portainer.
+
+## HTTPS (needed to install the PWA and for "Usar mi ubicación actual")
+
+The app always listens on plain HTTP; TLS is terminated by a reverse proxy
+in front. Nothing in the code depends on which one, so switching later needs
+no code change.
+
+### Private: Tailscale (what this server uses today)
+
+1. In the Tailscale admin console, *DNS* page: enable **MagicDNS** and
+   **HTTPS Certificates** (they are off on this tailnet today).
+2. On the Unraid host (Tailscale plugin), expose the app:
+
+   ```bash
+   tailscale serve --bg --https=443 http://localhost:4000
+   ```
+
+   The app is then at `https://anas.tail899c15.ts.net`, with a valid
+   certificate, reachable only from your tailnet. `tailscale serve status`
+   shows it; `tailscale serve --https=443 off` removes it.
+3. Set `TRUST_PROXY=uniquelocal` (the proxy reaches the container through
+   Docker's network).
+
+### Public: own domain
+
+Point a domain at the server and put any of these in front of port 4000:
+Nginx Proxy Manager or Caddy with Let's Encrypt, or a Cloudflare Tunnel (no
+router ports opened). Set `TRUST_PROXY` to the proxy's address range.
+
+Before opening it to other people, see "Before going public" below.
+
+## Installing on the iPhone
+
+1. Open the HTTPS address in **Safari** and sign in.
+2. *Share* > *Añadir a pantalla de inicio*.
+3. Open it from the home screen: it runs full screen with its own icon.
+
+New versions install themselves; if the app was open during an upgrade it
+shows "Hay una versión nueva" with a reload button. Over plain HTTP (for
+example the LAN IP) the app works, but without offline shell, installation
+or geolocation.
+
+## Backups
+
+Photos live in the `uploads` volume and data in `pgdata`. A backup needs
+**both**.
+
+One-off, before an upgrade (from the folder with `docker-compose.yml`):
 
 ```bash
 docker compose exec db pg_dump -U puntuaciones puntuaciones > backup-$(date +%F).sql
@@ -42,20 +107,28 @@ docker run --rm -v <project>_uploads:/data -v "$PWD":/backup alpine tar czf /bac
 ```
 
 `<project>` is the compose project (Portainer stack) name; `docker volume ls`
-shows the exact volume name. The database dump without the photos is an
-incomplete backup.
+shows the exact volume names.
 
-### New environment variables
+Periodic: set `COMPOSE_PROFILES=backup` and `BACKUP_DIR` to a share on the
+array (for example `/mnt/user/backups/puntuaciones`). The `backup` service
+writes a gzipped dump per day (keeps `BACKUP_KEEP_DAYS`) and mirrors the
+photos into `BACKUP_DIR/uploads`. Named Docker volumes live inside
+`docker.img`, which Unraid's Appdata Backup doesn't cover, so this mirror is
+what protects the photos. Include `BACKUP_DIR` in your usual off-server copy.
 
-| Variable | Default | Use |
-|---|---|---|
-| `ALLOW_REGISTRATION` | `true` | `false` closes sign-ups (403) and hides "Regístrate" |
-| `TRUST_PROXY` | empty | Express `trust proxy` value when a reverse proxy sits in front |
-| `MAP_TILE_URL` | OpenStreetMap | Tile template for the maps; the CSP is built from it |
-| `GEOCODER_URL` | public Nominatim | Nominatim-compatible geocoder base URL |
-| `APP_PORT` | `4000` | Host port published by compose |
+### Restoring
 
-### Local development without Docker
+```bash
+docker compose stop api
+gunzip -c backups/db/puntuaciones-YYYY-MM-DD.sql.gz | docker compose exec -T db psql -U puntuaciones -d puntuaciones
+docker run --rm -v <project>_uploads:/data -v "$PWD/backups/uploads":/src alpine cp -a /src/. /data/
+docker compose start api
+```
+
+Restore the dump into an empty database (a fresh `pgdata` volume, or after
+`DROP SCHEMA public CASCADE; CREATE SCHEMA public;`).
+
+## Development
 
 ```bash
 cd dev && npm install && node db.mjs          # throwaway Postgres 16 on :5433
@@ -63,135 +136,53 @@ cd backend && npm install && node src/migrate.js && node src/index.js
 cd web && npm install && npm run dev           # http://localhost:5173, proxies /api
 ```
 
-The backend needs `DATABASE_URL=postgres://puntuaciones:puntuaciones@localhost:5433/puntuaciones`,
-`JWT_SECRET`, `UPLOADS_DIR` and, to serve the built web app, `WEB_DIST_DIR=../web/dist`.
+The backend reads `DATABASE_URL`
+(`postgres://puntuaciones:puntuaciones@localhost:5433/puntuaciones` for the
+dev database), `JWT_SECRET`, `UPLOADS_DIR`, and `WEB_DIST_DIR=../web/dist` to
+serve a built web app.
 
-## Running the backend
-
-Requires Docker + Docker Compose.
-
-```bash
-cp backend/.env.example backend/.env   # then set a real JWT_SECRET
-docker compose up --build
-```
-
-This starts Postgres and the API (migrations run automatically on boot).
-The API listens on `http://localhost:4000`; uploaded photos are served from
-`/uploads` and persisted in a Docker volume.
-
-For a real server deployment, set `PUBLIC_URL` (in `docker-compose.yml`'s
-`api` service or an `.env` next to `docker-compose.yml`) to the public
-HTTPS URL of the API, since it's used to build photo URLs returned to the
-app.
-
-Optionally set `TMDB_API_KEY` (themoviedb.org, free) and `RAWG_API_KEY`
-(rawg.io, free) to enable "Buscar carátula" for movies/series and games.
-Book covers use Open Library and need no key. Leave a key blank to just
-skip that source in search results.
-
-## Running the mobile app
-
-Requires Node 18+ and the Expo Go app (or a dev build) on your phone.
+### Tests
 
 ```bash
-cd mobile
-npm install
-EXPO_PUBLIC_API_URL=http://<your-machine-ip>:4000 npx expo start
+cd web && npm run build
+cd e2e && npm install && npx playwright install chromium webkit
+npx playwright test
 ```
 
-`EXPO_PUBLIC_API_URL` must point at a host your phone can reach — `localhost`
-only works in an iOS Simulator on the same machine. Set it to your computer's
-LAN IP (or the public URL of your deployed backend) when testing on a real
-device via Expo Go.
+The suite starts its own throwaway stack (embedded Postgres, the API on
+:4100 and a stub geocoder) and runs every test in Chromium and in WebKit
+with an iPhone 15 profile. It fails on any browser console error.
+`e2e/test.js` is the old suite for the Expo web build.
 
-The app also runs as a web build (`npx expo start --web`) — auth token
-storage, photo upload, and the map/location field have web-specific code
-paths (the location field falls back to an address-only form on web, since
-`react-native-maps` has no web target).
+## Security notes
 
-The location field's map (`react-native-maps`) needs no setup to test via
-Expo Go — it works out of the box on both iOS and Android in Expo Go. A
-Google Maps API key is only required if you later build a standalone
-Android app (`eas build` or a dev client) for distribution.
+- Strict Content-Security-Policy (scripts only from the same origin), no
+  framing, `Referrer-Policy: same-origin`, `nosniff`.
+- Rate limits: login/register per IP; uploads, cover search, geocoding and
+  color extraction per user; thumbnails per IP.
+- Photos under `/uploads` (and their thumbnails) are served without a
+  session: anyone with the exact URL can see a photo. Names are random UUIDs
+  and are never listed.
 
-## End-to-end tests
+### Before going public
 
-`e2e/test.js` drives the web build with Playwright through the full user
-flow: register, empty home, create a score (title, category, 1-10 pills,
-extra people with rename, long-text/list/gallery fields, real photo upload
-through the file picker), detail view, editing scores per person,
-adding/renaming/removing people, the home card's stacked "+N" badges,
-search, category filters, and session persistence across reloads. It also
-fails on any browser console error. Setup instructions are in the file
-header. Run it against a disposable database.
+- A real `JWT_SECRET` (the server only warns about the example one today).
+- Password recovery (needs SMTP), email verification and some anti-bot
+  protection on sign-up; or keep `ALLOW_REGISTRATION=false`.
+- Deleting one's account and exporting one's data (GDPR), privacy policy.
+- Per-user photo storage quota.
+- Map tiles and geocoding from a provider that allows that traffic.
+- TMDB attribution in the app ("This product uses the TMDB API but is not
+  endorsed or certified by TMDB").
+- Verified automatic backups and monitoring of the healthcheck.
 
-## What's implemented
+## Legacy Expo app (`mobile/`)
 
-The four screens from the design, wired to a real backend:
+```bash
+cd mobile && npm install
+EXPO_PUBLIC_API_URL=http://<server-ip>:4000 npx expo start
+```
 
-1. **Acceder** — login/register (toggle, matches the design's single form).
-2. **Principal** — 2-column grid of your scores, search, tag filters, single
-   score badge or stacked mini-badges + "+N" for multi-person scores.
-3. **Crear puntuación** — title, a reorderable photo gallery (upload from
-   device or search movies/games/books for a poster; the first photo is
-   always the cover), collapsible multi-select categories, required 1-10
-   score (single-row pill selector), optional extra people's scores,
-   dynamic fields (quick-add chips + "more fields" sheet: text, number,
-   date (native picker), location (map picker), repeatable gallery, list,
-   tag (multi-select autocomplete of previously-used tags)), save.
-4. **Detalle** — read-only by default: hero photo + thumbnails (tap any
-   photo to open it full-screen with pinch-to-zoom), your score, other
-   people's scores, categories and fields are all just displayed. An edit
-   mode (pencil icon) unlocks everything: change your score, add/remove/
-   rename other people's scores, toggle categories, reorder/remove/add
-   fields, edit field values (including removing individual photos from
-   gallery-type fields), and reorder/remove/add gallery photos.
-
-A score's photo gallery is stored as an ordered list (`photoUrls`) — the
-first photo is always the cover shown on the home grid and as the hero
-image. Reordering photos in edit mode changes the cover.
-
-Colors and spacing are ported directly from the design's CSS (the
-`oklch()` tokens are converted to sRGB at runtime in `src/theme/oklch.js` —
-RN has no `oklch()` support, so this keeps the palette pixel-accurate rather
-than eyeballed). The pure-CSS field-type icons (border tricks / pseudo
-elements) are recreated as small View compositions in
-`src/components/FieldIcon.js`. Typeface is Poppins (swapped from the
-design's original Nunito by request).
-
-The standalone "Foto" field type was folded into "Galería" (a gallery of
-one photo is the same thing) to cut down on redundant options.
-
-### Gaps filled beyond the prototype
-
-The `.dc.html` prototype is a visual mock with local-only state; a few
-things needed real decisions to become a working app and weren't specified
-in the design chat:
-
-- **Save action**: the create screen had no submit button in the prototype.
-  Added a "Guardar puntuación" button, styled like the login CTA.
-- **Category assignment**: cards are filterable by category
-  (Restaurantes/Películas/Recuerdos in the mock data), but the create flow
-  never let you set one. Added a lightweight "Categoría" text input with
-  suggestion chips (existing categories, seeded with the three examples).
-- **Field labels**: the mock detail view shows custom labels ("Precio
-  medio", "Fecha de la visita") but the create flow only ever assigns the
-  generic type label ("Número", "Fecha"). Made the field label editable
-  inline when adding a field, defaulting to the generic label.
-- **Photo/gallery fields in Detail**: the static mock detail data never
-  included photo/gallery-type fields, so the prototype's detail template
-  only handles list/text values. Added thumbnail rendering for those field
-  types, and photos from `photo`/`gallery` fields feed the hero image +
-  thumbnail strip.
-- **Account name**: the login design has no "name" field. Registration
-  derives a display name from the email's local part.
-
-### Not yet built (per the design's own "next steps")
-
-The design chat flags these as future work, not part of this handoff:
-teams/invite flow (create/join with a code or link), empty-state polish,
-and screen-transition animation (the `.dc.html` prototype's interactive
-filmstrip was a design-tool affordance, not part of the spec to implement).
-Score/field deletion beyond removing a field during creation, and editing a
-score's title/fields after creation, are also not implemented — the design
-only specifies score (rating) editing in Detail, not field editing.
+It talks to the same API; photo URLs it stores are absolute (`PUBLIC_URL`),
+which the web app normalizes when showing them. CORS stays open while it is
+in use.

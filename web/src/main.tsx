@@ -11,6 +11,13 @@ import { ThemeProvider } from './theme/ThemeContext';
 import { AuthProvider } from './auth/AuthContext';
 import App from './App';
 
+// After a new release is deployed, a page still running the old build can't
+// lazy-load its old chunks (the files are gone): reload into the new build.
+window.addEventListener('vite:preloadError', (e) => {
+  e.preventDefault();
+  window.location.reload();
+});
+
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {

@@ -52,6 +52,43 @@ services:
       start_period: 20s
       retries: 3
 
+  # Optional daily backups (enable with COMPOSE_PROFILES=backup, or the
+  # "backup" profile in Portainer). Writes to BACKUP_DIR on the host:
+  #   db/puntuaciones-YYYY-MM-DD.sql.gz   one per day, older than
+  #                                       BACKUP_KEEP_DAYS are deleted
+  #   uploads/                            mirror of the photos volume (photo
+  #                                       files never change, so new ones are
+  #                                       just added)
+  backup:
+    image: postgres:16-alpine
+    profiles: ["backup"]
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      PGHOST: db
+      PGUSER: puntuaciones
+      PGPASSWORD: puntuaciones
+      PGDATABASE: puntuaciones
+      KEEP_DAYS: ${BACKUP_KEEP_DAYS:-14}
+    volumes:
+      - ${BACKUP_DIR:-./backups}:/backups
+      - uploads:/uploads:ro
+    entrypoint:
+      - sh
+      - -c
+      - |
+        mkdir -p /backups/db /backups/uploads
+        while true; do
+          day=$$(date +%F)
+          pg_dump | gzip > /backups/db/puntuaciones-$$day.sql.gz.tmp && mv /backups/db/puntuaciones-$$day.sql.gz.tmp /backups/db/puntuaciones-$$day.sql.gz && echo "backup $$day ok"
+          # Photo files never change: copy only the new ones (skips .thumbs).
+          cd /uploads && for f in *; do [ -f "$$f" ] && [ ! -e "/backups/uploads/$$f" ] && cp -p "$$f" /backups/uploads/; done; cd /
+          find /backups/db -name 'puntuaciones-*.sql.gz' -mtime +$$KEEP_DAYS -delete
+          sleep 86400
+        done
+
 volumes:
   pgdata:
   uploads:

@@ -21,6 +21,9 @@ export default defineConfig({
   use: {
     baseURL,
     trace: 'retain-on-failure',
+    // Request stubs (page.route) don't see requests that go through a service
+    // worker in WebKit, so it's off everywhere except the PWA suite.
+    serviceWorkers: 'block',
     screenshot: 'only-on-failure',
   },
   projects: [
