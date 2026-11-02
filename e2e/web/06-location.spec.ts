@@ -4,6 +4,10 @@ import { Seeder } from './seed';
 test.use({ permissions: ['geolocation'], geolocation: { latitude: 39.4747, longitude: -0.3764 } });
 
 test('elegir ubicación por búsqueda, por toque y por "mi ubicación"', async ({ page }) => {
+  const tileReferers: Promise<string | null>[] = [];
+  page.on('request', (r) => {
+    if (r.url().startsWith('https://tile.openstreetmap.org/')) tileReferers.push(r.headerValue('referer'));
+  });
   await signedInViaApi(page);
   await page.goto('/nueva');
   await page.getByPlaceholder('Título *').fill('Casa Pepa');
@@ -14,6 +18,9 @@ test('elegir ubicación por búsqueda, por toque y por "mi ubicación"', async (
   await expect(page.locator('.location-map .leaflet-container')).toBeVisible();
   await expect(page.getByRole('button', { name: 'Confirmar ubicación' })).toBeDisabled();
   await expect(page.locator('.location-map')).toContainText('© OpenStreetMap contributors');
+  // OpenStreetMap blocks browser apps whose tile requests carry no Referer.
+  await expect.poll(() => tileReferers.length).toBeGreaterThan(0);
+  expect(await Promise.all(tileReferers)).toContain(new URL(page.url()).origin + '/');
 
   // 1. Search: the typed text becomes the label.
   await page.getByPlaceholder('Buscar dirección...').fill('Calle Mayor 12, Madrid');

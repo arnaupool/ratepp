@@ -15,7 +15,19 @@ const FALLBACK_TILES = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
 export function Tiles() {
   const { data } = useQuery({ queryKey: ['config'], queryFn: () => api.get<AppConfig>('/api/config'), staleTime: Infinity });
   const url = data?.mapTileUrl || FALLBACK_TILES;
-  return <TileLayer key={url} url={url} attribution="© OpenStreetMap contributors" maxZoom={19} />;
+  // The page's Referrer-Policy (same-origin) would send tile requests with no
+  // Referer, and OpenStreetMap's tile servers block browser apps that don't
+  // identify themselves ("Access blocked: App is not following the tile
+  // usage policy"). Tiles alone send the app's origin, never the full URL.
+  return (
+    <TileLayer
+      key={url}
+      url={url}
+      attribution="© OpenStreetMap contributors"
+      maxZoom={19}
+      referrerPolicy="strict-origin-when-cross-origin"
+    />
+  );
 }
 
 // A CSS pin instead of Leaflet's default PNG markers (no image paths to fix
