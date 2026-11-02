@@ -13,6 +13,8 @@ import { Photo, PhotoStripe, ScoreBadge, Spinner, TagChip } from '../components/
 import { useGoBack } from '../hooks/useGoBack';
 import { usePageBackground } from '../hooks/usePageBackground';
 import { contrastTextColors } from '../utils/colors';
+import NumberPillRow from '../components/editors/NumberPillRow';
+import '../components/editors/editors.css';
 import EditMode from './DetailEditMode';
 import './DetailScreen.css';
 
@@ -63,8 +65,28 @@ function Detail({ serverScore }: { serverScore: ScoreDetail }) {
   }, [queryClient, score]);
   const photos = score.photoUrls;
   const heroUrl = photos[activeIndex] ?? photos[0];
-  const owner = score.ratings.find((r) => r.isOwner);
-  const others = score.ratings.filter((r) => !r.isOwner);
+  // Your own score (made with your account), other members' scores in a
+  // group note, and the free-named "Nota adicional" ones.
+  const mine = score.ratings.find((r) => r.isMe);
+  const members = score.ratings.filter((r) => r.userId && !r.isMe);
+  const guests = score.ratings.filter((r) => !r.userId);
+  const inGroup = !!score.groupId;
+  const iAmAuthor = score.ratings.some((r) => r.isOwner && r.isMe);
+  const [rating, setRating] = useState(false);
+
+  // In a group note each member scores it with their own account, right
+  // from read mode (no need to enter edit mode for that).
+  const rateMe = async (value: number) => {
+    setRating(false);
+    setError('');
+    try {
+      const { rating: r } = await scoresApi.rateMe(score.id, value);
+      setScore((s) => ({ ...s, ratings: s.ratings.some((x) => x.id === r.id) ? s.ratings.map((x) => (x.id === r.id ? r : x)) : [...s.ratings, r] }));
+      queryClient.invalidateQueries({ queryKey: ['scores'] });
+    } catch (e) {
+      setError(errorMessage(e, 'No se pudo guardar la puntuación'));
+    }
+  };
 
   const pageBg = score.cardColor || undefined;
   usePageBackground(score.cardColor);
@@ -111,9 +133,11 @@ function Detail({ serverScore }: { serverScore: ScoreDetail }) {
             <button type="button" className="detail-hero-action edit" onClick={() => setEditMode(true)} aria-label="Editar puntuación">
               <EditIcon size={16} color="#2a2a2a" />
             </button>
-            <button type="button" className="detail-hero-action delete" onClick={() => setConfirmDelete(true)} aria-label="Eliminar puntuación">
-              <TrashIcon size={16} color="#2a2a2a" />
-            </button>
+            {score.canManage && (
+              <button type="button" className="detail-hero-action delete" onClick={() => setConfirmDelete(true)} aria-label="Eliminar puntuación">
+                <TrashIcon size={16} color="#2a2a2a" />
+              </button>
+            )}
           </div>
 
           {photos.length > 1 && (
@@ -138,36 +162,82 @@ function Detail({ serverScore }: { serverScore: ScoreDetail }) {
               </div>
             )}
 
+            {inGroup && (
+              <p className="detail-group-line" style={subStyle}>
+                👥 {score.groupName} · {iAmAuthor ? 'creada por ti' : `creada por ${score.authorName ?? 'alguien'}`}
+              </p>
+            )}
+
             {!!error && <p className="detail-error-banner">{error}</p>}
 
             <div className="detail-owner">
               <span className="t-section-label" style={subStyle}>
                 Tu puntuación
               </span>
-              {owner && <ScoreBadge value={owner.value} size={40} />}
+              {inGroup ? (
+                mine ? (
+                  <ScoreBadge value={mine.value} size={40} onClick={() => setRating((v) => !v)} label="Cambiar tu puntuación" />
+                ) : (
+                  <button type="button" className="select-chip detail-rate-btn" onClick={() => setRating((v) => !v)}>
+                    Puntuar
+                  </button>
+                )
+              ) : (
+                mine && <ScoreBadge value={mine.value} size={40} />
+              )}
+              {inGroup && rating && (
+                <div className="detail-rate-pills">
+                  <NumberPillRow value={mine?.value ?? null} onSelect={rateMe} />
+                </div>
+              )}
             </div>
 
-            <div className="detail-people-section">
-              <span className="t-section-label" style={subStyle}>
-                Nota adicional
-              </span>
-              {others.length > 0 ? (
+            {members.length > 0 && (
+              <div className="detail-people-section">
+                <span className="t-section-label" style={subStyle}>
+                  Miembros
+                </span>
                 <div className="detail-people">
-                  {others.map((p) => (
+                  {members.map((p) => (
                     <div key={p.id} className="detail-person">
                       <span className="detail-person-name" style={subStyle}>
                         {p.personName}
                       </span>
                       <ScoreBadge value={p.value} size={44} />
+                      {p.formerMember && (
+                        <span className="detail-person-former" style={subStyle}>
+                          ex miembro
+                        </span>
+                      )}
                     </div>
                   ))}
                 </div>
-              ) : (
-                <p className="detail-nobody" style={subStyle}>
-                  Nadie más ha puntuado esto todavía.
-                </p>
-              )}
-            </div>
+              </div>
+            )}
+
+            {(guests.length > 0 || members.length === 0) && (
+              <div className="detail-people-section">
+                <span className="t-section-label" style={subStyle}>
+                  Nota adicional
+                </span>
+                {guests.length > 0 ? (
+                  <div className="detail-people">
+                    {guests.map((p) => (
+                      <div key={p.id} className="detail-person">
+                        <span className="detail-person-name" style={subStyle}>
+                          {p.personName}
+                        </span>
+                        <ScoreBadge value={p.value} size={44} />
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="detail-nobody" style={subStyle}>
+                    Nadie más ha puntuado esto todavía.
+                  </p>
+                )}
+              </div>
+            )}
           </div>
 
           {score.fields.length > 0 && (

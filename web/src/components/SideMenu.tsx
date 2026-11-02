@@ -26,6 +26,9 @@ export default function SideMenu({ visible, onClose }: { visible: boolean; onClo
           <button className="side-menu-item" onClick={() => go('/mapa')}>
             🗺️&nbsp;&nbsp;Mapa de ubicaciones
           </button>
+          <button className="side-menu-item" onClick={() => go('/grupos')}>
+            👥&nbsp;&nbsp;Grupos
+          </button>
           <button className="side-menu-item" onClick={() => go('/etiquetas')}>
             🏷️&nbsp;&nbsp;Categorías y etiquetas
           </button>

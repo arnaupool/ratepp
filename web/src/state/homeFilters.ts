@@ -4,6 +4,8 @@ import { useSyncExternalStore } from 'react';
 // trip to Detalle and back (the native stack kept Home mounted; a web route
 // change unmounts it).
 export interface HomeFilters {
+  /** 'all', 'me' or a group id; shared by Principal and the map. */
+  space: string;
   searchInput: string;
   category: string;
   tag: string | null;
@@ -11,7 +13,7 @@ export interface HomeFilters {
   dateTo: string | null;
 }
 
-const INITIAL: HomeFilters = { searchInput: '', category: 'Todas', tag: null, dateFrom: null, dateTo: null };
+const INITIAL: HomeFilters = { space: 'all', searchInput: '', category: 'Todas', tag: null, dateFrom: null, dateTo: null };
 let state = INITIAL;
 const listeners = new Set<() => void>();
 

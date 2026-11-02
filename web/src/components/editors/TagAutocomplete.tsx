@@ -3,6 +3,7 @@ import { useAutoAnimate } from '@formkit/auto-animate/react';
 import { useQuery } from '@tanstack/react-query';
 import { tagsApi } from '../../api/endpoints';
 import { asStringArray } from '../../constants/fieldDefs';
+import { useNoteSpace } from '../../state/noteSpace';
 
 // Tag field editor: chips for the tags already added, a free-text input, and
 // a collapsed list of previously used tags to add with one tap.
@@ -11,7 +12,9 @@ export default function TagAutocomplete({ value, onChange }: { value: unknown; o
   const [draft, setDraft] = useState('');
   const [expanded, setExpanded] = useState(false);
   const [rootRef] = useAutoAnimate<HTMLDivElement>();
-  const { data } = useQuery({ queryKey: ['tags'], queryFn: tagsApi.list });
+  // Suggestions come from the note's own space (personal or its group).
+  const space = useNoteSpace();
+  const { data } = useQuery({ queryKey: ['tags', space], queryFn: () => tagsApi.list(space) });
   const suggestions = (data?.tags ?? []).filter((t) => !tags.includes(t));
 
   const add = (t: string) => {

@@ -3,19 +3,27 @@ import { useNavigate } from 'react-router';
 import { useQuery } from '@tanstack/react-query';
 import { scoresApi } from '../api/endpoints';
 import ScreenHeader from '../components/ScreenHeader';
+import SpaceRow from '../components/SpaceRow';
+import '../components/SpaceRow.css';
 import { Spinner } from '../components/bits';
+import { useGroups } from '../hooks/useGroups';
+import { setHomeFilters, useHomeFilters } from '../state/homeFilters';
 import './LocationsMapScreen.css';
 
 const LocationsMap = lazy(() => import('../components/map/LocationsMap'));
 
 export default function LocationsMapScreen() {
   const navigate = useNavigate();
-  const { data, isPending, isError } = useQuery({ queryKey: ['locations'], queryFn: scoresApi.locations });
+  // Same space selector as Principal (and the same choice).
+  const { space } = useHomeFilters();
+  const groups = useGroups();
+  const { data, isPending, isError } = useQuery({ queryKey: ['locations', space], queryFn: () => scoresApi.locations(space) });
   const pins = data?.locations ?? [];
 
   return (
     <div className="screen locations-screen">
       <ScreenHeader title="Mapa de ubicaciones" />
+      <SpaceRow groups={groups} value={space} withAll onChange={(s) => setHomeFilters({ space: s, category: 'Todas', tag: null })} />
       {isPending ? (
         <div className="locations-status">
           <Spinner />

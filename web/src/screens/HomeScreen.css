@@ -160,6 +160,11 @@
   min-width: 0;
 }
 
+.score-card-media {
+  position: relative;
+  display: block;
+}
+
 .score-card-photo {
   display: block;
   width: 100%;

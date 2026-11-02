@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type Dispatch, type SetStateAction } from 'react';
 import { useAutoAnimate } from '@formkit/auto-animate/react';
-import { useBlocker } from 'react-router';
+import { useBlocker, useNavigate } from 'react-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { errorMessage } from '../api/client';
 import { categoriesApi, scoresApi } from '../api/endpoints';
@@ -23,6 +23,10 @@ import { useGoBack } from '../hooks/useGoBack';
 import { usePageBackground } from '../hooks/usePageBackground';
 import { useSuggestedColor } from '../hooks/useSuggestedColor';
 import { contrastTextColors } from '../utils/colors';
+import SpaceRow from '../components/SpaceRow';
+import '../components/SpaceRow.css';
+import { useGroups } from '../hooks/useGroups';
+import { NoteSpaceContext } from '../state/noteSpace';
 
 interface Props {
   score: ScoreDetail;
@@ -43,7 +47,10 @@ export default function DetailEditMode({ score, setScore, onDone }: Props) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [coverOpen, setCoverOpen] = useState(false);
   const [locationFieldId, setLocationFieldId] = useState<string | null>(null);
-  const used = useQuery({ queryKey: ['categories'], queryFn: categoriesApi.list });
+  const navigate = useNavigate();
+  const groups = useGroups();
+  const space = score.groupId ?? 'me';
+  const used = useQuery({ queryKey: ['categories', space], queryFn: () => categoriesApi.list(space) });
   const [customCategories, setCustomCategories] = useState<string[]>([]);
   const suggestions = [...new Set([...DEFAULT_CATEGORIES, ...(used.data?.categories ?? []), ...customCategories])];
   const suggestedColor = useSuggestedColor(score.photoUrls[0]);
@@ -54,6 +61,8 @@ export default function DetailEditMode({ score, setScore, onDone }: Props) {
   // closing the keyboard causes must not save the pending text.
   const suspendCommits = useRef(false);
   const pendingInput = useRef<HTMLElement | null>(null);
+  // Set when the app itself must leave (the note is no longer reachable).
+  const leaveFreely = useRef(false);
 
   usePageBackground(score.cardColor);
   const onColor = contrastTextColors(score.cardColor);
@@ -89,8 +98,11 @@ export default function DetailEditMode({ score, setScore, onDone }: Props) {
   };
 
   // ---- ratings ----
-  const owner = score.ratings.find((r) => r.isOwner);
-  const others = score.ratings.filter((r) => !r.isOwner).sort((a, b) => a.sortOrder - b.sortOrder);
+  // Your own score is saved with your account; other members' scores are
+  // theirs to change; the free-named "Nota adicional" ones anyone edits.
+  const mine = score.ratings.find((r) => r.isMe);
+  const members = score.ratings.filter((r) => r.userId && !r.isMe);
+  const others = score.ratings.filter((r) => !r.userId).sort((a, b) => a.sortOrder - b.sortOrder);
   const setRatings = (fn: (r: Rating[]) => Rating[]) => setScore((s) => ({ ...s, ratings: fn(s.ratings) }));
   const restoreRatings = () => setScore((s) => ({ ...s, ratings: saved.current.ratings }));
   const confirmRatings = () => {
@@ -110,6 +122,42 @@ export default function DetailEditMode({ score, setScore, onDone }: Props) {
     } catch (e) {
       restoreRatings();
       setError(errorMessage(e, 'No se pudo guardar la puntuación'));
+    }
+  };
+
+  const rateMe = async (value: number) => {
+    const prev = score.ratings;
+    if (mine) setRatings((rs) => rs.map((r) => (r.id === mine.id ? { ...r, value } : r)));
+    try {
+      const { rating } = await scoresApi.rateMe(id, value);
+      setRatings((rs) => (rs.some((r) => r.id === rating.id) ? rs.map((r) => (r.id === rating.id ? rating : r)) : [...rs, rating]));
+      confirmRatings();
+    } catch (e) {
+      setScore((s) => ({ ...s, ratings: prev }));
+      setError(errorMessage(e, 'No se pudo guardar la puntuación'));
+    }
+  };
+
+  // Moving the note to another space (author or group admin).
+  const moveTo = async (target: string) => {
+    if (target === space) return;
+    setError('');
+    try {
+      const res = await scoresApi.update(id, { groupId: target === 'me' ? null : target });
+      invalidateLists();
+      queryClient.invalidateQueries({ queryKey: ['locations'] });
+      if (!res) {
+        // An admin moved someone else's note out of the group: it's no longer visible to them.
+        suspendCommits.current = true;
+        leaveFreely.current = true;
+        queryClient.removeQueries({ queryKey: ['score', id] });
+        navigate('/', { replace: true });
+        return;
+      }
+      setScore((s) => ({ ...s, groupId: res.score.groupId, groupName: res.score.groupName }));
+      saved.current = { ...saved.current, groupId: res.score.groupId, groupName: res.score.groupName };
+    } catch (e) {
+      setError(errorMessage(e, 'No se pudo mover la puntuación'));
     }
   };
 
@@ -211,7 +259,7 @@ export default function DetailEditMode({ score, setScore, onDone }: Props) {
   // ---- leaving edit mode / the screen ----
   // Going back while editing asks first: a typed value only saves on blur,
   // so leaving straight away could drop it.
-  const blocker = useBlocker(({ currentLocation, nextLocation }) => currentLocation.pathname !== nextLocation.pathname);
+  const blocker = useBlocker(({ currentLocation, nextLocation }) => !leaveFreely.current && currentLocation.pathname !== nextLocation.pathname);
   const [leaving, setLeaving] = useState(false);
   useEffect(() => {
     if (blocker.state !== 'blocked') return;
@@ -254,155 +302,189 @@ export default function DetailEditMode({ score, setScore, onDone }: Props) {
   const locationField = score.fields.find((f) => f.id === locationFieldId);
 
   return (
-    <div className="detail-screen detail-edit" style={{ background: score.cardColor || undefined }}>
-      <div className="detail-edit-head">
-        <div className="detail-edit-head-row">
-          <BackButton onClick={goBack} keepFocus />
-          <button type="button" className="detail-edit-done" onClick={finish}>
-            Listo
-          </button>
-        </div>
-        <span className="t-section-label detail-edit-photos-label">Fotos</span>
-        <PhotoGalleryEditor
-          photos={score.photoUrls}
-          onChange={(photoUrls) => saveScore({ photoUrls }, 'No se pudo actualizar la galería')}
-          onError={setError}
-          onOpenCoverSearch={() => setCoverOpen(true)}
-        />
-      </div>
-
-      <div className="detail-content">
-        <input
-          className="detail-title-input"
-          style={ink}
-          value={score.title}
-          onChange={(e) => setScore((s) => ({ ...s, title: e.target.value }))}
-          onBlur={() => {
-            const title = score.title.trim() || 'Sin título';
-            if (title !== saved.current.title) saveScore({ title }, 'No se pudo actualizar el título');
-            else if (title !== score.title) setScore((s) => ({ ...s, title }));
-          }}
-          aria-label="Título"
-        />
-
-        <div className="detail-edit-categories">
-          <CategoryEditor
-            categories={score.categories}
-            suggestions={suggestions}
-            onToggle={toggleCategory}
-            onAddCustom={(c) => {
-              if (!suggestions.includes(c)) setCustomCategories((prev) => [...prev, c]);
-              if (!score.categories.includes(c)) toggleCategory(c);
-            }}
+    <NoteSpaceContext.Provider value={space}>
+      <div className="detail-screen detail-edit" style={{ background: score.cardColor || undefined }}>
+        <div className="detail-edit-head">
+          <div className="detail-edit-head-row">
+            <BackButton onClick={goBack} keepFocus />
+            <button type="button" className="detail-edit-done" onClick={finish}>
+              Listo
+            </button>
+          </div>
+          <span className="t-section-label detail-edit-photos-label">Fotos</span>
+          <PhotoGalleryEditor
+            photos={score.photoUrls}
+            onChange={(photoUrls) => saveScore({ photoUrls }, 'No se pudo actualizar la galería')}
+            onError={setError}
+            onOpenCoverSearch={() => setCoverOpen(true)}
           />
         </div>
 
-        {!!error && (
-          <p className="detail-error-banner" role="alert">
-            {error}
-          </p>
-        )}
+        <div className="detail-content">
+          <input
+            className="detail-title-input"
+            style={ink}
+            value={score.title}
+            onChange={(e) => setScore((s) => ({ ...s, title: e.target.value }))}
+            onBlur={() => {
+              const title = score.title.trim() || 'Sin título';
+              if (title !== saved.current.title) saveScore({ title }, 'No se pudo actualizar el título');
+              else if (title !== score.title) setScore((s) => ({ ...s, title }));
+            }}
+            aria-label="Título"
+          />
 
-        <div className="detail-owner">
-          <span className="t-section-label" style={sub}>
-            Tu puntuación
-          </span>
-          {owner && (
-            <div className="detail-owner-edit">
-              <ScoreBadge value={owner.value} size={40} />
-              <div className="detail-owner-pills">
-                <NumberPillRow value={owner.value} onSelect={(n) => selectNumber(owner.id, n)} />
+          <div className="detail-edit-categories">
+            <CategoryEditor
+              categories={score.categories}
+              suggestions={suggestions}
+              onToggle={toggleCategory}
+              onAddCustom={(c) => {
+                if (!suggestions.includes(c)) setCustomCategories((prev) => [...prev, c]);
+                if (!score.categories.includes(c)) toggleCategory(c);
+              }}
+            />
+          </div>
+
+          {!!error && (
+            <p className="detail-error-banner" role="alert">
+              {error}
+            </p>
+          )}
+
+          {groups.length > 0 && score.canManage && (
+            <div className="detail-people-section">
+              <span className="t-section-label" style={sub}>
+                Dónde
+              </span>
+              <div className="detail-space-row">
+                <SpaceRow groups={groups} value={space} onChange={moveTo} label="Dónde" />
               </div>
             </div>
           )}
+
+          <div className="detail-owner">
+            <span className="t-section-label" style={sub}>
+              Tu puntuación
+            </span>
+            <div className="detail-owner-edit">
+              {mine && <ScoreBadge value={mine.value} size={40} />}
+              <div className="detail-owner-pills">
+                <NumberPillRow value={mine?.value ?? null} onSelect={rateMe} />
+              </div>
+            </div>
+          </div>
+
+          {members.length > 0 && (
+            <div className="detail-people-section">
+              <span className="t-section-label" style={sub}>
+                Miembros
+              </span>
+              <div className="detail-people">
+                {members.map((p) => (
+                  <div key={p.id} className="detail-person">
+                    <span className="detail-person-name" style={sub}>
+                      {p.personName}
+                    </span>
+                    <ScoreBadge value={p.value} size={44} />
+                    {p.formerMember && (
+                      <span className="detail-person-former" style={sub}>
+                        ex miembro
+                      </span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div className="detail-people-section">
+            <span className="t-section-label" style={sub}>
+              Nota adicional
+            </span>
+            <PeopleScoresEditor
+              people={others.map((r) => ({ id: r.id, name: r.personName, value: r.value }))}
+              editingId={editingId}
+              onStartEdit={(rid) => setEditingId((cur) => (cur === rid ? null : rid))}
+              onSelectNumber={selectNumber}
+              onRename={(rid, name) => setRatings((rs) => rs.map((r) => (r.id === rid ? { ...r, personName: name } : r)))}
+              onRenameCommit={renameCommit}
+              onRemove={removePerson}
+              onAdd={addPerson}
+              subColor={subColor}
+            />
+          </div>
         </div>
 
-        <div className="detail-people-section">
-          <span className="t-section-label" style={sub}>
-            Nota adicional
-          </span>
-          <PeopleScoresEditor
-            people={others.map((r) => ({ id: r.id, name: r.personName, value: r.value }))}
-            editingId={editingId}
-            onStartEdit={(rid) => setEditingId((cur) => (cur === rid ? null : rid))}
-            onSelectNumber={selectNumber}
-            onRename={(rid, name) => setRatings((rs) => rs.map((r) => (r.id === rid ? { ...r, personName: name } : r)))}
-            onRenameCommit={renameCommit}
-            onRemove={removePerson}
-            onAdd={addPerson}
-            subColor={subColor}
-          />
-        </div>
-      </div>
-
-      <div className="detail-fields detail-fields-edit" ref={fieldsRef}>
-        {score.fields.map((f, idx) => (
-          <EditableFieldRow
-            key={f.id}
-            field={f}
-            isFirst={idx === 0}
-            isLast={idx === score.fields.length - 1}
-            onChange={(patch) => setFields((fs) => fs.map((x) => (x.id === f.id ? { ...x, ...patch } : x)))}
-            onCommit={(patch) => commitField(f.id, patch, 'label' in patch ? 'No se pudo renombrar el campo' : 'No se pudo guardar el campo')}
-            onRemove={() => removeField(f.id)}
-            onMove={(dir) => moveField(f.id, dir)}
-            onPickLocation={() => setLocationFieldId(f.id)}
-            onError={setError}
-          />
-        ))}
-        <div className="quick-row detail-add-fields">
-          {FIELD_DEFS.map((def) => (
-            <button type="button" key={def.id} className="quick-chip on-bg" onClick={() => addField(def)}>
-              <FieldIcon type={def.id} size="chip" />
-              {def.label}
-            </button>
+        <div className="detail-fields detail-fields-edit" ref={fieldsRef}>
+          {score.fields.map((f, idx) => (
+            <EditableFieldRow
+              key={f.id}
+              field={f}
+              isFirst={idx === 0}
+              isLast={idx === score.fields.length - 1}
+              onChange={(patch) => setFields((fs) => fs.map((x) => (x.id === f.id ? { ...x, ...patch } : x)))}
+              onCommit={(patch) => commitField(f.id, patch, 'label' in patch ? 'No se pudo renombrar el campo' : 'No se pudo guardar el campo')}
+              onRemove={() => removeField(f.id)}
+              onMove={(dir) => moveField(f.id, dir)}
+              onPickLocation={() => setLocationFieldId(f.id)}
+              onError={setError}
+            />
           ))}
+          <div className="quick-row detail-add-fields">
+            {FIELD_DEFS.map((def) => (
+              <button type="button" key={def.id} className="quick-chip on-bg" onClick={() => addField(def)}>
+                <FieldIcon type={def.id} size="chip" />
+                {def.label}
+              </button>
+            ))}
+          </div>
         </div>
-      </div>
 
-      <div className="detail-content">
-        <CollapsibleSection title="Color de la card" subColor={subColor}>
-          <ColorPicker value={score.cardColor} onChange={(cardColor) => saveScore({ cardColor }, 'No se pudo actualizar el color')} suggestedColor={suggestedColor} />
-        </CollapsibleSection>
-      </div>
-
-      <CoverPicker
-        visible={coverOpen}
-        onClose={() => setCoverOpen(false)}
-        onPick={(url) => {
-          saveScore({ photoUrls: [...score.photoUrls, url] }, 'No se pudo actualizar la galería');
-          setCoverOpen(false);
-        }}
-      />
-
-      <LocationPicker
-        visible={!!locationField}
-        initialValue={locationField ? asLocation(locationField.value) : null}
-        onClose={() => setLocationFieldId(null)}
-        onConfirm={(value) => {
-          if (locationFieldId) {
-            setFields((fs) => fs.map((x) => (x.id === locationFieldId ? { ...x, value } : x)));
-            commitField(locationFieldId, { value }, 'No se pudo guardar el campo');
-          }
-          setLocationFieldId(null);
-        }}
-      />
-
-      <Sheet visible={leaving} onClose={cancelLeave} label="¿Guardar los cambios?">
-        <h2 className="sheet-title">¿Guardar los cambios?</h2>
-        <p className="sheet-message">Tienes cambios sin confirmar en esta puntuación.</p>
-        <div className="sheet-actions three">
-          <button type="button" className="sheet-btn-text" onClick={cancelLeave}>
-            Cancelar
-          </button>
-          <button type="button" className="sheet-btn-outline" onClick={discardAndLeave}>
-            Descartar
-          </button>
-          <button type="button" className="sheet-btn-main" onClick={saveAndLeave}>
-            Guardar
-          </button>
+        <div className="detail-content">
+          <CollapsibleSection title="Color de la card" subColor={subColor}>
+            <ColorPicker value={score.cardColor} onChange={(cardColor) => saveScore({ cardColor }, 'No se pudo actualizar el color')} suggestedColor={suggestedColor} />
+          </CollapsibleSection>
         </div>
-      </Sheet>
-    </div>
+
+        <CoverPicker
+          visible={coverOpen}
+          onClose={() => setCoverOpen(false)}
+          onPick={(url) => {
+            saveScore({ photoUrls: [...score.photoUrls, url] }, 'No se pudo actualizar la galería');
+            setCoverOpen(false);
+          }}
+        />
+
+        <LocationPicker
+          visible={!!locationField}
+          initialValue={locationField ? asLocation(locationField.value) : null}
+          onClose={() => setLocationFieldId(null)}
+          onConfirm={(value) => {
+            if (locationFieldId) {
+              setFields((fs) => fs.map((x) => (x.id === locationFieldId ? { ...x, value } : x)));
+              commitField(locationFieldId, { value }, 'No se pudo guardar el campo');
+            }
+            setLocationFieldId(null);
+          }}
+        />
+
+        <Sheet visible={leaving} onClose={cancelLeave} label="¿Guardar los cambios?">
+          <h2 className="sheet-title">¿Guardar los cambios?</h2>
+          <p className="sheet-message">Tienes cambios sin confirmar en esta puntuación.</p>
+          <div className="sheet-actions three">
+            <button type="button" className="sheet-btn-text" onClick={cancelLeave}>
+              Cancelar
+            </button>
+            <button type="button" className="sheet-btn-outline" onClick={discardAndLeave}>
+              Descartar
+            </button>
+            <button type="button" className="sheet-btn-main" onClick={saveAndLeave}>
+              Guardar
+            </button>
+          </div>
+        </Sheet>
+      </div>
+    </NoteSpaceContext.Provider>
   );
 }

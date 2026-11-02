@@ -30,6 +30,10 @@ scores and optional fields: text, number, date, location, gallery, list,
 tag, price (per person or total), criteria (named 1-10 sub-scores), time,
 link, sí/no, ingredients (rescaled by servings), steps and difficulty.
 
+Notes are personal or belong to a group: members of a group see, create and
+score its notes with their own accounts and share its categories and tags.
+People join with an invitation link or are added by email (docs/grupos.md).
+
 ## Deploying on Unraid (Portainer or docker compose)
 
 1. **Back up first** (see "Backups" below), every time you upgrade.

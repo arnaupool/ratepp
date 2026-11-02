@@ -115,6 +115,7 @@ export const api = {
   get: <T>(path: string) => request<T>(path),
   post: <T>(path: string, body?: unknown) => request<T>(path, { method: 'POST', body: body ?? {} }),
   patch: <T>(path: string, body: unknown) => request<T>(path, { method: 'PATCH', body }),
+  put: <T>(path: string, body: unknown) => request<T>(path, { method: 'PUT', body }),
   del: (path: string) => request<null>(path, { method: 'DELETE' }),
   upload: <T>(path: string, form: FormData) => request<T>(path, { method: 'POST', form, timeoutMs: 120_000 }),
 };

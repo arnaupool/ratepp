@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useAutoAnimate } from '@formkit/auto-animate/react';
 import { useNavigate } from 'react-router';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
@@ -9,6 +9,9 @@ import SideMenu from '../components/SideMenu';
 import Sheet from '../components/Sheet';
 import DateField from '../components/DateField';
 import { FilterChip, Photo, PhotoStripe, ScoreStack, Spinner, TagChip } from '../components/bits';
+import SpaceRow from '../components/SpaceRow';
+import '../components/SpaceRow.css';
+import { useGroups } from '../hooks/useGroups';
 import { useDebounced } from '../hooks/useDebounced';
 import { setHomeFilters, useHomeFilters } from '../state/homeFilters';
 import { categoryTint, contrastTextColors } from '../utils/colors';
@@ -16,23 +19,31 @@ import './HomeScreen.css';
 
 export default function HomeScreen() {
   const navigate = useNavigate();
-  const { searchInput, category, tag, dateFrom, dateTo } = useHomeFilters();
+  const { space, searchInput, category, tag, dateFrom, dateTo } = useHomeFilters();
+  const groups = useGroups();
   const [menuOpen, setMenuOpen] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [gridRef] = useAutoAnimate<HTMLDivElement>();
   // Matching happens server-side (title, categories and field values).
   const search = useDebounced(searchInput, 300);
 
-  const filters = { search, category, tag, dateFrom, dateTo };
+  // A group you have left stops being a valid space.
+  useEffect(() => {
+    if (space !== 'all' && space !== 'me' && groups.length > 0 && !groups.some((g) => g.id === space)) {
+      setHomeFilters({ space: 'all' });
+    }
+  }, [space, groups]);
+
+  const filters = { space, search, category, tag, dateFrom, dateTo };
   const scores = useQuery({
     queryKey: ['scores', filters],
     queryFn: () => scoresApi.list(filters),
     placeholderData: keepPreviousData,
   });
-  // Chips and tag filters list ALL of the user's categories/tags, not just
-  // the ones in the current results.
-  const categories = useQuery({ queryKey: ['categories'], queryFn: categoriesApi.list });
-  const tags = useQuery({ queryKey: ['tags'], queryFn: tagsApi.list });
+  // Chips and tag filters list ALL the categories/tags of the chosen space,
+  // not just the ones in the current results.
+  const categories = useQuery({ queryKey: ['categories', space], queryFn: () => categoriesApi.list(space) });
+  const tags = useQuery({ queryKey: ['tags', space], queryFn: () => tagsApi.list(space) });
 
   const activeFilterCount = (tag ? 1 : 0) + (dateFrom || dateTo ? 1 : 0);
   const isFiltering = !!search || category !== 'Todas' || !!tag || !!dateFrom || !!dateTo;
@@ -79,6 +90,9 @@ export default function HomeScreen() {
         </button>
       </div>
 
+      {/* Category and tag filters belong to a space: switching resets them. */}
+      <SpaceRow groups={groups} value={space} withAll onChange={(s) => setHomeFilters({ space: s, category: 'Todas', tag: null })} />
+
       <div className="home-chips no-scrollbar">
         {chipList.map((c) => (
           <FilterChip key={c} label={c} active={category === c} onClick={() => setHomeFilters({ category: c })} />
@@ -103,7 +117,7 @@ export default function HomeScreen() {
       ) : (
         <div className="home-grid" ref={gridRef}>
           {items.map((item) => (
-            <ScoreCard key={item.id} item={item} onOpen={() => navigate(`/p/${item.id}`)} />
+            <ScoreCard key={item.id} item={item} showGroup={space === 'all'} onOpen={() => navigate(`/p/${item.id}`)} />
           ))}
         </div>
       )}
@@ -169,7 +183,7 @@ export default function HomeScreen() {
   );
 }
 
-function ScoreCard({ item, onOpen }: { item: ScoreSummary; onOpen: () => void }) {
+function ScoreCard({ item, onOpen, showGroup }: { item: ScoreSummary; onOpen: () => void; showGroup: boolean }) {
   const tint = item.cardColor || categoryTint(item.categories[0]);
   // A custom color can be light or dark whatever the theme, so the title
   // picks its own contrast; category tints already pair with the theme ink.
@@ -177,11 +191,14 @@ function ScoreCard({ item, onOpen }: { item: ScoreSummary; onOpen: () => void })
   const cover = item.photoUrls[0];
   return (
     <button type="button" className="score-card" style={{ background: tint }} onClick={onOpen} aria-label={`Ver ${item.title}`}>
-      {cover ? (
-        <Photo url={cover} thumb sizes="(min-width: 600px) 260px, 50vw" className="score-card-photo" />
-      ) : (
-        <PhotoStripe id={item.id} className="score-card-photo" stripe={14} />
-      )}
+      <span className="score-card-media">
+        {cover ? (
+          <Photo url={cover} thumb sizes="(min-width: 600px) 260px, 50vw" className="score-card-photo" />
+        ) : (
+          <PhotoStripe id={item.id} className="score-card-photo" stripe={14} />
+        )}
+        {showGroup && item.groupName && <span className="group-badge">👥 {item.groupName}</span>}
+      </span>
       <span className="score-card-body">
         <span className="score-card-top">
           <span className="score-card-title" style={titleColor ? { color: titleColor } : undefined}>

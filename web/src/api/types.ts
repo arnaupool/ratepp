@@ -16,10 +16,40 @@ export interface AppConfig {
 
 export interface Rating {
   id: string;
+  /** The account's name for ratings made with one; the typed name otherwise. */
   personName: string;
+  /** The author's own rating. */
   isOwner: boolean;
   value: number;
   sortOrder: number;
+  /** Set for ratings made with an account; null for "Nota adicional" ones. */
+  userId: string | null;
+  isMe: boolean;
+  /** The rater has left the note's group. */
+  formerMember: boolean;
+}
+
+export interface GroupSummary {
+  id: string;
+  name: string;
+  role: 'admin' | 'member';
+  memberCount: number;
+}
+
+export interface GroupMember {
+  userId: string;
+  name: string;
+  email?: string;
+  role: 'admin' | 'member';
+  isMe: boolean;
+}
+
+export interface GroupInvite {
+  id: string;
+  expiresAt: string;
+  createdAt?: string;
+  token?: string;
+  path?: string;
 }
 
 export type FieldType =
@@ -64,6 +94,13 @@ export interface ScoreSummary {
   cardColor: string | null;
   createdAt: string;
   updatedAt: string;
+  /** null = personal note. */
+  groupId: string | null;
+  groupName: string | null;
+  authorId: string;
+  authorName: string | null;
+  /** May delete it or move it to another space (author or group admin). */
+  canManage: boolean;
   ratings: Rating[];
 }
 

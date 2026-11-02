@@ -127,7 +127,7 @@ test('si el servidor falla, el cambio se revierte y se muestra el error', async 
   await openSeeded(page);
   await page.getByLabel('Editar puntuación').click();
   await page.route('**/api/scores/*/ratings/*', (route) =>
-    route.request().method() === 'PATCH' ? route.fulfill({ status: 500, json: { error: 'Error interno del servidor' } }) : route.continue()
+    ['PATCH', 'PUT'].includes(route.request().method()) ? route.fulfill({ status: 500, json: { error: 'Error interno del servidor' } }) : route.continue()
   );
   await page.locator('.detail-owner-pills').getByRole('radio', { name: '3' }).click();
   await expect(page.getByText('Error interno del servidor')).toBeVisible();

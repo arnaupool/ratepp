@@ -1,7 +1,8 @@
 # Grupos: notas y etiquetas compartidas
 
-Decisiones de la entrevista del 2026-11-02 y diseño propuesto. Estado:
-**pendiente de implementar**.
+Decisiones de la entrevista del 2026-11-02 y diseño. Estado:
+**implementado** (migración 007, `backend/src/access.js`,
+`backend/src/routes/groups.js`, pantallas Grupos, Grupo e Invitación).
 
 ## Decisiones
 
@@ -84,9 +85,19 @@ acceso a sus notas, incluidas las que creó allí.
   las cards.
 - Categorías y etiquetas: secciones por espacio.
 
+## Decidido al implementar
+
+- **Borrar una nota de grupo**: su autor o un admin del grupo. El resto de
+  miembros la edita pero no la borra.
+- **Mover una nota entre espacios**: su autor o un admin, y solo a grupos de
+  los que sea miembro. Fuera de un grupo vuelve como personal de su autor.
+- Si el último admin sale o deja de serlo, el miembro más antiguo pasa a
+  admin. Si un grupo se queda sin nadie, se borra y sus notas vuelven a sus
+  autores.
+- En una nota de grupo cada miembro puntúa desde la vista de lectura
+  ("Puntuar" o tocando su nota), sin entrar en modo edición.
+
 ## Por decidir más adelante
 
-- Quién puede mover una nota fuera de un grupo: propuesta, su autor o un
-  admin; al salir del grupo vuelve como personal del autor.
 - Avisos (badge o notificación) cuando alguien añade algo al grupo: fuera de
   alcance de la primera versión.
