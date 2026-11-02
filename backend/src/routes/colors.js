@@ -15,17 +15,12 @@ const MAX_BYTES = 8 * 1024 * 1024;
 const uploadsDir = path.resolve(process.env.UPLOADS_DIR || path.join(__dirname, '../../uploads'));
 const MIME_BY_EXT = { '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.png': 'image/png' };
 
-// Matches any URL whose path is /uploads/<filename> — host/protocol don't
-// matter, since a match is read straight off disk rather than fetched over
-// the network. This isn't just an optimization: a self-hosted deploy's
-// PUBLIC_URL is very likely a private LAN address (this app's whole point),
-// which the hostname blocklist below would otherwise reject outright,
-// silently breaking color suggestions for the user's own uploaded photos.
-// Reading by filename sidesteps that entirely, and has no SSRF surface
-// (the resolved path is verified to stay inside uploadsDir).
-//
-// Relative paths ("/uploads/<file>", what the web app sends after normalizing
-// photo URLs) resolve against a dummy base and take the same path.
+// Matches our own photos: the relative path /uploads/<filename> stored today,
+// or an old absolute URL with that path (host/protocol don't matter). A match
+// is read straight off disk rather than fetched over the network, so it has
+// no SSRF surface (the resolved path is verified to stay inside uploadsDir)
+// and works even though the server's own address is usually a private one
+// the hostname blocklist below would reject.
 function readOwnUpload(url) {
   let u;
   try {

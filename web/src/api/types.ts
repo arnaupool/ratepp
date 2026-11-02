@@ -22,7 +22,23 @@ export interface Rating {
   sortOrder: number;
 }
 
-export type FieldType = 'text_long' | 'number' | 'date' | 'location' | 'photo' | 'gallery' | 'list' | 'tag';
+export type FieldType =
+  | 'text_long'
+  | 'number'
+  | 'date'
+  | 'location'
+  | 'photo'
+  | 'gallery'
+  | 'list'
+  | 'tag'
+  | 'price'
+  | 'criteria'
+  | 'duration'
+  | 'link'
+  | 'boolean'
+  | 'ingredients'
+  | 'steps'
+  | 'difficulty';
 
 export interface LocationValue {
   label: string;

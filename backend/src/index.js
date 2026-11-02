@@ -1,6 +1,5 @@
 require('dotenv').config();
 const express = require('express');
-const cors = require('cors');
 const config = require('./config');
 const { securityHeaders } = require('./middleware/securityHeaders');
 const { mountWebApp } = require('./webApp');
@@ -36,9 +35,8 @@ if (!process.env.JWT_SECRET || INSECURE_JWT_SECRETS.has(process.env.JWT_SECRET))
 // share one rate-limit counter.
 if (config.trustProxy !== null) app.set('trust proxy', config.trustProxy);
 
-// The Expo app's web build calls the API cross-origin. The PWA is same-origin
-// and doesn't need this; keep it only while the Expo app is in use.
-app.use(cors());
+// No CORS: the web app is served from this same origin and nothing else is
+// meant to call the API from a browser.
 app.use(express.json({ limit: '2mb' }));
 app.use(securityHeaders(config));
 // Upload filenames are random UUIDs and never overwritten, so a cached copy

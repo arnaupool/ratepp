@@ -8,9 +8,14 @@ const ICON_CLASS: Partial<Record<FieldType, string>> = {
   photo: 't-photo',
   gallery: 't-gallery',
   tag: 't-tag',
+  duration: 't-clock',
+  ingredients: 't-bowl',
+  difficulty: 't-bars',
+  link: 't-link',
 };
 
-const GLYPH: Partial<Record<FieldType, string>> = { number: '#', list: '☰' };
+// Newer types reuse the prototype's two styles: CSS shapes above, glyphs here.
+const GLYPH: Partial<Record<FieldType, string>> = { number: '#', list: '☰', price: '€', criteria: '★', boolean: '✓', steps: '1.' };
 
 // Field-type glyphs drawn in pure CSS, ported from the prototype's
 // `.ficon.t-*` classes. `size`: 'lg' inside the 34 px tile, 'sm' inside the

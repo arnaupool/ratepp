@@ -305,3 +305,143 @@
 .detail-edit .collapsible {
   margin-top: 4px;
 }
+
+/* Newer field types in read mode */
+.detail-field-sub {
+  margin-top: 2px;
+  font-weight: 600;
+  font-size: 12.5px;
+  color: var(--sub);
+}
+
+.detail-criteria {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.detail-criterion {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.detail-link {
+  font-weight: 700;
+  font-size: 14px;
+  color: var(--accent);
+  overflow-wrap: anywhere;
+}
+
+.detail-yesno {
+  display: inline-flex;
+  align-items: center;
+  height: 26px;
+  padding: 0 12px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--bg);
+  color: var(--sub);
+  font-weight: 800;
+  font-size: 12.5px;
+}
+
+.detail-yesno.yes {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-ink);
+}
+
+.detail-difficulty {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.detail-difficulty-bars {
+  display: inline-flex;
+  align-items: flex-end;
+  gap: 3px;
+  height: 14px;
+}
+
+.detail-difficulty-bars span {
+  width: 5px;
+  border-radius: 2px;
+  background: var(--line);
+}
+
+.detail-difficulty-bars span:nth-child(1) {
+  height: 40%;
+}
+
+.detail-difficulty-bars span:nth-child(2) {
+  height: 70%;
+}
+
+.detail-difficulty-bars span:nth-child(3) {
+  height: 100%;
+}
+
+.detail-difficulty-bars span.on {
+  background: var(--accent);
+}
+
+.detail-ingredients ul,
+.detail-steps {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.detail-qty {
+  font-weight: 800;
+}
+
+.detail-servings {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+  font-weight: 700;
+  font-size: 12.5px;
+  color: var(--sub);
+}
+
+.detail-servings button {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 1px solid var(--line);
+  background: var(--bg);
+  color: var(--ink);
+  font-weight: 800;
+  font-size: 15px;
+  line-height: 1;
+}
+
+.detail-servings button:disabled {
+  opacity: 0.4;
+}
+
+.detail-steps {
+  counter-reset: step;
+  gap: 8px;
+  padding-left: 32px;
+}
+
+.detail-steps li {
+  counter-increment: step;
+  display: flex;
+  gap: 8px;
+}
+
+.detail-steps li::before {
+  content: counter(step) '.';
+  font-weight: 800;
+  color: var(--accent);
+}

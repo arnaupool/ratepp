@@ -69,7 +69,6 @@ export default defineConfig({
             DATABASE_URL: 'postgres://puntuaciones:puntuaciones@localhost:5433/puntuaciones',
             JWT_SECRET: 'e2e-only-secret-0123456789abcdef',
             UPLOADS_DIR: '../dev/uploads-e2e',
-            PUBLIC_URL: `http://localhost:${PORT}`,
             WEB_DIST_DIR: '../web/dist',
             // The suite registers a fresh user per test.
             AUTH_RATE_LIMIT_MAX: '10000',

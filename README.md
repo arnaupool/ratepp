@@ -7,8 +7,9 @@ to 10, with photos, other people's scores and free-form fields per score.
   iPhone from Safari ("Añadir a pantalla de inicio").
 - **Backend**: Node/Express + PostgreSQL, in `backend/`. The same server
   serves the API, the photos and the web app, from one origin.
-- **Legacy mobile app**: React Native/Expo, in `mobile/`. Still works against
-  the same backend while it is being retired.
+
+The original React Native/Expo app was retired; its last version is at the
+git tag `expo-final`.
 
 Design references: `project/Puntuaciones App.dc.html` (original prototype),
 `docs/webapp-rewrite/` (spec for the web app, decisions in `05-decisiones.md`).
@@ -20,10 +21,14 @@ Dockerfile           single image: builds web/, bundles it with the API
 docker-compose.yml   Postgres + app (+ optional daily backups)
 backend/             Express API, migrations, static serving of web/dist
 web/                 the PWA
-e2e/                 Playwright suites (web/ for the PWA, test.js for Expo)
+e2e/                 Playwright suite
 dev/                 local-only tooling (throwaway Postgres, icon generator)
-mobile/              legacy Expo app
 ```
+
+Each score has a title, photos, categories, your 1-10 score, other people's
+scores and optional fields: text, number, date, location, gallery, list,
+tag, price (per person or total), criteria (named 1-10 sub-scores), time,
+link, sí/no, ingredients (rescaled by servings), steps and difficulty.
 
 ## Deploying on Unraid (Portainer or docker compose)
 
@@ -36,7 +41,6 @@ mobile/              legacy Expo app
 | Variable | Default | What it does |
 |---|---|---|
 | `JWT_SECRET` | example value | **Set a real one** (`openssl rand -hex 32`). Signs sessions. |
-| `PUBLIC_URL` | `http://localhost:4000` | Base of the photo URLs the API stores (needed by the Expo app; the web app ignores the host part). |
 | `APP_PORT` | `4000` | Host port the app is published on. |
 | `ALLOW_REGISTRATION` | `true` | `false` closes sign-ups: 403 on register and no "Regístrate" link. |
 | `TRUST_PROXY` | empty | Set when a reverse proxy sits in front, so rate limits see real client IPs. With a proxy reaching the container over Docker's network, `uniquelocal` works. |
@@ -151,8 +155,8 @@ npx playwright test
 
 The suite starts its own throwaway stack (embedded Postgres, the API on
 :4100 and a stub geocoder) and runs every test in Chromium and in WebKit
-with an iPhone 15 profile. It fails on any browser console error.
-`e2e/test.js` is the old suite for the Expo web build.
+with an iPhone 15 profile, plus layout checks on a 1440x900 desktop. It
+fails on any browser console error.
 
 ## Security notes
 
@@ -175,14 +179,3 @@ with an iPhone 15 profile. It fails on any browser console error.
 - TMDB attribution in the app ("This product uses the TMDB API but is not
   endorsed or certified by TMDB").
 - Verified automatic backups and monitoring of the healthcheck.
-
-## Legacy Expo app (`mobile/`)
-
-```bash
-cd mobile && npm install
-EXPO_PUBLIC_API_URL=http://<server-ip>:4000 npx expo start
-```
-
-It talks to the same API; photo URLs it stores are absolute (`PUBLIC_URL`),
-which the web app normalizes when showing them. CORS stays open while it is
-in use.

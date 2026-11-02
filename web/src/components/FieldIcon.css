@@ -245,3 +245,101 @@
   width: 10px;
   height: 10px;
 }
+
+/* Shapes for the newer field types, in the same style. */
+.ficon.t-clock {
+  width: 15px;
+  height: 15px;
+  border: var(--stroke) solid currentColor;
+  border-radius: 50%;
+}
+
+.ficon.t-clock::before,
+.ficon.t-clock::after {
+  content: '';
+  position: absolute;
+  left: calc(50% - 1px);
+  bottom: 50%;
+  width: 2px;
+  background: currentColor;
+  border-radius: 1px;
+  transform-origin: 50% 100%;
+}
+
+.ficon.t-clock::before {
+  height: 35%;
+}
+
+.ficon.t-clock::after {
+  height: 28%;
+  transform: rotate(90deg);
+}
+
+.ficon.t-bowl {
+  width: 16px;
+  height: 8px;
+  margin-top: 5px;
+  border: var(--stroke) solid currentColor;
+  border-top: none;
+  border-radius: 0 0 9px 9px;
+}
+
+.ficon.t-bowl::before {
+  content: '';
+  position: absolute;
+  top: -2px;
+  left: -4px;
+  right: -4px;
+  height: var(--stroke);
+  background: currentColor;
+  border-radius: 1px;
+}
+
+.ficon.t-bars {
+  width: 15px;
+  height: 13px;
+  background:
+    linear-gradient(currentColor, currentColor) 0 100% / 3.5px 40% no-repeat,
+    linear-gradient(currentColor, currentColor) 50% 100% / 3.5px 70% no-repeat,
+    linear-gradient(currentColor, currentColor) 100% 100% / 3.5px 100% no-repeat;
+}
+
+.ficon.t-link {
+  width: 16px;
+  height: 16px;
+  transform: rotate(-45deg);
+}
+
+.ficon.t-link::before,
+.ficon.t-link::after {
+  content: '';
+  position: absolute;
+  top: 5px;
+  width: 9px;
+  height: 6px;
+  border: var(--stroke) solid currentColor;
+  border-radius: 4px;
+}
+
+.ficon.t-link::before {
+  left: -1px;
+}
+
+.ficon.t-link::after {
+  right: -1px;
+}
+
+.ficon-sm.t-clock,
+.ficon-sm.t-bowl,
+.ficon-sm.t-bars,
+.ficon-sm.t-link,
+.ficon-chip.t-clock,
+.ficon-chip.t-bowl,
+.ficon-chip.t-bars,
+.ficon-chip.t-link {
+  zoom: 0.8;
+}
+
+.ficon-sm.t-link {
+  zoom: 0.7;
+}

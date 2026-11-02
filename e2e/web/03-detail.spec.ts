@@ -6,9 +6,11 @@ test('Detalle en lectura: todos los tipos de campo, datos antiguos, visor y elim
   const seed = new Seeder(page.request, token);
   const p1 = await seed.upload();
   const p2 = await seed.upload();
-  // Rows written by the Expo app carry absolute URLs with a LAN IP over
-  // HTTP; the web app must still show them (same file, same-origin path).
-  const legacyUrl = p2.replace(/^https?:\/\/[^/]+/, 'http://192.168.1.50:4000');
+  // Uploads now return a relative path. Rows written before (by the Expo app)
+  // may still carry absolute URLs with a LAN IP over HTTP if migration 005
+  // didn't see them; the web app must still show them from its own origin.
+  expect(p2).toMatch(/^\/uploads\/[0-9a-f-]+\.png$/);
+  const legacyUrl = `http://192.168.1.50:4000${p2}`;
   const score = await seed.score({
     title: 'Casa Pepa',
     ownerValue: 9,

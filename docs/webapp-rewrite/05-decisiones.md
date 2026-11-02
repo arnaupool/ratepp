@@ -55,3 +55,20 @@ Prevalecen sobre los docs 01–04 donde se contradigan.
 - **Teselas de OSM**: llevan `referrerPolicy="strict-origin-when-cross-origin"`
   (envían el origen de la app). Con la política global `same-origin` salían
   sin `Referer` y OSM respondía "Access blocked".
+
+## App Expo retirada (2026-11-02)
+
+- `mobile/` y `e2e/test.js` se borran; la última versión queda en la etiqueta
+  git `expo-final`.
+- `POST /api/uploads` devuelve la ruta relativa `/uploads/<archivo>`. La
+  migración 005 quita el host de las URLs propias ya guardadas (portadas,
+  campos `gallery` y `photo`), sin tocar pósters externos ni el orden.
+- Fuera CORS, `PUBLIC_URL` y el Dockerfile solo-API de `backend/`.
+- Tarjetas nuevas (migración 006 amplía el CHECK de `score_fields.type`):
+  `price` `{ amount, currency, per: 'person'|'total', people }`,
+  `criteria` `[{ name, value 1-10 }]`, `duration` (minutos), `link`
+  `{ url, title }` (solo http/https se muestran como enlace), `boolean`,
+  `ingredients` `{ servings, items: [{ qty, unit, name }] }` (en Detalle se
+  pueden recalcular las cantidades para otras raciones), `steps` (lista
+  numerada) y `difficulty` (1 fácil, 2 media, 3 difícil). Formas y lectores
+  tolerantes en `web/src/utils/fields.ts`.

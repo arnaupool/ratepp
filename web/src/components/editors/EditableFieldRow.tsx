@@ -10,6 +10,27 @@ import MapPreview from '../MapPreview';
 import { Photo, Spinner } from '../bits';
 import TagAutocomplete from './TagAutocomplete';
 import AutoTextarea from './AutoTextarea';
+import {
+  BooleanEditor,
+  CriteriaEditor,
+  DifficultyEditor,
+  DurationEditor,
+  IngredientsEditor,
+  LinkEditor,
+  PriceEditor,
+  StepsEditor,
+} from './FieldEditors';
+
+const EDITORS = {
+  price: PriceEditor,
+  criteria: CriteriaEditor,
+  duration: DurationEditor,
+  link: LinkEditor,
+  boolean: BooleanEditor,
+  ingredients: IngredientsEditor,
+  steps: StepsEditor,
+  difficulty: DifficultyEditor,
+} as const;
 
 export type EditableField = Pick<Field, 'id' | 'type' | 'label' | 'value'>;
 
@@ -110,6 +131,12 @@ export default function EditableFieldRow({ field, isFirst, isLast, onChange, onC
       )}
 
       {def.kind === 'date' && <DateField value={typeof field.value === 'string' ? field.value : null} onChange={(v) => setValue(v, true)} />}
+
+      {def.kind in EDITORS &&
+        (() => {
+          const Editor = EDITORS[def.kind as keyof typeof EDITORS];
+          return <Editor value={field.value} onChange={(value) => onChange({ value })} onCommit={(value) => onCommit({ value })} />;
+        })()}
 
       {def.kind === 'tag' && <TagAutocomplete value={field.value} onChange={(v) => setValue(v, true)} />}
 

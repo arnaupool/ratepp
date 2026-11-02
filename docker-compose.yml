@@ -29,7 +29,6 @@ services:
       DATABASE_URL: postgres://puntuaciones:puntuaciones@db:5432/puntuaciones
       JWT_SECRET: ${JWT_SECRET:-change-this-to-a-long-random-string}
       UPLOADS_DIR: /app/uploads
-      PUBLIC_URL: ${PUBLIC_URL:-http://localhost:4000}
       TMDB_API_KEY: ${TMDB_API_KEY:-}
       RAWG_API_KEY: ${RAWG_API_KEY:-}
       # false closes sign-ups (the login screen hides "Regístrate").

@@ -45,8 +45,9 @@ router.post('/', requireAuth, uploadLimit, (req, res) => {
   upload.single('photo')(req, res, (err) => {
     if (err) return res.status(400).json({ error: err.message || 'No se pudo subir el archivo' });
     if (!req.file) return res.status(400).json({ error: 'Falta el archivo "photo"' });
-    const base = process.env.PUBLIC_URL || `${req.protocol}://${req.get('host')}`;
-    res.status(201).json({ url: `${base}/uploads/${req.file.filename}` });
+    // Relative: the app and the photos share one origin, whatever host or
+    // proxy it is reached through.
+    res.status(201).json({ url: `/uploads/${req.file.filename}` });
   });
 });
 
