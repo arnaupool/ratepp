@@ -60,6 +60,9 @@ test('grupos: acceso, permisos, invitaciones, salir y borrar', async ({ request 
   // Invitation link: only admins create it; anyone with it can join.
   const { invite } = await ana.json(ana.post(`/api/groups/${group.id}/invites`));
   expect(invite.path).toMatch(/^\/unirse\/[\w-]{20,}$/);
+  // PUBLIC_URL (set for the test server) builds the full link.
+  expect(invite.url).toBe(`https://puntuaciones.example${invite.path}`);
+  expect((await (await request.get('/api/config')).json()).publicUrl).toBe('https://puntuaciones.example');
   const preview = await bea.json(bea.get(`/api/invites/${invite.token}`));
   expect(preview).toMatchObject({ group: { name: 'Pareja' }, alreadyMember: false });
   await bea.json(bea.post(`/api/invites/${invite.token}/accept`));

@@ -73,6 +73,8 @@ export default defineConfig({
             // The suite registers a fresh user per test.
             AUTH_RATE_LIMIT_MAX: '10000',
             GEOCODER_URL: 'http://localhost:4199',
+            // Invitation links must use this, not the address the test opened.
+            PUBLIC_URL: 'https://puntuaciones.example/',
           },
         },
       ],

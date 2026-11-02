@@ -5,6 +5,7 @@ const { requireAuth } = require('../middleware/auth');
 const asyncHandler = require('../middleware/asyncHandler');
 const { rateLimit } = require('../middleware/rateLimit');
 const { HttpError, groupRole, isUuid } = require('../access');
+const config = require('../config');
 
 // Groups, their members and invitations (docs/grupos.md). Every member
 // creates, edits and scores the group's notes; admins also invite, remove
@@ -195,7 +196,11 @@ groups.post('/:id/invites', asyncHandler(async (req, res) => {
      VALUES ($1, $2, $3, now() + make_interval(days => $4)) RETURNING id, expires_at`,
     [req.params.id, hashToken(token), req.userId, INVITE_DAYS]
   );
-  res.status(201).json({ invite: { id: r.rows[0].id, token, path: `/unirse/${token}`, expiresAt: r.rows[0].expires_at } });
+  const path = `/unirse/${token}`;
+  // Full link with the external address when PUBLIC_URL is set; otherwise
+  // the app builds it from the address it was opened with.
+  const url = config.publicUrl ? `${config.publicUrl}${path}` : null;
+  res.status(201).json({ invite: { id: r.rows[0].id, token, path, url, expiresAt: r.rows[0].expires_at } });
 }));
 
 groups.delete('/:id/invites/:inviteId', asyncHandler(async (req, res) => {

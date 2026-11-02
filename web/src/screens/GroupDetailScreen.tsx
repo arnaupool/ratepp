@@ -73,7 +73,9 @@ export default function GroupDetailScreen() {
     }, 'No se pudo crear la invitación');
   };
 
-  const inviteUrl = newInvite?.path ? `${window.location.origin}${newInvite.path}` : '';
+  // PUBLIC_URL when configured, so the link works from outside even if this
+  // device opened the app through a LAN address.
+  const inviteUrl = newInvite?.url ?? (newInvite?.path ? `${window.location.origin}${newInvite.path}` : '');
 
   const shareInvite = async () => {
     const text = `Únete a "${detail.data?.group.name}" en Puntuaciones`;

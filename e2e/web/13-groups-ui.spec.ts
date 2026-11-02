@@ -35,6 +35,8 @@ test('grupo compartido entre dos personas, de la invitación a borrar el grupo',
   await expect(page.locator('.groups-role')).toHaveText('Admin');
   await page.getByRole('button', { name: 'Crear enlace de invitación' }).click();
   const link = await page.getByLabel('Enlace de invitación').inputValue();
+  // The external address (PUBLIC_URL), not the one this browser used.
+  expect(link.startsWith('https://puntuaciones.example/unirse/')).toBeTruthy();
   expect(link).toMatch(/\/unirse\/[\w-]{20,}$/);
   await expect(page.getByText('Enlace activo')).toBeVisible();
 

@@ -12,6 +12,8 @@ export interface AuthResponse {
 export interface AppConfig {
   allowRegistration: boolean;
   mapTileUrl: string;
+  /** External address for links shared with others (PUBLIC_URL), or null. */
+  publicUrl: string | null;
 }
 
 export interface Rating {
@@ -50,6 +52,8 @@ export interface GroupInvite {
   createdAt?: string;
   token?: string;
   path?: string;
+  /** Full link with PUBLIC_URL; null when it isn't configured. */
+  url?: string | null;
 }
 
 export type FieldType =

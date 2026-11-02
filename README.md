@@ -47,6 +47,7 @@ People join with an invitation link or are added by email (docs/grupos.md).
 | `JWT_SECRET` | example value | **Set a real one** (`openssl rand -hex 32`). Signs sessions. |
 | `APP_PORT` | `4000` | Host port the app is published on. |
 | `ALLOW_REGISTRATION` | `true` | `false` closes sign-ups: 403 on register and no "Regístrate" link. |
+| `PUBLIC_URL` | empty | External address of the app (e.g. `https://anas.tail899c15.ts.net`). Group invitation links use it, so they work from outside even when created from a LAN address. Shown in Ajustes. |
 | `TRUST_PROXY` | empty | Set when a reverse proxy sits in front, so rate limits see real client IPs. With a proxy reaching the container over Docker's network, `uniquelocal` works. |
 | `MAP_TILE_URL` | OpenStreetMap | Map tile template. The CSP is built from it. |
 | `GEOCODER_URL` | public Nominatim | Nominatim-compatible geocoder for the location picker. |

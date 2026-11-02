@@ -51,3 +51,23 @@
 .switch:checked::after {
   transform: translateX(20px);
 }
+
+.settings-info {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  cursor: default;
+}
+
+.settings-row-value {
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+
+.settings-row-hint {
+  font-weight: 600;
+  font-size: 12px;
+  color: var(--sub);
+}
