@@ -235,3 +235,73 @@
   flex-wrap: wrap;
   gap: 6px;
 }
+
+/* ---- edit mode ---- */
+.detail-edit-head {
+  background: var(--surface);
+  padding: calc(env(safe-area-inset-top) + 14px) 18px 8px;
+}
+
+.detail-edit-head-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.detail-edit-done {
+  border-radius: 999px;
+  padding: 8px 16px;
+  background: var(--accent);
+  color: #fff;
+  font-weight: 700;
+  font-size: 12.5px;
+  line-height: 16px;
+}
+
+.detail-edit-photos-label {
+  display: block;
+  margin: 10px 0 8px;
+}
+
+.detail-title-input {
+  width: 100%;
+  padding: 0;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-weight: 900;
+  font-size: 20px;
+  color: var(--ink);
+}
+
+.detail-edit-categories {
+  margin-top: 8px;
+}
+
+.detail-owner-edit {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+}
+
+.detail-owner-pills {
+  flex: 1;
+  min-width: 0;
+}
+
+.detail-fields-edit .field-row {
+  border-radius: 14px;
+}
+
+.detail-add-fields {
+  padding: 13px 16px;
+}
+
+.quick-chip.on-bg {
+  background: var(--bg);
+}
+
+.detail-edit .collapsible {
+  margin-top: 4px;
+}

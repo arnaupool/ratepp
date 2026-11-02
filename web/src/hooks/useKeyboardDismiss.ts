@@ -19,7 +19,7 @@ export function useKeyboardDismiss() {
       const active = document.activeElement;
       if (!isTextEntry(active)) return;
       const target = e.target as Element | null;
-      if (target && (isTextEntry(target) || target.closest('label')?.contains(active))) return;
+      if (target && (isTextEntry(target) || target.closest('label')?.contains(active) || target.closest('[data-keep-focus]'))) return;
       active.blur();
     };
     const onTouchStart = (e: TouchEvent) => {

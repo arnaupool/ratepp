@@ -27,6 +27,8 @@ const DEFAULT_GEOCODER_URL = 'https://nominatim.openstreetmap.org';
 const config = {
   port: Number(process.env.PORT) || 4000,
   allowRegistration: parseBool(process.env.ALLOW_REGISTRATION, true),
+  // Login/register attempts per IP every 15 minutes.
+  authRateLimitMax: Number(process.env.AUTH_RATE_LIMIT_MAX) || 30,
   trustProxy: parseTrustProxy(process.env.TRUST_PROXY),
   mapTileUrl: (process.env.MAP_TILE_URL || '').trim() || DEFAULT_TILE_URL,
   geocoderUrl: ((process.env.GEOCODER_URL || '').trim() || DEFAULT_GEOCODER_URL).replace(/\/+$/, ''),

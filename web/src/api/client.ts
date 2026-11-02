@@ -17,10 +17,13 @@ export class NetworkError extends Error {
 /** The server answered with an error; `message` is its Spanish `error` text. */
 export class ApiError extends Error {
   status: number;
-  constructor(status: number, message: string) {
+  /** False when the server sent no `error` text (the message is generic). */
+  fromServer: boolean;
+  constructor(status: number, message: string, fromServer = true) {
     super(message);
     this.name = 'ApiError';
     this.status = status;
+    this.fromServer = fromServer;
   }
 }
 
@@ -102,8 +105,8 @@ async function request<T>(path: string, { method = 'GET', body, form, timeoutMs 
       throw new NetworkError();
     }
     if (res.status === 401 && token) unauthorizedListeners.forEach((fn) => fn());
-    const message = (data as { error?: string } | null)?.error || `Error de red (${res.status})`;
-    throw new ApiError(res.status, message);
+    const serverMessage = (data as { error?: string } | null)?.error;
+    throw new ApiError(res.status, serverMessage || `Error de red (${res.status})`, !!serverMessage);
   }
   return data as T;
 }
@@ -116,6 +119,9 @@ export const api = {
   upload: <T>(path: string, form: FormData) => request<T>(path, { method: 'POST', form, timeoutMs: 120_000 }),
 };
 
+// The server's Spanish message when there is one, otherwise the caller's
+// specific fallback ("No se pudo guardar el campo"...).
 export function errorMessage(e: unknown, fallback: string) {
+  if (e instanceof ApiError && !e.fromServer) return fallback;
   return e instanceof Error && e.message ? e.message : fallback;
 }

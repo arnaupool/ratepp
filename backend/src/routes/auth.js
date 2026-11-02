@@ -15,7 +15,7 @@ const router = express.Router();
 // TRUST_PROXY behind a reverse proxy (see config.js).
 const rateLimitAuth = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 30,
+  max: config.authRateLimitMax,
   message: 'Demasiados intentos, inténtalo de nuevo más tarde',
 });
 

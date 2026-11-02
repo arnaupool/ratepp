@@ -55,6 +55,8 @@ export default defineConfig({
             UPLOADS_DIR: '../dev/uploads-e2e',
             PUBLIC_URL: `http://localhost:${PORT}`,
             WEB_DIST_DIR: '../web/dist',
+            // The suite registers a fresh user per test.
+            AUTH_RATE_LIMIT_MAX: '10000',
           },
         },
       ],
