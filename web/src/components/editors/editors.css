@@ -651,3 +651,45 @@
 .collapsible-body {
   margin-top: 8px;
 }
+
+/* Location picker */
+.location-current {
+  font-weight: 700;
+  font-size: 12.5px;
+}
+
+.location-map {
+  position: relative;
+  width: 100%;
+  height: 220px;
+  flex-shrink: 0;
+  border-radius: 14px;
+  overflow: hidden;
+  background: var(--bg);
+}
+
+.picker-map {
+  position: absolute;
+  inset: 0;
+}
+
+.location-busy {
+  position: absolute;
+  inset: 0;
+  z-index: 1000;
+  background: rgba(255, 255, 255, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.location-label {
+  margin: 0;
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--sub);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}

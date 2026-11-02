@@ -8,6 +8,7 @@ import PlaceholderScreen from './screens/PlaceholderScreen';
 import OfflineScreen from './screens/OfflineScreen';
 import DetailScreen from './screens/DetailScreen';
 import CreateScreen from './screens/CreateScreen';
+import LocationsMapScreen from './screens/LocationsMapScreen';
 import { useKeyboardDismiss } from './hooks/useKeyboardDismiss';
 
 function Boot() {
@@ -50,7 +51,7 @@ const router = createBrowserRouter([
           { path: '/', element: <HomeScreen /> },
           { path: '/nueva', element: <CreateScreen /> },
           { path: '/p/:id', element: <DetailScreen /> },
-          { path: '/mapa', element: <PlaceholderScreen title="Mapa de ubicaciones" /> },
+          { path: '/mapa', element: <LocationsMapScreen /> },
           { path: '/etiquetas', element: <PlaceholderScreen title="Categorías y etiquetas" /> },
           { path: '/ajustes', element: <SettingsScreen /> },
         ],

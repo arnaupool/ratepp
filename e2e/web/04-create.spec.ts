@@ -111,9 +111,10 @@ test('Crear con todos los tipos de campo y verla en Detalle', async ({ page }) =
   await page.getByRole('button', { name: '📍 Elegir ubicación en el mapa' }).click();
   await expect(page.getByRole('heading', { name: 'Elegir ubicación' })).toBeVisible();
   await page.getByPlaceholder('Buscar dirección...').fill('Calle Mayor 12, Madrid');
-  await page.getByRole('button', { name: '📍 Usar mi ubicación actual' }).click();
+  await page.getByLabel('Buscar dirección', { exact: true }).click();
+  await expect(page.locator('.location-label')).toHaveText('Calle Mayor 12, Madrid');
   await page.getByRole('button', { name: 'Confirmar ubicación' }).click();
-  await expect(page.getByText('Calle Mayor 12, Madrid')).toBeVisible();
+  await expect(page.locator('.field-row .map-preview-label')).toHaveText('Calle Mayor 12, Madrid');
   await page.locator('.quick-chip', { hasText: 'Etiqueta' }).click();
   await page.getByPlaceholder('Escribe una etiqueta y pulsa enter...').fill('Mediterránea');
   await page.keyboard.press('Enter');

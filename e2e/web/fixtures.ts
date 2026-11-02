@@ -1,9 +1,20 @@
 import { test as base, expect, type Page } from '@playwright/test';
+import { PNG_BASE64 } from './seed';
 
 // Every test fails on any console error or uncaught page error, like the
 // original suite did. A test that provokes network failures on purpose
 // clears the list itself.
-export const test = base.extend<{ consoleErrors: string[] }>({
+export const test = base.extend<{ consoleErrors: string[]; offlineTiles: void }>({
+  // Map tiles come from a stub image: no dependency on OpenStreetMap.
+  offlineTiles: [
+    async ({ page }, use) => {
+      await page.route('https://tile.openstreetmap.org/**', (route) =>
+        route.fulfill({ contentType: 'image/png', body: Buffer.from(PNG_BASE64, 'base64') })
+      );
+      await use();
+    },
+    { auto: true },
+  ],
   consoleErrors: [
     async ({ page }, use) => {
       const errors: string[] = [];

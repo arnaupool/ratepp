@@ -43,6 +43,11 @@ export default defineConfig({
           timeout: 120_000,
         },
         {
+          command: 'node stub-geocoder.mjs',
+          port: 4199,
+          reuseExistingServer: true,
+        },
+        {
           command: 'node src/migrate.js && node src/index.js',
           cwd: '../backend',
           url: `${baseURL}/health`,
@@ -57,6 +62,7 @@ export default defineConfig({
             WEB_DIST_DIR: '../web/dist',
             // The suite registers a fresh user per test.
             AUTH_RATE_LIMIT_MAX: '10000',
+            GEOCODER_URL: 'http://localhost:4199',
           },
         },
       ],

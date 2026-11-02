@@ -61,3 +61,18 @@
   align-items: center;
   justify-content: center;
 }
+
+.map-preview-map {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+/* Leaflet stacks its panes at z-index 400+; keep the overlays above them. */
+.map-preview .leaflet-control-container {
+  pointer-events: none;
+}
+
+.map-preview {
+  isolation: isolate;
+}
