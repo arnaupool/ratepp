@@ -14,6 +14,7 @@ const colorsRoutes = require('./routes/colors');
 const configRoutes = require('./routes/config');
 const thumbsRoutes = require('./routes/thumbs');
 const geoRoutes = require('./routes/geo');
+const { groups: groupsRoutes, invites: invitesRoutes } = require('./routes/groups');
 
 const app = express();
 
@@ -60,6 +61,8 @@ app.use('/api/color', colorsRoutes);
 app.use('/api/config', configRoutes);
 app.use('/api/thumb', thumbsRoutes);
 app.use('/api/geo', geoRoutes);
+app.use('/api/groups', groupsRoutes);
+app.use('/api/invites', invitesRoutes);
 
 mountWebApp(app, config.webDistDir);
 
@@ -67,6 +70,10 @@ app.use((req, res) => res.status(404).json({ error: 'No encontrado' }));
 
 // eslint-disable-next-line no-unused-vars
 app.use((err, req, res, next) => {
+  // Expected errors thrown on purpose (access.js HttpError).
+  if (err.status && err.status < 500) {
+    return res.status(err.status).json({ error: err.message });
+  }
   // Postgres invalid_text_representation — a malformed UUID in a route
   // param, not a server fault.
   if (err.code === '22P02') {
