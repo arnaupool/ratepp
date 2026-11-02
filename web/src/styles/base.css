@@ -171,3 +171,16 @@ a {
     transition-duration: 0.01ms !important;
   }
 }
+
+html.scroll-locked,
+html.scroll-locked body {
+  overflow: hidden;
+}
+
+.no-scrollbar {
+  scrollbar-width: none;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}

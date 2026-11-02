@@ -1,4 +1,4 @@
-import { createBrowserRouter, Navigate, Outlet } from 'react-router';
+import { createBrowserRouter, Navigate, Outlet, ScrollRestoration } from 'react-router';
 import { RouterProvider } from 'react-router/dom';
 import { useAuth } from './auth/AuthContext';
 import LoginScreen from './screens/LoginScreen';
@@ -6,9 +6,11 @@ import HomeScreen from './screens/HomeScreen';
 import SettingsScreen from './screens/SettingsScreen';
 import PlaceholderScreen from './screens/PlaceholderScreen';
 import OfflineScreen from './screens/OfflineScreen';
+import { useKeyboardDismiss } from './hooks/useKeyboardDismiss';
 
 function Boot() {
   const { status } = useAuth();
+  useKeyboardDismiss();
   if (status === 'checking') {
     return (
       <div className="center-fill">
@@ -17,7 +19,12 @@ function Boot() {
     );
   }
   if (status === 'offline') return <OfflineScreen />;
-  return <Outlet />;
+  return (
+    <>
+      <Outlet />
+      <ScrollRestoration />
+    </>
+  );
 }
 
 function RequireAuth() {

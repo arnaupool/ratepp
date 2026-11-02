@@ -30,7 +30,9 @@ function buildCsp({ mapTileUrl }) {
   return [
     "default-src 'self'",
     "script-src 'self'",
-    "style-src 'self'",
+    // Inline styles only (no inline scripts): WebKit injects a stylesheet for
+    // native <select> popups, and style attributes can't run code.
+    "style-src 'self' 'unsafe-inline'",
     `img-src ${img.join(' ')}`,
     "font-src 'self'",
     "connect-src 'self'",

@@ -13,6 +13,7 @@ const categoriesRoutes = require('./routes/categories');
 const coversRoutes = require('./routes/covers');
 const colorsRoutes = require('./routes/colors');
 const configRoutes = require('./routes/config');
+const thumbsRoutes = require('./routes/thumbs');
 
 const app = express();
 
@@ -58,6 +59,7 @@ app.use('/api/categories', categoriesRoutes);
 app.use('/api/covers', coversRoutes);
 app.use('/api/color', colorsRoutes);
 app.use('/api/config', configRoutes);
+app.use('/api/thumb', thumbsRoutes);
 
 mountWebApp(app, config.webDistDir);
 

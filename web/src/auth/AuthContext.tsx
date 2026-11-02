@@ -2,6 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useState, type React
 import { useQueryClient } from '@tanstack/react-query';
 import { api, ApiError, getToken, onUnauthorized, setToken } from '../api/client';
 import type { AuthResponse, User } from '../api/types';
+import { resetHomeFilters } from '../state/homeFilters';
 
 type Status = 'checking' | 'offline' | 'signedOut' | 'signedIn';
 
@@ -26,6 +27,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setToken(null);
     setUser(null);
     queryClient.clear();
+    resetHomeFilters();
     setStatus('signedOut');
   }, [queryClient]);
 
