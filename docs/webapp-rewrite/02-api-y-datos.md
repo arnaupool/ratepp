@@ -159,6 +159,9 @@ descargan con protección SSRF básica. Siempre responde 200; `null` si no puede
 | `PUBLIC_URL` | Base para construir URLs de fotos |
 | `TMDB_API_KEY`, `RAWG_API_KEY` | Opcionales, búsqueda de carátulas |
 | `ALLOW_REGISTRATION` | **Nueva.** `true` por defecto; `false` cierra el registro (ver doc 04) |
+| `TRUST_PROXY` | **Nueva.** Vacía por defecto. Valor para `app.set('trust proxy', …)` cuando hay un proxy inverso delante |
+| `MAP_TILE_URL` | **Nueva.** Plantilla de teselas; por defecto OpenStreetMap |
+| `GEOCODER_URL` | **Nueva.** Base de la API compatible con Nominatim; por defecto el Nominatim público |
 
 ## Seguridad ya aplicada (mantener)
 
@@ -181,7 +184,8 @@ máx. 1 petición/segundo, cachear respuestas. Deben requerir auth como el resto
 
 Otros endpoints nuevos (detalle en doc 04), todos compatibles hacia atrás:
 
-- `GET /api/config` (público, sin auth) → `{ allowRegistration: boolean }`.
+- `GET /api/config` (público, sin auth) → `{ allowRegistration: boolean,
+  mapTileUrl: string }`.
 - `GET /api/thumb?path=/uploads/<archivo>&w=400` (auth) → imagen redimensionada
   con `sharp` y cacheada en disco. Solo archivos de `UPLOADS_DIR`.
 - `GET /api/color` debe aceptar también una ruta relativa `/uploads/<archivo>`.

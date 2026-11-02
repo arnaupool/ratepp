@@ -81,7 +81,7 @@ Un único formulario con dos modos que se alternan.
 - Registro: no hay campo nombre; el nombre se deriva de la parte local del email
   (`ana@x.com` → `ana`).
 
-- Si el servidor no responde (sin red, fuera de casa sin Tailscale): mensaje claro
+- Si el servidor no responde (sin red o sin acceso al servidor): mensaje claro
   "No se puede conectar con el servidor", nunca un spinner infinito.
 - Si el servidor tiene el registro desactivado (`ALLOW_REGISTRATION=false`, ver doc
   04), ocultar el enlace "Regístrate" y el modo registro.

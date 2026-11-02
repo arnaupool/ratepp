@@ -11,12 +11,21 @@
    `docker-compose` que ya usa el usuario (Unraid + Portainer).
 4. **No romper lo que funciona.** El usuario lo ha pedido explícitamente en varias
    ocasiones. Ante la duda, preguntar.
+5. **Independiente de cómo se accede.** Hoy el usuario entra por Tailscale, pero en el
+   futuro puede querer abrir la app a más usuarios en internet con un dominio
+   propio. Nada puede depender de Tailscale: la app sirve HTTP en un puerto y el
+   HTTPS lo pone un proxy inverso delante, sea cual sea. Hostnames, orígenes y
+   proveedores externos se configuran por variables de entorno, nunca en el código.
 
 ## Arquitectura objetivo
 
 ```
 iPhone (PWA instalada desde Safari)
-        │  HTTPS  (Tailscale: https://<máquina>.<tailnet>.ts.net)
+        │  HTTPS
+        ▼
+Proxy inverso (termina TLS) — hoy: `tailscale serve`;
+  mañana: Caddy / Nginx Proxy Manager / Cloudflare Tunnel con dominio propio
+        │  HTTP
         ▼
 ┌───────────────────────── contenedor "app" ─────────────────────────┐
 │ Express                                                            │
@@ -47,17 +56,26 @@ estático** (Dockerfile multi-etapa: etapa 1 compila `web/`, etapa 2 copia `dist
 dentro de la imagen del backend). Un solo contenedor `app`. Alternativa: contenedor
 nginx delante; solo si el usuario lo prefiere.
 
-**[DECISIÓN 3] HTTPS** — Necesario: el service worker de la PWA y "Usar mi ubicación
-actual" (geolocalización) solo funcionan en contexto seguro. Recomendado:
-**`tailscale serve`** en el servidor, que da `https://<máquina>.<tailnet>.ts.net` con
-certificado válido y solo accesible dentro de la tailnet. Documentar el comando
-exacto para Unraid en el README. Por HTTP en LAN la app debe seguir funcionando,
-solo sin esas dos cosas.
+**[DECISIÓN 3] HTTPS y acceso** — Necesario: el service worker de la PWA y "Usar mi
+ubicación actual" (geolocalización) solo funcionan en contexto seguro. La app **no**
+gestiona certificados: escucha en HTTP y el TLS lo termina un proxy inverso. El
+README documenta dos formas, sin que el código dependa de ninguna:
+- **Privado (lo que usa hoy el usuario):** `tailscale serve`, que da
+  `https://<máquina>.<tailnet>.ts.net` con certificado válido, accesible solo dentro
+  de la tailnet.
+- **Público (futuro):** dominio propio + proxy con Let's Encrypt (Caddy o Nginx Proxy
+  Manager, ambos habituales en Unraid) o Cloudflare Tunnel (sin abrir puertos del
+  router).
+
+Variable `TRUST_PROXY` (por defecto vacía = no confiar) para que Express lea la IP
+real del cliente detrás del proxy (`app.set('trust proxy', …)`); sin ella, el rate
+limit trata a todos los usuarios como una sola IP. Por HTTP en LAN la app debe
+seguir funcionando, solo sin service worker ni geolocalización.
 
 **[DECISIÓN 4] URLs de las fotos** — Hoy se guardan absolutas con `PUBLIC_URL`
 (p. ej. `http://192.168.1.50:4000/uploads/abc.jpg`). Servidas en una página HTTPS,
 esas URLs HTTP se bloquean (contenido mixto) y además se rompen si se accede por
-otro host (IP de LAN vs. nombre de Tailscale). Recomendado:
+otro host (IP de LAN vs. nombre de Tailscale vs. un dominio futuro). Recomendado:
 - El frontend **normaliza al leer**, en una única función aplicada a **todas** las
   URLs de imagen que vienen de la API: `photoUrls`, los valores de campos `gallery`
   y `photo` (heredado) y el `coverUrl` de `/api/scores/locations`. Cualquier URL
@@ -77,6 +95,13 @@ otro host (IP de LAN vs. nombre de Tailscale). Recomendado:
 **[DECISIÓN 5] Mapas** — Recomendado: **Leaflet** (react-leaflet) con teselas de
 OpenStreetMap, y geocodificación con **Nominatim a través del backend**
 (`/api/geo/search`, `/api/geo/reverse`, ver doc 02). Sin claves ni costes.
+Los servidores públicos de OSM y Nominatim solo admiten uso ligero; valen para
+unos pocos usuarios pero no para una app abierta al público. Por eso la URL de
+teselas (`MAP_TILE_URL`) y la del geocodificador (`GEOCODER_URL`) van por variable
+de entorno con OSM/Nominatim por defecto, para poder pasar a un proveedor de pago o
+autoalojado sin tocar código. El frontend obtiene la URL de teselas de
+`GET /api/config`, y la CSP se construye a partir de ella. Mantener siempre visible
+la atribución "© OpenStreetMap contributors" (obligatoria).
 "Abrir navegación" abre la URL de direcciones de Google Maps como hoy
 (`https://www.google.com/maps/dir/?api=1&destination=lat,lng`).
 
@@ -115,7 +140,7 @@ borra (preguntar). El backend debe seguir sirviendo a ambas durante la transici�
   esas etiquetas y por textos visibles; si se conservan, portar el test es casi
   directo.
 - **Sin conexión**: si la PWA se abre sin poder llegar al servidor (p. ej. fuera de
-  casa sin Tailscale), mostrar un estado claro ("No se puede conectar con el
+  casa sin VPN o sin datos), mostrar un estado claro ("No se puede conectar con el
   servidor" + botón "Reintentar"), nunca una pantalla en blanco ni un spinner
   infinito. Poner un timeout razonable a las peticiones (~10 s).
 
@@ -125,7 +150,8 @@ Ahora el servidor entrega HTML y JS, y el token vive en `localStorage` del mismo
 origen. Un XSS equivaldría a robar la sesión. Añadir:
 - **Content-Security-Policy** estricta: `default-src 'self'`; `img-src 'self' data:
   blob:` + los dominios de pósters (`image.tmdb.org`, `media.rawg.io`,
-  `covers.openlibrary.org`) + teselas de OSM (`*.tile.openstreetmap.org`);
+  `covers.openlibrary.org`) + el host de teselas de `MAP_TILE_URL` (por defecto
+  `*.tile.openstreetmap.org`), generando la cabecera a partir de la configuración;
   `script-src 'self'` (sin `unsafe-inline`; el script de tema en línea con hash o
   nonce); `frame-ancestors 'none'`.
 - `Referrer-Policy: same-origin`, `X-Frame-Options: DENY` (redundante con
@@ -140,13 +166,12 @@ origen. Un XSS equivaldría a robar la sesión. Añadir:
   cambiar el comportamiento). Con `false`, `POST /api/auth/register` responde 403
   "El registro está desactivado" y la pantalla de Acceder oculta el enlace
   "Regístrate" (exponer el flag en un endpoint público, p. ej. `GET /api/config`).
-  Útil cuando el usuario invite a compañeros a su tailnet y luego quiera cerrar
-  altas.
+  Útil para abrir altas a un grupo concreto y luego cerrarlas.
 
 ### Rendimiento de imágenes
 
 Principal pinta las fotos originales (pueden pesar varios MB) en cards pequeñas;
-por Tailscale con datos móviles es lento. La reducción en cliente al subir solo
+fuera de casa con datos móviles es lento. La reducción en cliente al subir solo
 arregla las fotos nuevas.
 - `/uploads` con `Cache-Control: public, max-age=31536000, immutable` (los nombres
   son aleatorios y nunca se sobrescriben).
@@ -179,8 +204,7 @@ arregla las fotos nuevas.
 - Antes del primer despliegue, indicar al usuario cómo hacer copia:
   `docker compose exec db pg_dump -U puntuaciones puntuaciones > backup.sql`
   y copiar el volumen de fotos.
-- Añadir `app.set('trust proxy', 'loopback')` (o lo adecuado) si va detrás de
-  `tailscale serve`, para que el rate limit vea IPs reales.
+- `TRUST_PROXY` configurable (ver decisión 3) para cualquier proxy delante.
 - `healthcheck` en el servicio de la app (`GET /health`) para que Portainer muestre
   su estado.
 - **Copias periódicas** (no solo la inicial): documentar en el README una forma
@@ -188,8 +212,8 @@ arregla las fotos nuevas.
   `pg_dump` diario a una carpeta del host con rotación (conservar N días), y
   recordar incluir el volumen `uploads` en la copia de Unraid (Appdata Backup o
   similar). Sin las fotos, la copia de la BD está incompleta.
-- README actualizado: cómo desplegar en Unraid/Portainer, cómo activar HTTPS con
-  Tailscale, cómo instalar en el iPhone ("Compartir → Añadir a pantalla de inicio"),
+- README actualizado: cómo desplegar en Unraid/Portainer, cómo poner HTTPS delante
+  (privado con Tailscale y público con dominio propio), cómo instalar en el iPhone ("Compartir → Añadir a pantalla de inicio"),
   cómo restaurar una copia.
 
 ## Plan por fases
@@ -206,7 +230,7 @@ Cada fase termina con la app funcionando y sus criterios verificados.
 | 5. Detalle (edición) | Guardado inmediato por acción con reversión en error, reordenar campos, título editable, color, diálogo de salida. | Cada edición persiste tras recargar; salir con un input a medias pregunta. |
 | 6. Ubicación | `/api/geo/*`, selector de mapa, vista previa con navegación, pantalla Mapa de ubicaciones. | Elegir por búsqueda, por toque y por "mi ubicación" (en HTTPS). |
 | 7. Resto | Categorías y etiquetas (borrado global), Ajustes (modo oscuro). | Borrar una etiqueta la quita de todas las notas. |
-| 8. PWA y HTTPS | Manifest, iconos, service worker, `tailscale serve`, README. | Instalable en iPhone, abre a pantalla completa con su icono, funciona fuera de casa por Tailscale. |
+| 8. PWA y HTTPS | Manifest, iconos, service worker, `TRUST_PROXY`, README con las dos formas de acceso. | Instalable en iPhone, abre a pantalla completa con su icono, funciona fuera de casa por HTTPS (hoy vía Tailscale) sin cambios de código para cambiar a un dominio público. |
 | 9. Tests y cierre | Portar `e2e/test.js` (Playwright) a la web app y ejecutarlo en **dos proyectos: Chromium y WebKit con perfil de iPhone** (`devices['iPhone 15']`). El usuario usa Safari en iOS, que es donde aparecen los problemas de teclado, selector de fecha y modo standalone. Decidir con el usuario qué hacer con `mobile/`. | E2E completo en verde en ambos navegadores sin errores de consola. Prueba manual del usuario en su iPhone con la PWA instalada. |
 
 ## Errores ya vividos en este proyecto (no repetirlos)
@@ -228,6 +252,43 @@ Cada uno fue reportado por el usuario probando en su iPhone:
 - Pantalla de login sin salida si el servidor no respondía → en web, mensaje de
   error de red claro ("No se puede conectar con el servidor").
 
+## Preparado para abrirse a más usuarios
+
+El usuario puede querer servir la app en internet a más gente en el futuro. El
+rework no la hace pública, pero no debe impedirlo.
+
+**Hacer ya en este rework** (baratos y sin cambiar el comportamiento actual):
+- Todo lo que dependa del entorno, por variable: `TRUST_PROXY`, `MAP_TILE_URL`,
+  `GEOCODER_URL`, `ALLOW_REGISTRATION`, `PUBLIC_URL`. Nada de hostnames, IPs ni
+  dominios en el código.
+- Rate limit por usuario también en los endpoints que llaman a servicios externos o
+  consumen disco/CPU: `POST /api/uploads`, `/api/covers/search`, `/api/geo/*`,
+  `/api/color` y `/api/thumb`. Límites generosos para que un uso normal no los
+  toque nunca. En memoria vale (un solo contenedor), pero detrás de una interfaz
+  pequeña para poder cambiarlo por Redis si algún día hay varias instancias.
+- La app no asume que solo hay un usuario: cada consulta ya filtra por `owner_id`;
+  mantenerlo así en todo lo nuevo.
+- Las fotos de `/uploads` se sirven **sin autenticación**: cualquiera con la URL
+  exacta puede verlas. Hoy es aceptable porque los nombres son UUID aleatorios
+  imposibles de adivinar y nunca se listan. No exponer nunca un listado del
+  directorio ni nombres predecibles.
+
+**Antes de abrirla al público** (fuera de alcance ahora; dejar anotado en el README
+como checklist):
+- `JWT_SECRET` real obligatorio: con un secreto por defecto, el servidor debe negarse
+  a arrancar en modo público, no solo avisar.
+- Recuperación de contraseña, que exige configurar envío de email (SMTP). Hoy un
+  usuario que olvide la contraseña no tiene forma de entrar.
+- Verificación de email y alguna protección anti-bots en el registro.
+- Borrar la propia cuenta y exportar los propios datos (RGPD si hay usuarios en la UE),
+  con política de privacidad y aviso legal.
+- Cuota de almacenamiento por usuario para las fotos.
+- Teselas y geocodificación con un proveedor que admita ese volumen (ver decisión 5).
+- Atribución de TMDB en la app ("This product uses the TMDB API but is not endorsed
+  or certified by TMDB"), obligatoria según sus condiciones.
+- Copias de seguridad automáticas verificadas y algo de monitorización (al menos que
+  el healthcheck avise si cae).
+
 ## Deuda conocida (no arreglar ahora, pero no empeorarla)
 
 - **Fotos huérfanas**: borrar una puntuación o quitar una foto de una galería no
@@ -239,6 +300,6 @@ Cada uno fue reportado por el usuario probando en su iPhone:
 ## Fuera de alcance (ideas futuras ya habladas, no construir ahora)
 
 Sección social / compartir notas, modo standalone sin servidor (local-first),
-login con Google, recuperar contraseña, exportar/importar (Markdown/JSON),
-panel de administración. Conviene no cerrarles la puerta en la arquitectura, pero
+login con Google, recuperar contraseña (necesaria antes de abrirla al público, ver
+arriba), exportar/importar (Markdown/JSON), panel de administración. Conviene no cerrarles la puerta en la arquitectura, pero
 no implementar nada de esto en el rework.

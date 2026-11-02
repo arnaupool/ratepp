@@ -14,7 +14,9 @@ diseño, mismo comportamiento. No es un rediseño.
   icono, gratis.
 - El backend ya vive en el servidor del usuario (Unraid, Docker/Portainer). Si el
   frontend también se sirve desde ahí, todo queda en un único despliegue.
-- El usuario accede desde fuera de casa por **Tailscale**.
+- Hoy el usuario accede desde fuera de casa por **Tailscale**, pero en el futuro
+  puede querer abrir la app a más usuarios en internet con un dominio propio. La
+  arquitectura no debe depender de Tailscale (ver doc 04).
 
 ## Documentos (léelos en este orden)
 
@@ -78,12 +80,16 @@ Repositorio: https://github.com/arnaupool/ratepp (rama main)
   suponer.
 - Pruébalo de verdad: además de compilar, ejecuta la app y el test e2e (Chromium y
   WebKit con perfil de iPhone). Si algo falla, dímelo con el error, no lo escondas.
-- Yo lo voy a usar en un iPhone, instalado como PWA desde Safari, accediendo por
-  Tailscale. Ten eso en mente en cada decisión.
+- Yo lo voy a usar en un iPhone, instalado como PWA desde Safari. Ten eso en mente
+  en cada decisión.
 
 ## Contexto de mi servidor
 Unraid con Docker/Portainer, Postgres y la API ya desplegados con el
-`docker-compose.yml` del repo. Accedo desde fuera de casa por Tailscale.
+`docker-compose.yml` del repo. Hoy accedo desde fuera de casa por Tailscale, pero
+en el futuro puede que quiera abrir la app a más usuarios en internet con un
+dominio propio. Nada debe depender de Tailscale: la app tiene que funcionar detrás
+de cualquier proxy inverso con HTTPS, y lo que dependa del entorno va por variables
+de entorno (ver doc 04, "Preparado para abrirse a más usuarios").
 ```
 
 ## Decisiones que el usuario puede querer revisar antes de empezar
