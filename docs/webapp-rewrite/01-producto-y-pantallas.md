@@ -81,6 +81,11 @@ Un único formulario con dos modos que se alternan.
 - Registro: no hay campo nombre; el nombre se deriva de la parte local del email
   (`ana@x.com` → `ana`).
 
+- Si el servidor no responde (sin red, fuera de casa sin Tailscale): mensaje claro
+  "No se puede conectar con el servidor", nunca un spinner infinito.
+- Si el servidor tiene el registro desactivado (`ALLOW_REGISTRATION=false`, ver doc
+  04), ocultar el enlace "Regístrate" y el modo registro.
+
 > La app móvil tenía aquí una sección plegable "Configurar servidor" (IP + puerto).
 > **En la web app no hace falta**: el frontend se sirve desde el mismo servidor que
 > la API, así que la API siempre es el mismo origen. Eliminar esta funcionalidad
@@ -165,6 +170,9 @@ Botón volver arriba a la izquierda. Formulario en scroll:
    añade el campo al final.
 8. **"Color de la card"**: sección **plegada por defecto**; al abrirla, selector de
    color (ver abajo). Al elegir color, **el fondo de la pantalla cambia en vivo**.
+   Igual que en Detalle, cuando cambia la portada (primera foto de la galería) se
+   pide la sugerencia de color y aparece el círculo "📷" (ver "Sugerencia de color"
+   en Pantalla 4).
 9. Error (si lo hay) en rojo.
 10. Botón "Guardar puntuación".
 

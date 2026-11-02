@@ -122,10 +122,12 @@ DTO de detalle = el anterior + `"fields": [ { "id", "type", "label", "value", "s
 jpeg, png, webp, heic; máx. 10 MB. → `201 { url }` con
 `url = PUBLIC_URL + "/uploads/<uuid>.<ext>"`.
 
-> Ojo para la web: `url` es absoluta y depende de `PUBLIC_URL`. Si la web app se
-> sirve en el mismo origen, es preferible que el frontend trate como válidas tanto
-> URLs absolutas antiguas como rutas relativas `/uploads/...`. Ver doc 04 (hay
-> fotos ya guardadas con URLs absolutas con la IP del servidor).
+> Ojo para la web: `url` es absoluta y depende de `PUBLIC_URL`, y todas las fotos ya
+> guardadas tienen URLs absolutas con la IP del servidor por HTTP. El frontend debe
+> normalizar **todas** las URLs de imagen que reciba (`photoUrls`, valores de campos
+> `gallery`/`photo`, `coverUrl`) a rutas relativas `/uploads/...`. **No cambiar esta
+> respuesta mientras exista la app Expo** (la rompería). Detalle en doc 04,
+> decisión 4.
 
 ### Categorías y etiquetas
 | Método y ruta | Detalle |
@@ -156,6 +158,7 @@ descargan con protección SSRF básica. Siempre responde 200; `null` si no puede
 | `UPLOADS_DIR` | `/app/uploads` |
 | `PUBLIC_URL` | Base para construir URLs de fotos |
 | `TMDB_API_KEY`, `RAWG_API_KEY` | Opcionales, búsqueda de carátulas |
+| `ALLOW_REGISTRATION` | **Nueva.** `true` por defecto; `false` cierra el registro (ver doc 04) |
 
 ## Seguridad ya aplicada (mantener)
 
@@ -175,3 +178,12 @@ no existe; se recomienda añadir al backend un proxy a Nominatim (OpenStreetMap)
 
 Requisitos de la política de uso de Nominatim: `User-Agent` identificativo,
 máx. 1 petición/segundo, cachear respuestas. Deben requerir auth como el resto.
+
+Otros endpoints nuevos (detalle en doc 04), todos compatibles hacia atrás:
+
+- `GET /api/config` (público, sin auth) → `{ allowRegistration: boolean }`.
+- `GET /api/thumb?path=/uploads/<archivo>&w=400` (auth) → imagen redimensionada
+  con `sharp` y cacheada en disco. Solo archivos de `UPLOADS_DIR`.
+- `GET /api/color` debe aceptar también una ruta relativa `/uploads/<archivo>`.
+- `POST /api/auth/register` → `403 "El registro está desactivado"` si
+  `ALLOW_REGISTRATION=false`.
