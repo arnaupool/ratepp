@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { AttributionControl, MapContainer, Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import type { LocationPin } from '../../api/types';
-import { Photo, ScoreBadge } from '../bits';
+import { Photo, PhotoStripe, ScoreBadge } from '../bits';
 import { DEFAULT_CENTER, Tiles, pinIcon } from './mapBase';
 
 function FitAll({ pins }: { pins: LocationPin[] }) {
@@ -26,19 +26,20 @@ export default function LocationsMap({ pins, onOpen }: { pins: LocationPin[]; on
       {pins.map((p, idx) => (
         <Marker key={`${p.scoreId}-${idx}`} position={[p.lat, p.lng]} icon={pinIcon} title={p.title}>
           <Popup className="map-popup" closeButton={false} autoPanPadding={[24, 24]}>
+            {/* A small card: big cover on top, title, place and score below. */}
             <button type="button" className="map-callout" onClick={() => onOpen(p.scoreId)} aria-label={`Abrir ${p.title}`}>
               {p.coverUrl ? (
-                <Photo url={p.coverUrl} thumb sizes="44px" className="map-callout-photo" />
+                <Photo url={p.coverUrl} thumb sizes="240px" className="map-callout-photo" />
               ) : (
-                <span className="map-callout-photo" aria-hidden="true">
-                  📍
-                </span>
+                <PhotoStripe id={p.scoreId} className="map-callout-photo" stripe={12} />
               )}
               <span className="map-callout-body">
-                <span className="map-callout-title">{p.title}</span>
-                {!!p.label && <span className="map-callout-label">{p.label}</span>}
+                <span className="map-callout-text">
+                  <span className="map-callout-title">{p.title}</span>
+                  {!!p.label && <span className="map-callout-label">{p.label}</span>}
+                </span>
+                {p.avgScore != null && <ScoreBadge value={p.avgScore} size={32} />}
               </span>
-              {p.avgScore != null && <ScoreBadge value={p.avgScore} size={32} />}
             </button>
           </Popup>
         </Marker>

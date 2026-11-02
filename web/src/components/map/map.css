@@ -34,7 +34,11 @@
 
 .map-popup .leaflet-popup-content {
   margin: 0;
-  width: 240px !important;
+  width: 220px !important;
+}
+
+.map-popup .leaflet-popup-content-wrapper {
+  overflow: hidden;
 }
 
 .map-popup .leaflet-popup-tip {
@@ -43,28 +47,28 @@
 
 .map-callout {
   display: flex;
-  align-items: center;
-  gap: 10px;
+  flex-direction: column;
   width: 100%;
-  padding: 10px;
   text-align: left;
   color: var(--ink);
 }
 
 .map-callout-photo {
-  width: 44px;
-  height: 44px;
-  border-radius: 10px;
+  display: block;
+  width: 100%;
+  aspect-ratio: 4 / 3;
   object-fit: cover;
-  flex-shrink: 0;
   background: var(--bg);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 18px;
 }
 
 .map-callout-body {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px 12px;
+}
+
+.map-callout-text {
   flex: 1;
   min-width: 0;
 }
@@ -75,13 +79,13 @@
   -webkit-box-orient: vertical;
   overflow: hidden;
   font-weight: 800;
-  font-size: 13.5px;
-  line-height: 17px;
+  font-size: 14px;
+  line-height: 18px;
 }
 
 .map-callout-label {
   display: block;
-  margin-top: 1px;
+  margin-top: 2px;
   font-weight: 700;
   font-size: 11px;
   color: var(--sub);
