@@ -16,6 +16,16 @@ test('escritorio: rejilla ancha, Detalle en dos columnas, diálogos centrados', 
   expect(perRow).toBeGreaterThanOrEqual(4);
   const screenBox = (await page.locator('.home-screen').boundingBox())!;
   expect(screenBox.width).toBeLessThanOrEqual(1200);
+  // Its title and search sit in the same centered column as the other screens.
+  const homeTitle = (await page.getByRole('heading', { name: 'Tus puntuaciones' }).boundingBox())!;
+  const search = (await page.locator('.home-search-row').boundingBox())!;
+  expect(Math.abs(search.x + search.width / 2 - 720)).toBeLessThan(4);
+  await page.goto('/ajustes');
+  const menuBox = (await page.getByLabel('Volver').boundingBox())!;
+  await page.goto('/');
+  const homeMenu = (await page.getByLabel('Abrir menú').boundingBox())!;
+  expect(Math.abs(homeMenu.x - menuBox.x)).toBeLessThan(10);
+  expect(homeTitle.x).toBeGreaterThan(homeMenu.x);
 
   // Detalle: photos on the left, information on the right.
   await page.getByLabel('Ver Nota 6').click();
