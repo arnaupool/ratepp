@@ -109,6 +109,10 @@ export interface ScoreSummary {
   authorName: string | null;
   /** May delete it or move it to another space (author or group admin). */
   canManage: boolean;
+  /** A group note waiting for your score (docs/avisos.md). */
+  pending: boolean;
+  /** You marked it "No la he probado". */
+  dismissed: boolean;
   ratings: Rating[];
 }
 

@@ -39,6 +39,8 @@ export default defineConfig({
         navigateFallback: '/index.html',
         navigateFallbackDenylist: [/^\/api\//, /^\/uploads\//, /^\/health$/],
         cleanupOutdatedCaches: true,
+        // Notifications: the push and notificationclick handlers.
+        importScripts: ['push-sw.js'],
         runtimeCaching: [
           {
             // Uploaded photos never change (random names), so they can be

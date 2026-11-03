@@ -15,6 +15,8 @@ export interface ScoreFilters {
   tag?: string | null;
   dateFrom?: string | null;
   dateTo?: string | null;
+  /** Only the group notes waiting for your score. */
+  pending?: boolean;
 }
 
 export interface NewScore {
@@ -38,6 +40,7 @@ export const scoresApi = {
     if (f.tag) qs.set('tag', f.tag);
     if (f.dateFrom) qs.set('dateFrom', f.dateFrom);
     if (f.dateTo) qs.set('dateTo', f.dateTo);
+    if (f.pending) qs.set('pending', '1');
     const suffix = qs.toString() ? `?${qs}` : '';
     return api.get<{ items: ScoreSummary[] }>(`/api/scores${suffix}`);
   },
@@ -48,6 +51,10 @@ export const scoresApi = {
   update: (id: string, payload: Partial<Pick<ScoreSummary, 'title' | 'categories' | 'photoUrls' | 'cardColor' | 'groupId'>>) =>
     api.patch<{ score: ScoreDetail } | null>(`/api/scores/${id}`, payload),
   remove: (id: string) => api.del(`/api/scores/${id}`),
+  pendingCount: () => api.get<{ count: number }>('/api/scores/pending-count'),
+  /** "No la he probado" (and its undo). */
+  dismiss: (id: string) => api.post<{ score: ScoreDetail }>(`/api/scores/${id}/dismiss`),
+  undismiss: (id: string) => api.del<{ score: ScoreDetail }>(`/api/scores/${id}/dismiss`),
 
   /** Your own score on a note, created if missing. */
   rateMe: (id: string, value: number) => api.put<{ rating: Rating }>(`/api/scores/${id}/ratings/me`, { value }),
@@ -159,4 +166,11 @@ export interface GeoResult {
 export const geoApi = {
   search: (q: string) => api.get<{ results: GeoResult[] }>(`/api/geo/search?q=${encodeURIComponent(q)}`),
   reverse: (lat: number, lng: number) => api.get<{ label: string | null }>(`/api/geo/reverse?lat=${lat}&lng=${lng}`),
+};
+
+// This device's notifications (docs/avisos.md).
+export const pushApi = {
+  key: () => api.get<{ publicKey: string }>('/api/push/key'),
+  subscribe: (subscription: PushSubscriptionJSON) => api.post('/api/push/subscription', subscription),
+  unsubscribe: (endpoint: string) => api.del('/api/push/subscription', { endpoint }),
 };

@@ -11,9 +11,11 @@ export interface HomeFilters {
   tag: string | null;
   dateFrom: string | null;
   dateTo: string | null;
+  /** Only the group notes waiting for your score. */
+  pendingOnly: boolean;
 }
 
-const INITIAL: HomeFilters = { space: 'all', searchInput: '', category: 'Todas', tag: null, dateFrom: null, dateTo: null };
+const INITIAL: HomeFilters = { space: 'all', searchInput: '', category: 'Todas', tag: null, dateFrom: null, dateTo: null, pendingOnly: false };
 let state = INITIAL;
 const listeners = new Set<() => void>();
 

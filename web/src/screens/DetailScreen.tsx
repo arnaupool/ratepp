@@ -84,10 +84,26 @@ function Detail({ serverScore }: { serverScore: ScoreDetail }) {
     setError('');
     try {
       const { rating: r } = await scoresApi.rateMe(score.id, value);
-      setScore((s) => ({ ...s, ratings: s.ratings.some((x) => x.id === r.id) ? s.ratings.map((x) => (x.id === r.id ? r : x)) : [...s.ratings, r] }));
+      setScore((s) => ({
+        ...s,
+        pending: false,
+        ratings: s.ratings.some((x) => x.id === r.id) ? s.ratings.map((x) => (x.id === r.id ? r : x)) : [...s.ratings, r],
+      }));
       queryClient.invalidateQueries({ queryKey: ['scores'] });
     } catch (e) {
       setError(errorMessage(e, 'No se pudo guardar la puntuación'));
+    }
+  };
+
+  // "No la he probado": out of your pending list without scoring it.
+  const setDismissed = async (on: boolean) => {
+    setError('');
+    try {
+      const { score: next } = on ? await scoresApi.dismiss(score.id) : await scoresApi.undismiss(score.id);
+      setScore((s) => ({ ...s, pending: next.pending, dismissed: next.dismissed }));
+      queryClient.invalidateQueries({ queryKey: ['scores'] });
+    } catch (e) {
+      setError(errorMessage(e, 'No se pudo guardar'));
     }
   };
 
@@ -189,9 +205,21 @@ function Detail({ serverScore }: { serverScore: ScoreDetail }) {
                 mine ? (
                   <ScoreBadge value={mine.value} size={40} onClick={() => setRating((v) => !v)} label="Cambiar tu puntuación" />
                 ) : (
-                  <button type="button" className="select-chip detail-rate-btn" onClick={() => setRating((v) => !v)}>
-                    Puntuar
-                  </button>
+                  <span className="detail-rate-actions">
+                    <button type="button" className="select-chip detail-rate-btn" onClick={() => setRating((v) => !v)}>
+                      Puntuar
+                    </button>
+                    {score.pending && (
+                      <button type="button" className="select-chip" onClick={() => setDismissed(true)}>
+                        No la he probado
+                      </button>
+                    )}
+                    {score.dismissed && (
+                      <button type="button" className="select-chip" onClick={() => setDismissed(false)} aria-label="Deshacer «No la he probado»">
+                        No la has probado · Deshacer
+                      </button>
+                    )}
+                  </span>
                 )
               ) : (
                 mine && <ScoreBadge value={mine.value} size={40} />

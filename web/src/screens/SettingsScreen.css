@@ -130,3 +130,8 @@
   gap: 12px;
   margin: 0;
 }
+
+.settings-row-text + .switch {
+  margin-left: 12px;
+  flex-shrink: 0;
+}
