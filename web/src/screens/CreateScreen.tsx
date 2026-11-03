@@ -25,9 +25,10 @@ import '../components/SpaceRow.css';
 import { useGroups } from '../hooks/useGroups';
 import { useHomeFilters } from '../state/homeFilters';
 import { NoteSpaceContext } from '../state/noteSpace';
+import Sheet from '../components/Sheet';
 import SaveTemplateSheet from '../components/templates/SaveTemplateSheet';
 import TemplatePicker from '../components/templates/TemplatePicker';
-import { applyTemplate } from '../utils/templates';
+import { applyTemplate, removeTemplate, templateHasData, type TemplateAdded } from '../utils/templates';
 import type { NoteTemplate } from '../api/types';
 import './CreateScreen.css';
 
@@ -55,6 +56,8 @@ export default function CreateScreen() {
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
   const [templateId, setTemplateId] = useState('');
+  const [templateAdded, setTemplateAdded] = useState<TemplateAdded | null>(null);
+  const [unpickOpen, setUnpickOpen] = useState(false);
   const [saveTemplateOpen, setSaveTemplateOpen] = useState(false);
   const [templateNotice, setTemplateNotice] = useState('');
   const [bodyRef] = useAutoAnimate<HTMLDivElement>();
@@ -94,16 +97,34 @@ export default function CreateScreen() {
     });
 
   // Adds the template's fields, people and categories to what is already
-  // written; nothing is overwritten.
+  // written; nothing is overwritten. Unmarking it takes them back out, asking
+  // first if any was filled in (they can stay, to make a template from it).
   const pickTemplate = (t: NoteTemplate | null) => {
-    setTemplateId(t?.id ?? '');
-    if (!t) return;
-    const next = applyTemplate(t, { fields, categories, cardColor, people: others }, tempId);
+    const cur = { fields, categories, cardColor, people: others };
+    if (!t) {
+      if (templateAdded && templateHasData(cur, templateAdded)) return setUnpickOpen(true);
+      return unpickTemplate(true);
+    }
+    setTemplateId(t.id);
+    const { next, added } = applyTemplate(t, cur, tempId);
+    setTemplateAdded(added);
     setFields(next.fields);
     setCategories(next.categories);
     setCardColor(next.cardColor);
     setOthers(next.people);
     setCustomCategories((prev) => [...prev, ...t.categories.filter((c) => !suggestions.includes(c) && !prev.includes(c))]);
+  };
+
+  const unpickTemplate = (remove: boolean) => {
+    setUnpickOpen(false);
+    setTemplateId('');
+    setTemplateAdded(null);
+    if (!remove || !templateAdded) return;
+    const next = removeTemplate({ fields, categories, cardColor, people: others }, templateAdded);
+    setFields(next.fields);
+    setCategories(next.categories);
+    setCardColor(next.cardColor);
+    setOthers(next.people);
   };
 
   const save = async () => {
@@ -287,9 +308,26 @@ export default function CreateScreen() {
           onSaved={(t) => {
             setSaveTemplateOpen(false);
             setTemplateId(t.id);
+            setTemplateAdded(null);
             setTemplateNotice(`Plantilla «${t.emoji} ${t.name}» guardada`);
           }}
         />
+
+        <Sheet visible={unpickOpen} onClose={() => setUnpickOpen(false)} label="¿Quitar la plantilla?">
+          <h2 className="sheet-title">¿Quitar la plantilla?</h2>
+          <p className="sheet-message">Ya has rellenado algo de lo que añadió. Puedes borrar sus campos o dejarlos, por ejemplo para guardar una plantilla nueva a partir de esta.</p>
+          <div className="sheet-actions three">
+            <button type="button" className="sheet-btn-text" onClick={() => setUnpickOpen(false)}>
+              Cancelar
+            </button>
+            <button type="button" className="sheet-btn-outline" onClick={() => unpickTemplate(true)}>
+              Borrar campos
+            </button>
+            <button type="button" className="sheet-btn-main" onClick={() => unpickTemplate(false)}>
+              Dejarlos
+            </button>
+          </div>
+        </Sheet>
 
         <LocationPicker
           visible={!!locationField}

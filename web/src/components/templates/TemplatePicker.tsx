@@ -10,8 +10,8 @@ interface Props {
 
 // "Plantilla" at the top of Nueva puntuación: a row of cards to swipe, yours
 // first and then each group's. A tap applies one and marks it; tapping the
-// marked one only unmarks it (what it added stays). Hidden until there is
-// at least one.
+// marked one unmarks it (CreateScreen decides what happens to what it
+// added). Hidden until there is at least one.
 export default function TemplatePicker({ templates, value, onPick, subColor }: Props) {
   if (templates.length === 0) return null;
   const ordered = [...templates.filter((t) => !t.groupId), ...templates.filter((t) => t.groupId)];
