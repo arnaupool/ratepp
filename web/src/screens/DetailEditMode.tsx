@@ -27,6 +27,8 @@ import SpaceRow from '../components/SpaceRow';
 import '../components/SpaceRow.css';
 import { useGroups } from '../hooks/useGroups';
 import { NoteSpaceContext } from '../state/noteSpace';
+import SaveTemplateSheet from '../components/templates/SaveTemplateSheet';
+import '../components/templates/templates.css';
 
 interface Props {
   score: ScoreDetail;
@@ -47,6 +49,8 @@ export default function DetailEditMode({ score, setScore, onDone }: Props) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [coverOpen, setCoverOpen] = useState(false);
   const [locationFieldId, setLocationFieldId] = useState<string | null>(null);
+  const [saveTemplateOpen, setSaveTemplateOpen] = useState(false);
+  const [templateNotice, setTemplateNotice] = useState('');
   const navigate = useNavigate();
   const groups = useGroups();
   const space = score.groupId ?? 'me';
@@ -445,7 +449,34 @@ export default function DetailEditMode({ score, setScore, onDone }: Props) {
           <CollapsibleSection title="Color de la card" subColor={subColor}>
             <ColorPicker value={score.cardColor} onChange={(cardColor) => saveScore({ cardColor }, 'No se pudo actualizar el color')} suggestedColor={suggestedColor} />
           </CollapsibleSection>
+          <button
+            type="button"
+            className="template-save-as detail-save-template"
+            onClick={() => {
+              setTemplateNotice('');
+              setSaveTemplateOpen(true);
+            }}
+          >
+            Guardar como plantilla
+          </button>
+          {!!templateNotice && <p className="template-notice">{templateNotice}</p>}
         </div>
+
+        <SaveTemplateSheet
+          visible={saveTemplateOpen}
+          onClose={() => setSaveTemplateOpen(false)}
+          space={space}
+          draft={{
+            categories: score.categories,
+            cardColor: score.cardColor,
+            people: others.map((o) => o.personName.trim()).filter(Boolean),
+            fields: score.fields.map((f) => ({ type: f.type, label: f.label, value: f.value })),
+          }}
+          onSaved={(t) => {
+            setSaveTemplateOpen(false);
+            setTemplateNotice(`Plantilla «${t.emoji} ${t.name}» guardada`);
+          }}
+        />
 
         <CoverPicker
           visible={coverOpen}

@@ -16,6 +16,7 @@ const thumbsRoutes = require('./routes/thumbs');
 const geoRoutes = require('./routes/geo');
 const { groups: groupsRoutes, invites: invitesRoutes } = require('./routes/groups');
 const adminRoutes = require('./routes/admin');
+const templatesRoutes = require('./routes/templates');
 
 const app = express();
 
@@ -65,6 +66,7 @@ app.use('/api/geo', geoRoutes);
 app.use('/api/groups', groupsRoutes);
 app.use('/api/invites', invitesRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/templates', templatesRoutes);
 
 mountWebApp(app, config.webDistDir);
 

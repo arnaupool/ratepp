@@ -151,6 +151,7 @@ router.delete('/users/:id', asyncHandler(async (req, res) => {
     for (const m of memberships.rows) await ensureAdmin(client, m.group_id);
     const personal = await client.query('DELETE FROM scores WHERE owner_id = $1 AND group_id IS NULL RETURNING photo_urls', [u.id]);
     photoUrls = personal.rows.flatMap((r) => r.photo_urls || []);
+    await client.query('DELETE FROM note_templates WHERE owner_id = $1 AND group_id IS NULL', [u.id]);
     await client.query(
       "UPDATE score_ratings SET former_user = true, person_name = COALESCE(NULLIF(person_name, ''), $2) WHERE user_id = $1",
       [u.id, u.name]

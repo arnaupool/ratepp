@@ -3,7 +3,7 @@ import { useAutoAnimate } from '@formkit/auto-animate/react';
 import { useNavigate } from 'react-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { errorMessage } from '../api/client';
-import { categoriesApi, scoresApi } from '../api/endpoints';
+import { categoriesApi, scoresApi, templatesApi } from '../api/endpoints';
 import { BackButton } from '../components/ScreenHeader';
 import FieldIcon from '../components/FieldIcon';
 import { Spinner } from '../components/bits';
@@ -25,6 +25,10 @@ import '../components/SpaceRow.css';
 import { useGroups } from '../hooks/useGroups';
 import { useHomeFilters } from '../state/homeFilters';
 import { NoteSpaceContext } from '../state/noteSpace';
+import SaveTemplateSheet from '../components/templates/SaveTemplateSheet';
+import TemplatePicker from '../components/templates/TemplatePicker';
+import { applyTemplate } from '../utils/templates';
+import type { NoteTemplate } from '../api/types';
 import './CreateScreen.css';
 
 let tempSeq = 0;
@@ -50,6 +54,9 @@ export default function CreateScreen() {
   const [locationFieldId, setLocationFieldId] = useState<string | null>(null);
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
+  const [templateId, setTemplateId] = useState('');
+  const [saveTemplateOpen, setSaveTemplateOpen] = useState(false);
+  const [templateNotice, setTemplateNotice] = useState('');
   const [bodyRef] = useAutoAnimate<HTMLDivElement>();
   // Count of photo uploads in flight (gallery and gallery fields).
   const uploads = useRef(0);
@@ -61,6 +68,7 @@ export default function CreateScreen() {
 
   const used = useQuery({ queryKey: ['categories', space], queryFn: () => categoriesApi.list(space) });
   const suggestions = [...new Set([...DEFAULT_CATEGORIES, ...(used.data?.categories ?? []), ...customCategories])];
+  const templates = useQuery({ queryKey: ['templates'], queryFn: templatesApi.list });
   const suggestedColor = useSuggestedColor(photos[0]);
 
   usePageBackground(cardColor);
@@ -84,6 +92,19 @@ export default function CreateScreen() {
       [next[target], next[idx]] = [next[idx], next[target]];
       return next;
     });
+
+  // Adds the template's fields, people and categories to what is already
+  // written; nothing is overwritten.
+  const pickTemplate = (t: NoteTemplate | null) => {
+    setTemplateId(t?.id ?? '');
+    if (!t) return;
+    const next = applyTemplate(t, { fields, categories, cardColor, people: others }, tempId);
+    setFields(next.fields);
+    setCategories(next.categories);
+    setCardColor(next.cardColor);
+    setOthers(next.people);
+    setCustomCategories((prev) => [...prev, ...t.categories.filter((c) => !suggestions.includes(c) && !prev.includes(c))]);
+  };
 
   const save = async () => {
     setError('');
@@ -125,6 +146,8 @@ export default function CreateScreen() {
         </div>
 
         <div className="create-body" ref={bodyRef}>
+          <TemplatePicker templates={templates.data?.templates ?? []} value={templateId} onPick={pickTemplate} subColor={sub} />
+
           <input className="create-title" style={ink ? { color: ink } : undefined} placeholder="Título *" value={title} onChange={(e) => setTitle(e.target.value)} />
 
           {groups.length > 0 && (
@@ -229,6 +252,17 @@ export default function CreateScreen() {
           <button type="button" className="btn-primary create-save" onClick={save} disabled={saving} aria-busy={saving || uploadingCount > 0}>
             {saving ? <Spinner small onAccent label="Guardando" /> : 'Guardar puntuación'}
           </button>
+          <button
+            type="button"
+            className="template-save-as"
+            onClick={() => {
+              setTemplateNotice('');
+              setSaveTemplateOpen(true);
+            }}
+          >
+            Guardar como plantilla
+          </button>
+          {!!templateNotice && <p className="template-notice">{templateNotice}</p>}
         </div>
 
         <CoverPicker
@@ -237,6 +271,23 @@ export default function CreateScreen() {
           onPick={(url) => {
             setPhotos((prev) => [...prev, url]);
             setCoverOpen(false);
+          }}
+        />
+
+        <SaveTemplateSheet
+          visible={saveTemplateOpen}
+          onClose={() => setSaveTemplateOpen(false)}
+          space={space}
+          draft={{
+            categories,
+            cardColor,
+            people: others.map((o) => o.name.trim()).filter(Boolean),
+            fields: fields.map((f) => ({ type: f.type, label: f.label, value: f.value })),
+          }}
+          onSaved={(t) => {
+            setSaveTemplateOpen(false);
+            setTemplateId(t.id);
+            setTemplateNotice(`Plantilla «${t.emoji} ${t.name}» guardada`);
           }}
         />
 

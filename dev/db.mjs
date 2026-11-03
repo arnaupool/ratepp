@@ -1,7 +1,8 @@
 // Throwaway Postgres 16 for local development and e2e runs, so nothing needs
 // Docker on the dev machine. Data lives in dev/.pgdata (git-ignored).
 //   node db.mjs           start (creates the cluster the first time)
-//   node db.mjs --reset   wipe the data directory first
+//   node db.mjs --reset   wipe the data directory first (needed once for a
+//                         cluster created before it was forced to UTF8)
 import EmbeddedPostgres from 'embedded-postgres';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -20,6 +21,9 @@ const pg = new EmbeddedPostgres({
   password: 'puntuaciones',
   port,
   persistent: true,
+  // UTF8 like the server's Postgres; on Windows initdb would otherwise pick
+  // WIN1252, which can't store emoji (template emoticons).
+  initdbFlags: ['--encoding=UTF8', '--locale=C'],
 });
 
 if (fresh) await pg.initialise();
