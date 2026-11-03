@@ -150,13 +150,31 @@ async function managed(req) {
   return t;
 }
 
-// { name?, emoji? }
+router.get('/:id', asyncHandler(async (req, res) => {
+  res.json({ template: mapTemplate(await loadTemplate(req.params.id, req.userId), req.userId) });
+}));
+
+// Any of { name, emoji, categories, cardColor, people, fields }, cleaned like
+// on creation.
 router.patch('/:id', asyncHandler(async (req, res) => {
   const t = await managed(req);
   const b = req.body || {};
-  const name = b.name !== undefined ? cleanName(b.name) : t.name;
-  const emoji = b.emoji !== undefined ? cleanEmoji(b.emoji) : t.emoji;
-  await pool.query('UPDATE note_templates SET name = $1, emoji = $2, updated_at = now() WHERE id = $3', [name, emoji, t.id]);
+  const sets = [];
+  const values = [];
+  const set = (column, value) => {
+    values.push(value);
+    sets.push(`${column} = $${values.length}`);
+  };
+  if (b.name !== undefined) set('name', cleanName(b.name));
+  if (b.emoji !== undefined) set('emoji', cleanEmoji(b.emoji));
+  if (b.categories !== undefined) set('categories', cleanList(b.categories, 20, 40));
+  if (b.cardColor !== undefined) set('card_color', typeof b.cardColor === 'string' && HEX_COLOR.test(b.cardColor) ? b.cardColor : null);
+  if (b.people !== undefined) set('people', cleanList(b.people, 20, 40));
+  if (b.fields !== undefined) set('fields', JSON.stringify(cleanFields(b.fields)));
+  if (sets.length > 0) {
+    values.push(t.id);
+    await pool.query(`UPDATE note_templates SET ${sets.join(', ')}, updated_at = now() WHERE id = $${values.length}`, values);
+  }
   res.json({ template: mapTemplate(await loadTemplate(t.id, req.userId), req.userId) });
 }));
 

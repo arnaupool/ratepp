@@ -1,13 +1,12 @@
-import { useState, type FormEvent } from 'react';
+import { useState } from 'react';
+import { useNavigate } from 'react-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { errorMessage } from '../api/client';
 import { templatesApi } from '../api/endpoints';
 import type { NoteTemplate } from '../api/types';
 import ConfirmDialog from '../components/ConfirmDialog';
 import ScreenHeader from '../components/ScreenHeader';
-import Sheet from '../components/Sheet';
 import { Spinner } from '../components/bits';
-import EmojiPicker from '../components/templates/EmojiPicker';
 import '../components/editors/editors.css';
 import '../components/templates/templates.css';
 import './GroupsScreen.css';
@@ -19,15 +18,13 @@ function summary(t: NoteTemplate) {
   return parts.join(' · ');
 }
 
-// Your templates and your groups' ones: rename, change the emoticon or
-// delete them (their creator or a group admin). They are made from Nueva
+// Your templates and your groups' ones: edit (TemplateEditScreen) or delete
+// them (their creator or a group admin). They are made from Nueva
 // puntuación or a note's edit mode with "Guardar como plantilla".
 export default function TemplatesScreen() {
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const { data, isPending, isError, error: loadError } = useQuery({ queryKey: ['templates'], queryFn: templatesApi.list });
-  const [editing, setEditing] = useState<NoteTemplate | null>(null);
-  const [name, setName] = useState('');
-  const [emoji, setEmoji] = useState('');
   const [toDelete, setToDelete] = useState<NoteTemplate | null>(null);
   const [error, setError] = useState('');
 
@@ -44,22 +41,6 @@ export default function TemplatesScreen() {
 
   const refresh = () => queryClient.invalidateQueries({ queryKey: ['templates'] });
 
-  const saveEdit = async (e: FormEvent) => {
-    e.preventDefault();
-    const t = editing;
-    if (!t) return;
-    if (!name.trim()) return setError('Ponle un nombre');
-    if (!emoji) return setError('Elige un emoticono');
-    setError('');
-    try {
-      await templatesApi.update(t.id, { name: name.trim(), emoji });
-      setEditing(null);
-      refresh();
-    } catch (err) {
-      setError(errorMessage(err, 'No se pudo guardar'));
-    }
-  };
-
   return (
     <div className="screen groups-screen">
       <ScreenHeader title="Plantillas" />
@@ -68,7 +49,7 @@ export default function TemplatesScreen() {
           Usa una plantilla desde Nueva puntuación para empezar con los campos, categorías y personas de siempre. Para crear una, rellena una puntuación y pulsa
           «Guardar como plantilla».
         </p>
-        {!editing && !!error && <p className="error-text">{error}</p>}
+        {!!error && <p className="error-text">{error}</p>}
 
         {isPending ? (
           <div className="groups-status">
@@ -97,12 +78,7 @@ export default function TemplatesScreen() {
                         <button
                           type="button"
                           className="select-chip"
-                          onClick={() => {
-                            setEditing(t);
-                            setName(t.name);
-                            setEmoji(t.emoji);
-                            setError('');
-                          }}
+                          onClick={() => navigate(`/plantillas/${t.id}`)}
                           aria-label={`Editar ${t.name}`}
                         >
                           Editar
@@ -119,28 +95,6 @@ export default function TemplatesScreen() {
           ))
         )}
       </div>
-
-      <Sheet visible={!!editing} onClose={() => setEditing(null)} label="Editar plantilla">
-        <form className="template-form" onSubmit={saveEdit}>
-          <h2 className="sheet-title">Editar plantilla</h2>
-          <input className="editor-input" value={name} maxLength={60} onChange={(e) => setName(e.target.value)} aria-label="Nombre de la plantilla" />
-          <span className="t-section-label">Emoticono</span>
-          <EmojiPicker value={emoji} onChange={setEmoji} />
-          {!!error && (
-            <p className="error-text" role="alert">
-              {error}
-            </p>
-          )}
-          <div className="sheet-actions">
-            <button type="button" className="sheet-btn-text" onClick={() => setEditing(null)}>
-              Cancelar
-            </button>
-            <button type="submit" className="sheet-btn-main">
-              Guardar
-            </button>
-          </div>
-        </form>
-      </Sheet>
 
       <ConfirmDialog
         visible={!!toDelete}

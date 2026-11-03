@@ -5,7 +5,9 @@ const { requireAuth, signToken } = require('../middleware/auth');
 const asyncHandler = require('../middleware/asyncHandler');
 const { rateLimit } = require('../middleware/rateLimit');
 const config = require('../config');
-const { registration, isSiteAdmin } = require('../settings');
+const { registration, isSiteAdmin, isProtected } = require('../settings');
+const { deleteAccount } = require('../accounts');
+const { HttpError } = require('../access');
 
 const router = express.Router();
 
@@ -20,7 +22,7 @@ const rateLimitAuth = rateLimit({
 });
 
 function publicUser(row) {
-  return { id: row.id, email: row.email, name: row.name, isAdmin: isSiteAdmin(row) };
+  return { id: row.id, email: row.email, name: row.name, isAdmin: isSiteAdmin(row), isProtected: isProtected(row) };
 }
 
 router.post('/register', rateLimitAuth, asyncHandler(async (req, res) => {
@@ -70,6 +72,73 @@ router.get('/me', requireAuth, asyncHandler(async (req, res) => {
   const user = result.rows[0];
   if (!user) return res.status(404).json({ error: 'Usuario no encontrado' });
   res.json({ user: publicUser(user) });
+}));
+
+// Your own account, from Ajustes (docs/cuenta.md). Wrong passwords answer
+// 403, not 401: the app signs out on any 401.
+
+async function me(req) {
+  const r = await pool.query('SELECT * FROM users WHERE id = $1', [req.userId]);
+  return r.rows[0];
+}
+
+async function checkPassword(user, password) {
+  if (typeof password !== 'string' || !(await bcrypt.compare(password, user.password_hash))) {
+    throw new HttpError(403, 'La contraseña no es correcta');
+  }
+}
+
+function cleanUserName(raw) {
+  const name = String(raw ?? '').trim().slice(0, 60);
+  if (!name) throw new HttpError(400, 'El nombre no puede estar vacío');
+  return name;
+}
+
+router.patch('/me', requireAuth, asyncHandler(async (req, res) => {
+  const name = cleanUserName(req.body?.name);
+  const r = await pool.query('UPDATE users SET name = $1 WHERE id = $2 RETURNING id, email, name, is_admin', [name, req.userId]);
+  res.json({ user: publicUser(r.rows[0]) });
+}));
+
+// Closes every other session: the new token keeps this one open.
+router.put('/me/password', requireAuth, rateLimitAuth, asyncHandler(async (req, res) => {
+  const { currentPassword, newPassword } = req.body || {};
+  const user = await me(req);
+  await checkPassword(user, currentPassword);
+  if (typeof newPassword !== 'string' || newPassword.length < 6) throw new HttpError(400, 'La contraseña debe tener al menos 6 caracteres');
+  const hash = await bcrypt.hash(newPassword, 10);
+  const r = await pool.query(
+    'UPDATE users SET password_hash = $1, token_version = token_version + 1 WHERE id = $2 RETURNING *',
+    [hash, user.id]
+  );
+  res.json({ token: signToken(r.rows[0]) });
+}));
+
+router.put('/me/email', requireAuth, rateLimitAuth, asyncHandler(async (req, res) => {
+  const user = await me(req);
+  if (isProtected(user)) throw new HttpError(403, 'Es la cuenta de ADMIN_EMAIL: su email se cambia en el servidor');
+  await checkPassword(user, req.body?.password);
+  const email = String(req.body?.email ?? '').trim().toLowerCase();
+  if (!/^[^\s@]+@[^\s@]+$/.test(email)) throw new HttpError(400, 'Escribe un email válido');
+  if (email !== user.email) {
+    const taken = await pool.query('SELECT 1 FROM users WHERE email = $1', [email]);
+    if (taken.rowCount > 0) throw new HttpError(409, 'Ya existe una cuenta con ese email');
+  }
+  const r = await pool.query('UPDATE users SET email = $1 WHERE id = $2 RETURNING id, email, name, is_admin', [email, user.id]);
+  res.json({ user: publicUser(r.rows[0]) });
+}));
+
+router.post('/me/logout-others', requireAuth, asyncHandler(async (req, res) => {
+  const r = await pool.query('UPDATE users SET token_version = token_version + 1 WHERE id = $1 RETURNING *', [req.userId]);
+  res.json({ token: signToken(r.rows[0]) });
+}));
+
+router.delete('/me', requireAuth, rateLimitAuth, asyncHandler(async (req, res) => {
+  const user = await me(req);
+  if (isProtected(user)) throw new HttpError(403, 'Es la cuenta de ADMIN_EMAIL: no se puede borrar desde Ajustes');
+  await checkPassword(user, req.body?.password);
+  await deleteAccount(user);
+  res.status(204).end();
 }));
 
 module.exports = router;

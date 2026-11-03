@@ -31,6 +31,14 @@
   object-fit: cover;
 }
 
+/* A photo keeps its own proportions (a poster stays tall, a landscape
+   wide); only what goes past three quarters of the screen is cropped. */
+img.detail-hero {
+  aspect-ratio: auto;
+  height: auto;
+  max-height: 75svh;
+}
+
 .detail-hero-back,
 .detail-hero-action {
   position: absolute;

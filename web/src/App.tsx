@@ -14,6 +14,7 @@ import GroupDetailScreen from './screens/GroupDetailScreen';
 import JoinGroupScreen from './screens/JoinGroupScreen';
 import AdminScreen from './screens/AdminScreen';
 import TemplatesScreen from './screens/TemplatesScreen';
+import TemplateEditScreen from './screens/TemplateEditScreen';
 import { useKeyboardDismiss } from './hooks/useKeyboardDismiss';
 import UpdateBanner from './components/UpdateBanner';
 // Last, so its media queries win over each screen's own styles.
@@ -75,6 +76,7 @@ const router = createBrowserRouter([
           { path: '/unirse/:token', element: <JoinGroupScreen /> },
           { path: '/admin', element: <AdminScreen /> },
           { path: '/plantillas', element: <TemplatesScreen /> },
+          { path: '/plantillas/:id', element: <TemplateEditScreen /> },
         ],
       },
       { path: '*', element: <Navigate to="/" replace /> },

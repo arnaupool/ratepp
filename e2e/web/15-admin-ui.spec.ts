@@ -48,6 +48,7 @@ test('admin: datos, permisos, contraseña, desactivar y borrar una cuenta', asyn
   await expect(page.locator('.admin-stat-label', { hasText: 'Usuarios' })).toBeVisible();
   await expect(page.locator('.admin-stat-label', { hasText: 'Base de datos' })).toBeVisible();
   await expect(page.locator('.admin-info-row', { hasText: 'ADMIN_EMAIL' })).toContainText(ADMIN_EMAIL);
+  await expect(page.locator('.admin-info-row', { hasText: 'Dirección externa' })).toContainText('https://puntuaciones.example');
 
   // Your own row (also the ADMIN_EMAIL one) has no actions.
   const mine = page.getByRole('button', { name: `Admin, ${ADMIN_EMAIL}` });

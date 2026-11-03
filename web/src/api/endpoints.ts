@@ -1,5 +1,5 @@
 import { api } from './client';
-import type { AdminStats, AdminUser, Field, NewTemplate, NoteTemplate, FieldType, GroupInvite, GroupMember, GroupSummary, LocationPin, Rating, ScoreDetail, ScoreSummary } from './types';
+import type { AdminStats, AdminUser, Field, NewTemplate, NoteTemplate, User, FieldType, GroupInvite, GroupMember, GroupSummary, LocationPin, Rating, ScoreDetail, ScoreSummary } from './types';
 
 /** 'all' (personal + my groups), 'me' (personal) or a group id. */
 export type Space = string;
@@ -108,10 +108,21 @@ export const adminApi = {
     api.put<{ registrationOpen: boolean; registrationOverridden: boolean }>('/api/admin/settings', { allowRegistration }),
 };
 
+// Your own account (Ajustes). Calls that close other sessions return a new
+// token for this one.
+export const accountApi = {
+  rename: (name: string) => api.patch<{ user: User }>('/api/auth/me', { name }),
+  changePassword: (currentPassword: string, newPassword: string) => api.put<{ token: string }>('/api/auth/me/password', { currentPassword, newPassword }),
+  changeEmail: (email: string, password: string) => api.put<{ user: User }>('/api/auth/me/email', { email, password }),
+  logoutOthers: () => api.post<{ token: string }>('/api/auth/me/logout-others'),
+  remove: (password: string) => api.del('/api/auth/me', { password }),
+};
+
 export const templatesApi = {
   list: () => api.get<{ templates: NoteTemplate[] }>('/api/templates'),
   create: (t: NewTemplate) => api.post<{ template: NoteTemplate }>('/api/templates', t),
-  update: (id: string, patch: { name?: string; emoji?: string }) => api.patch<{ template: NoteTemplate }>(`/api/templates/${id}`, patch),
+  get: (id: string) => api.get<{ template: NoteTemplate }>(`/api/templates/${id}`),
+  update: (id: string, patch: Partial<NewTemplate>) => api.patch<{ template: NoteTemplate }>(`/api/templates/${id}`, patch),
   remove: (id: string) => api.del(`/api/templates/${id}`),
 };
 

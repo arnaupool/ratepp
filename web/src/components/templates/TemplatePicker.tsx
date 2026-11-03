@@ -8,45 +8,39 @@ interface Props {
   subColor?: string;
 }
 
-// "Plantilla" dropdown at the top of Nueva puntuación: yours, then each
-// group's. Hidden until there is at least one.
+// "Plantilla" at the top of Nueva puntuación: a row of cards to swipe, yours
+// first and then each group's. A tap applies one and marks it; tapping the
+// marked one only unmarks it (what it added stays). Hidden until there is
+// at least one.
 export default function TemplatePicker({ templates, value, onPick, subColor }: Props) {
   if (templates.length === 0) return null;
-  const mine = templates.filter((t) => !t.groupId);
-  const groups = [...new Map(templates.filter((t) => t.groupId).map((t) => [t.groupId, t.groupName ?? 'Grupo'])).entries()];
+  const ordered = [...templates.filter((t) => !t.groupId), ...templates.filter((t) => t.groupId)];
   return (
-    <label className="editor-section template-picker">
+    <section className="editor-section template-picker">
       <span className="t-section-label" style={subColor ? { color: subColor } : undefined}>
         Plantilla
       </span>
-      <select
-        className="editor-input template-select"
-        value={value}
-        onChange={(e) => onPick(templates.find((t) => t.id === e.target.value) ?? null)}
-        aria-label="Plantilla"
-      >
-        <option value="">Sin plantilla</option>
-        {mine.length > 0 && (
-          <optgroup label="Mías">
-            {mine.map((t) => (
-              <option key={t.id} value={t.id}>
-                {t.emoji} {t.name}
-              </option>
-            ))}
-          </optgroup>
-        )}
-        {groups.map(([groupId, groupName]) => (
-          <optgroup key={groupId} label={`👥 ${groupName}`}>
-            {templates
-              .filter((t) => t.groupId === groupId)
-              .map((t) => (
-                <option key={t.id} value={t.id}>
-                  {t.emoji} {t.name}
-                </option>
-              ))}
-          </optgroup>
-        ))}
-      </select>
-    </label>
+      <div className="template-cards no-scrollbar" role="group" aria-label="Plantillas">
+        {ordered.map((t) => {
+          const on = t.id === value;
+          return (
+            <button
+              key={t.id}
+              type="button"
+              className={`template-card${on ? ' on' : ''}`}
+              aria-pressed={on}
+              aria-label={`Plantilla ${t.name}`}
+              onClick={() => onPick(on ? null : t)}
+            >
+              <span className="template-card-emoji" aria-hidden>
+                {t.emoji}
+              </span>
+              <span className="template-card-name">{t.name}</span>
+              {t.groupName && <span className="template-card-group">👥 {t.groupName}</span>}
+            </button>
+          );
+        })}
+      </div>
+    </section>
   );
 }

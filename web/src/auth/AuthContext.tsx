@@ -13,6 +13,8 @@ interface AuthValue {
   register: (email: string, password: string, name: string) => Promise<void>;
   logout: () => void;
   retry: () => void;
+  /** After Ajustes changes the account: new details and/or a new token. */
+  updateSession: (patch: { user?: User; token?: string }) => void;
 }
 
 const AuthContext = createContext<AuthValue | null>(null);
@@ -83,8 +85,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const retry = useCallback(() => setAttempt((n) => n + 1), []);
 
+  const updateSession = useCallback((patch: { user?: User; token?: string }) => {
+    if (patch.token) setToken(patch.token);
+    if (patch.user) setUser(patch.user);
+  }, []);
+
   return (
-    <AuthContext.Provider value={{ status, user, login, register, logout, retry }}>{children}</AuthContext.Provider>
+    <AuthContext.Provider value={{ status, user, login, register, logout, retry, updateSession }}>{children}</AuthContext.Provider>
   );
 }
 

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import { useParams } from 'react-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { errorMessage } from '../api/client';
@@ -48,6 +48,9 @@ function Detail({ serverScore }: { serverScore: ScoreDetail }) {
   const [editMode, setEditMode] = useState(false);
   const [activeIndex, setActiveIndex] = useState(0);
   const [lightbox, setLightbox] = useState<string | null>(null);
+  // Width / height of the cover photo once loaded: sizes its frame on wide
+  // screens (desktop.css), whatever the photo's pixel size.
+  const [heroRatio, setHeroRatio] = useState<number | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState('');
@@ -119,10 +122,18 @@ function Detail({ serverScore }: { serverScore: ScoreDetail }) {
       {/* Stacked on phones; two columns (photos | info) on wide screens. */}
       <div className="detail-layout">
         <div className="detail-media">
-          <div className="detail-hero-wrap">
+          <div className="detail-hero-wrap" style={heroRatio ? ({ '--hero-ratio': heroRatio } as CSSProperties) : undefined}>
             {heroUrl ? (
               <button type="button" className="detail-hero-btn" onClick={() => setLightbox(heroUrl)} aria-label="Ampliar foto">
-                <Photo url={heroUrl} className="detail-hero" loading="eager" />
+                <Photo
+                  url={heroUrl}
+                  className="detail-hero"
+                  loading="eager"
+                  onLoad={(e) => {
+                    const img = e.currentTarget;
+                    if (img.naturalWidth && img.naturalHeight) setHeroRatio(img.naturalWidth / img.naturalHeight);
+                  }}
+                />
               </button>
             ) : (
               <PhotoStripe id={score.id} className="detail-hero" />
