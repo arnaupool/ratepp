@@ -19,8 +19,20 @@
     padding-right: 8px;
   }
 
-  .home-search-row {
+  /* Title, search and chips sit in the same centered column as every other
+     screen (below), so the title doesn't jump when moving between them; only
+     the cards use the full width. */
+  .home-head,
+  .home-search-row,
+  .home-chips {
+    width: 100%;
     max-width: 760px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  .home-head {
+    padding-top: 10px;
   }
 
   .home-grid {
