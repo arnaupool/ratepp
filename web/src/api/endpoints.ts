@@ -1,5 +1,5 @@
 import { api } from './client';
-import type { AdminStats, AdminUser, Field, FieldType, GroupInvite, GroupMember, GroupSummary, LocationPin, Rating, ScoreDetail, ScoreSummary } from './types';
+import type { AdminStats, AdminUser, Field, NewTemplate, NoteTemplate, FieldType, GroupInvite, GroupMember, GroupSummary, LocationPin, Rating, ScoreDetail, ScoreSummary } from './types';
 
 /** 'all' (personal + my groups), 'me' (personal) or a group id. */
 export type Space = string;
@@ -106,6 +106,13 @@ export const adminApi = {
   /** null goes back to the server's ALLOW_REGISTRATION. */
   setRegistration: (allowRegistration: boolean | null) =>
     api.put<{ registrationOpen: boolean; registrationOverridden: boolean }>('/api/admin/settings', { allowRegistration }),
+};
+
+export const templatesApi = {
+  list: () => api.get<{ templates: NoteTemplate[] }>('/api/templates'),
+  create: (t: NewTemplate) => api.post<{ template: NoteTemplate }>('/api/templates', t),
+  update: (id: string, patch: { name?: string; emoji?: string }) => api.patch<{ template: NoteTemplate }>(`/api/templates/${id}`, patch),
+  remove: (id: string) => api.del(`/api/templates/${id}`),
 };
 
 export const colorsApi = {

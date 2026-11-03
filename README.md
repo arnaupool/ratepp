@@ -34,6 +34,10 @@ Notes are personal or belong to a group: members of a group see, create and
 score its notes with their own accounts and share its categories and tags.
 People join with an invitation link or are added by email (docs/grupos.md).
 
+Templates keep the shape of a note (its fields, criteria names, categories,
+color and who else scores) to start new ones from a dropdown in Nueva
+puntuación; yours or a group's (docs/plantillas.md).
+
 ## Deploying on Unraid (Portainer or docker compose)
 
 1. **Back up first** (see "Backups" below), every time you upgrade.

@@ -49,8 +49,14 @@ async function inTransaction(fn) {
 
 // A group always keeps an admin: when the last one leaves or is demoted,
 // the longest-standing member takes over. An empty group is deleted, its
-// notes going back to their authors (those whose author's account was
-// deleted have nobody to go back to and are deleted).
+// notes and templates going back to their authors (those whose author's
+// account was deleted have nobody to go back to and are deleted).
+// Whatever happens to the notes, a deleted group's templates go back to
+// whoever made them, as personal ones.
+async function returnTemplates(client, groupId) {
+  await client.query('UPDATE note_templates SET group_id = NULL WHERE group_id = $1 AND owner_id IS NOT NULL', [groupId]);
+}
+
 async function ensureAdmin(client, groupId) {
   const admins = await client.query("SELECT 1 FROM group_members WHERE group_id = $1 AND role = 'admin'", [groupId]);
   if (admins.rowCount > 0) return;
@@ -60,6 +66,7 @@ async function ensureAdmin(client, groupId) {
   } else {
     await client.query('DELETE FROM scores WHERE group_id = $1 AND owner_id IS NULL', [groupId]);
     await client.query('UPDATE scores SET group_id = NULL WHERE group_id = $1', [groupId]);
+    await returnTemplates(client, groupId);
     await client.query('DELETE FROM groups WHERE id = $1', [groupId]);
   }
 }
@@ -127,6 +134,7 @@ groups.delete('/:id', asyncHandler(async (req, res) => {
       await client.query('DELETE FROM scores WHERE group_id = $1 AND owner_id IS NULL', [req.params.id]);
       await client.query('UPDATE scores SET group_id = NULL WHERE group_id = $1', [req.params.id]);
     }
+    await returnTemplates(client, req.params.id);
     await client.query('DELETE FROM groups WHERE id = $1', [req.params.id]);
   });
   res.status(204).end();

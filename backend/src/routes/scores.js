@@ -3,15 +3,11 @@ const { pool } = require('../db');
 const { requireAuth } = require('../middleware/auth');
 const asyncHandler = require('../middleware/asyncHandler');
 const { HttpError, accessibleScore, canManage, groupRole, isUuid, spaceCondition } = require('../access');
+const { FIELD_TYPES } = require('../fieldTypes');
 
 const router = express.Router();
 router.use(requireAuth);
 
-// Must match the CHECK constraint (migration 006).
-const FIELD_TYPES = [
-  'text_long', 'number', 'date', 'location', 'photo', 'gallery', 'list', 'tag',
-  'price', 'criteria', 'duration', 'link', 'boolean', 'ingredients', 'steps', 'difficulty',
-];
 
 const NOT_FOUND = 'Puntuación no encontrada';
 

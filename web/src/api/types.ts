@@ -157,3 +157,31 @@ export interface AdminUser {
   groups: number;
   isMe: boolean;
 }
+
+/** The shape of a note, reused when creating another (docs/plantillas.md). */
+export interface NoteTemplate {
+  id: string;
+  name: string;
+  emoji: string;
+  /** null: personal. */
+  groupId: string | null;
+  groupName: string | null;
+  categories: string[];
+  cardColor: string | null;
+  /** Names of the extra people who score. */
+  people: string[];
+  fields: { type: FieldType; label: string; value: unknown }[];
+  /** Its creator, or an admin of its group. */
+  canManage: boolean;
+}
+
+export interface NewTemplate {
+  name: string;
+  emoji: string;
+  groupId: string | null;
+  categories: string[];
+  cardColor: string | null;
+  people: string[];
+  /** Values may be filled in: the server keeps only their shape. */
+  fields: { type: FieldType; label: string; value: unknown }[];
+}
