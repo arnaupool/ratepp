@@ -4,12 +4,29 @@ const { requireAuth } = require('../middleware/auth');
 const asyncHandler = require('../middleware/asyncHandler');
 const { HttpError, accessibleScore, canManage, groupRole, isUuid, spaceCondition } = require('../access');
 const { FIELD_TYPES } = require('../fieldTypes');
+const { notifyNewGroupNote } = require('../push');
 
 const router = express.Router();
 router.use(requireAuth);
 
 
 const NOT_FOUND = 'Puntuación no encontrada';
+
+/**
+ * Whether a note waits for the user's score (docs/avisos.md): a note of one
+ * of their groups, by someone else, created after they joined, that they
+ * haven't scored nor dismissed ("No la he probado"). `u` is the SQL
+ * placeholder holding the user's id.
+ */
+function pendingSql(alias, u) {
+  return `(${alias}.group_id IS NOT NULL AND ${alias}.owner_id IS DISTINCT FROM ${u}
+    AND EXISTS (SELECT 1 FROM group_members pm WHERE pm.group_id = ${alias}.group_id AND pm.user_id = ${u} AND pm.joined_at <= ${alias}.created_at)
+    AND NOT EXISTS (SELECT 1 FROM score_ratings pr WHERE pr.score_id = ${alias}.id AND pr.user_id = ${u})
+    AND NOT EXISTS (SELECT 1 FROM score_dismissals pd WHERE pd.score_id = ${alias}.id AND pd.user_id = ${u}))`;
+}
+
+const dismissedSql = (alias, u) =>
+  `EXISTS (SELECT 1 FROM score_dismissals pd WHERE pd.score_id = ${alias}.id AND pd.user_id = ${u})`;
 
 // Ratings made with an account show that account's name; the free-named
 // "Nota adicional" ones keep the typed name. formerMember: the rater has
@@ -54,6 +71,9 @@ function mapScore(s, ratings, userId) {
     authorName: s.author_name || null,
     // Delete it, or move it to another space: its author or a group admin.
     canManage: s.owner_id === userId || s.my_role === 'admin',
+    // Waiting for this user's score, or taken out of their pending list.
+    pending: !!s.pending,
+    dismissed: !!s.dismissed,
     ratings,
   };
 }
@@ -63,10 +83,11 @@ async function loadScore(scoreId, userId) {
   if (!access) return null;
   const s = (
     await pool.query(
-      `SELECT s.*, g.name AS group_name, u.name AS author_name, $2::text AS my_role
+      `SELECT s.*, g.name AS group_name, u.name AS author_name, $2::text AS my_role,
+         ${pendingSql('s', '$3')} AS pending, ${dismissedSql('s', '$3')} AS dismissed
        FROM scores s LEFT JOIN groups g ON g.id = s.group_id LEFT JOIN users u ON u.id = s.owner_id
        WHERE s.id = $1`,
-      [scoreId, access.my_role]
+      [scoreId, access.my_role, userId]
     )
   ).rows[0];
   const ratings = await pool.query(`${RATINGS_SQL} WHERE sr.score_id = $1 ORDER BY sr.sort_order ASC, sr.created_at ASC`, [scoreId]);
@@ -91,7 +112,7 @@ async function touch(scoreId, db = pool) {
 // ---------- scores ----------
 
 router.get('/', asyncHandler(async (req, res) => {
-  const { search = '', category = '', tag = '', dateFrom = '', dateTo = '', space = 'all' } = req.query;
+  const { search = '', category = '', tag = '', dateFrom = '', dateTo = '', space = 'all', pending = '' } = req.query;
   const params = [];
   let where = spaceCondition(String(space), req.userId, params);
   if (search) {
@@ -138,8 +159,11 @@ router.get('/', asyncHandler(async (req, res) => {
   }
   params.push(req.userId);
   const me = `$${params.length}`;
+  // ?pending=1: only the notes waiting for your score.
+  if (pending === '1') where += ` AND ${pendingSql('scores', me)}`;
   const scoresRes = await pool.query(
-    `SELECT scores.*, g.name AS group_name, u.name AS author_name, gm.role AS my_role
+    `SELECT scores.*, g.name AS group_name, u.name AS author_name, gm.role AS my_role,
+       ${pendingSql('scores', me)} AS pending, ${dismissedSql('scores', me)} AS dismissed
      FROM scores
      LEFT JOIN groups g ON g.id = scores.group_id
      LEFT JOIN users u ON u.id = scores.owner_id
@@ -191,6 +215,12 @@ router.get('/locations', asyncHandler(async (req, res) => {
     lng: Number(r.value.lng),
   }));
   res.json({ locations });
+}));
+
+// How many notes wait for your score (the notice in Principal).
+router.get('/pending-count', asyncHandler(async (req, res) => {
+  const r = await pool.query(`SELECT COUNT(*)::int AS c FROM scores s WHERE ${pendingSql('s', '$1')}`, [req.userId]);
+  res.json({ count: r.rows[0].c });
 }));
 
 router.get('/:id', asyncHandler(async (req, res) => {
@@ -286,6 +316,7 @@ router.post('/', asyncHandler(async (req, res) => {
     client.release();
   }
   res.status(201).json({ score: await loadScore(scoreId, req.userId) });
+  if (group) notifyNewGroupNote(scoreId, req.userId);
 }));
 
 router.patch('/:id', asyncHandler(async (req, res) => {
@@ -340,6 +371,23 @@ router.delete('/:id', asyncHandler(async (req, res) => {
   }
   await pool.query('DELETE FROM scores WHERE id = $1', [req.params.id]);
   res.status(204).end();
+}));
+
+// "No la he probado": out of your pending list without scoring it (DELETE
+// undoes it).
+router.post('/:id/dismiss', asyncHandler(async (req, res) => {
+  const score = await requireScore(req, res);
+  if (!score) return;
+  if (!score.group_id) return res.status(400).json({ error: 'Solo las notas de grupo piden tu puntuación' });
+  await pool.query('INSERT INTO score_dismissals (score_id, user_id) VALUES ($1, $2) ON CONFLICT DO NOTHING', [score.id, req.userId]);
+  res.json({ score: await loadScore(score.id, req.userId) });
+}));
+
+router.delete('/:id/dismiss', asyncHandler(async (req, res) => {
+  const score = await requireScore(req, res);
+  if (!score) return;
+  await pool.query('DELETE FROM score_dismissals WHERE score_id = $1 AND user_id = $2', [score.id, req.userId]);
+  res.json({ score: await loadScore(score.id, req.userId) });
 }));
 
 // ---------- ratings (per-person scores) ----------

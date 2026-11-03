@@ -19,7 +19,7 @@ import './HomeScreen.css';
 
 export default function HomeScreen() {
   const navigate = useNavigate();
-  const { space, searchInput, category, tag, dateFrom, dateTo } = useHomeFilters();
+  const { space, searchInput, category, tag, dateFrom, dateTo, pendingOnly } = useHomeFilters();
   const groups = useGroups();
   const [menuOpen, setMenuOpen] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(false);
@@ -34,7 +34,7 @@ export default function HomeScreen() {
     }
   }, [space, groups]);
 
-  const filters = { space, search, category, tag, dateFrom, dateTo };
+  const filters = { space, search, category, tag, dateFrom, dateTo, pending: pendingOnly };
   const scores = useQuery({
     queryKey: ['scores', filters],
     queryFn: () => scoresApi.list(filters),
@@ -42,11 +42,14 @@ export default function HomeScreen() {
   });
   // Chips and tag filters list ALL the categories/tags of the chosen space,
   // not just the ones in the current results.
+  // Group notes waiting for your score (docs/avisos.md). Under 'scores' so
+  // scoring or creating a note refreshes it too.
+  const pendingCount = useQuery({ queryKey: ['scores', 'pending-count'], queryFn: scoresApi.pendingCount }).data?.count ?? 0;
   const categories = useQuery({ queryKey: ['categories', space], queryFn: () => categoriesApi.list(space) });
   const tags = useQuery({ queryKey: ['tags', space], queryFn: () => tagsApi.list(space) });
 
   const activeFilterCount = (tag ? 1 : 0) + (dateFrom || dateTo ? 1 : 0);
-  const isFiltering = !!search || category !== 'Todas' || !!tag || !!dateFrom || !!dateTo;
+  const isFiltering = !!search || category !== 'Todas' || !!tag || !!dateFrom || !!dateTo || pendingOnly;
   const items = scores.data?.items ?? [];
   const tagList = tags.data?.tags ?? [];
   const chipList = ['Todas', ...(categories.data?.categories ?? [])];
@@ -90,6 +93,28 @@ export default function HomeScreen() {
         </button>
       </div>
 
+      {pendingOnly ? (
+        <div className="home-pending">
+          <button type="button" className="home-pending-btn on" aria-pressed onClick={() => setHomeFilters({ pendingOnly: false })}>
+            <span aria-hidden>🔔</span> Sin tu puntuación <span className="home-pending-all">Ver todas</span>
+          </button>
+        </div>
+      ) : (
+        pendingCount > 0 && (
+          <div className="home-pending">
+            <button
+              type="button"
+              className="home-pending-btn"
+              aria-pressed={false}
+              onClick={() => setHomeFilters({ pendingOnly: true, category: 'Todas', tag: null })}
+            >
+              <span aria-hidden>🔔</span>{' '}
+              {pendingCount === 1 ? '1 nota de tus grupos espera tu puntuación' : `${pendingCount} notas de tus grupos esperan tu puntuación`}
+            </button>
+          </div>
+        )
+      )}
+
       {/* Category and tag filters belong to a space: switching resets them. */}
       <SpaceRow groups={groups} value={space} withAll onChange={(s) => setHomeFilters({ space: s, category: 'Todas', tag: null })} />
 
@@ -109,7 +134,7 @@ export default function HomeScreen() {
         </div>
       ) : items.length === 0 ? (
         <div className="home-center">
-          <p className="home-empty-title">{isFiltering ? 'No hay notas' : 'Todavía no hay puntuaciones'}</p>
+          <p className="home-empty-title">{pendingOnly ? 'No te falta ninguna' : isFiltering ? 'No hay notas' : 'Todavía no hay puntuaciones'}</p>
           <p className="home-empty-sub">
             {isFiltering ? 'Toca el botón + para crear una.' : 'Toca el botón + para puntuar tu primer restaurante, peli o recuerdo.'}
           </p>
@@ -198,6 +223,7 @@ function ScoreCard({ item, onOpen, showGroup }: { item: ScoreSummary; onOpen: ()
           <PhotoStripe id={item.id} className="score-card-photo" stripe={14} />
         )}
         {showGroup && item.groupName && <span className="group-badge">👥 {item.groupName}</span>}
+        {item.pending && <span className="pending-badge">Falta tu nota</span>}
       </span>
       <span className="score-card-body">
         <span className="score-card-top">

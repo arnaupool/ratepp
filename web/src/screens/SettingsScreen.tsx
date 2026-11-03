@@ -7,10 +7,19 @@ import ScreenHeader from '../components/ScreenHeader';
 import Sheet from '../components/Sheet';
 import { Spinner } from '../components/bits';
 import { useTheme } from '../theme/ThemeContext';
+import { disablePush, enablePush, pushState, type PushState } from '../utils/push';
 import '../components/editors/editors.css';
 import './SettingsScreen.css';
 
 type Panel = 'email' | 'password' | 'delete' | null;
+
+const PUSH_HINT: Record<PushState, string> = {
+  on: 'Te avisa cuando alguien crea una nota en uno de tus grupos.',
+  off: 'Te avisa cuando alguien crea una nota en uno de tus grupos.',
+  'needs-install': 'En iPhone, añade la app a la pantalla de inicio (Compartir → Añadir a pantalla de inicio) y actívalas desde allí.',
+  unsupported: 'Este navegador no permite notificaciones.',
+  denied: 'Las has bloqueado para esta web: permítelas en los ajustes del navegador.',
+};
 
 // A sheet with a form: title, inputs, the server's error and its buttons.
 function FormSheet({
@@ -80,8 +89,28 @@ export default function SettingsScreen() {
   const [newPassword, setNewPassword] = useState('');
   const [repeat, setRepeat] = useState('');
   const [confirmLogout, setConfirmLogout] = useState(false);
+  const [push, setPush] = useState<PushState | null>(null);
+  const [pushBusy, setPushBusy] = useState(false);
+  const [pushError, setPushError] = useState('');
 
   useEffect(() => setName(user?.name ?? ''), [user?.name]);
+  useEffect(() => {
+    pushState()
+      .then(setPush)
+      .catch(() => setPush('unsupported'));
+  }, []);
+
+  const togglePush = async (on: boolean) => {
+    setPushError('');
+    setPushBusy(true);
+    try {
+      setPush(on ? await enablePush() : await disablePush());
+    } catch (e) {
+      setPushError(errorMessage(e, 'No se pudieron activar las notificaciones'));
+    } finally {
+      setPushBusy(false);
+    }
+  };
 
   const open = (p: Panel) => {
     setPanel(p);
@@ -143,6 +172,24 @@ export default function SettingsScreen() {
           aria-label="Modo oscuro"
         />
       </label>
+
+      <span className="t-section-label settings-section">Avisos</span>
+      <label className="settings-row">
+        <span className="settings-row-text">
+          <span className="settings-row-label">Notificaciones en este dispositivo</span>
+          {push && <span className="settings-row-hint">{PUSH_HINT[push]}</span>}
+        </span>
+        <input
+          type="checkbox"
+          role="switch"
+          className="switch"
+          checked={push === 'on'}
+          disabled={pushBusy || (push !== 'on' && push !== 'off')}
+          onChange={(e) => togglePush(e.target.checked)}
+          aria-label="Notificaciones"
+        />
+      </label>
+      {!!pushError && <p className="error-text settings-error">{pushError}</p>}
 
       <span className="t-section-label settings-section">Cuenta</span>
       {!!notice && <p className="settings-notice">{notice}</p>}

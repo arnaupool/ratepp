@@ -3,6 +3,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { api, ApiError, getToken, onUnauthorized, setToken } from '../api/client';
 import type { AuthResponse, User } from '../api/types';
 import { resetHomeFilters } from '../state/homeFilters';
+import { dropPushOnLogout } from '../utils/push';
 
 type Status = 'checking' | 'offline' | 'signedOut' | 'signedIn';
 
@@ -26,6 +27,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [attempt, setAttempt] = useState(0);
 
   const logout = useCallback(() => {
+    dropPushOnLogout();
     setToken(null);
     setUser(null);
     queryClient.clear();

@@ -102,6 +102,52 @@
 }
 
 /* Explicit gap to the grid: it used to end up glued to the cards. */
+.home-pending {
+  padding: 0 18px 12px;
+}
+
+/* Group notes waiting for your score (docs/avisos.md). */
+.home-pending-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 11px 14px;
+  border-radius: 14px;
+  background: var(--accent);
+  color: #fff;
+  font-weight: 800;
+  font-size: 13.5px;
+  text-align: left;
+}
+
+.home-pending-btn.on {
+  background: transparent;
+  color: var(--accent);
+  border: 1.5px solid var(--accent);
+  padding: 9.5px 12.5px;
+}
+
+.home-pending-all {
+  margin-left: auto;
+  text-decoration: underline;
+}
+
+.pending-badge {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  height: 22px;
+  padding: 0 8px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: #fff;
+  font-weight: 800;
+  font-size: 10.5px;
+  display: inline-flex;
+  align-items: center;
+}
+
 .home-chips {
   display: flex;
   gap: 8px;
@@ -290,4 +336,9 @@
   background: var(--accent);
   border-color: var(--accent);
   color: var(--accent-ink);
+}
+
+/* Both badges on one card: the group name gives way. */
+.score-card-media:has(.pending-badge) .group-badge {
+  max-width: calc(100% - 118px);
 }

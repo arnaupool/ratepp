@@ -24,6 +24,7 @@
      the cards use the full width. */
   .home-head,
   .home-search-row,
+  .home-pending,
   .home-chips {
     width: 100%;
     max-width: 760px;

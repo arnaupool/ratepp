@@ -99,5 +99,5 @@ acceso a sus notas, incluidas las que creó allí.
 
 ## Por decidir más adelante
 
-- Avisos (badge o notificación) cuando alguien añade algo al grupo: fuera de
-  alcance de la primera versión.
+- Avisos cuando alguien añade algo al grupo: hechos para las notas nuevas,
+  ver docs/avisos.md.

@@ -1,9 +1,13 @@
 // Nominatim stand-in for the e2e suite (the backend's GEOCODER_URL points
-// here), so tests never depend on the public service or the network.
+// here), so tests never depend on the public service or the network. It is
+// also a fake Web Push service: subscriptions pointing at /push/<id> are
+// counted (GET /_pushes/<id>), and /push/gone-<id> answers 410 like an
+// expired one.
 import http from 'node:http';
 
 const PORT = Number(process.env.STUB_GEOCODER_PORT || 4199);
 let lastUserAgent = null;
+const pushes = {};
 
 const server = http.createServer((req, res) => {
   const url = new URL(req.url, `http://localhost:${PORT}`);
@@ -12,6 +16,14 @@ const server = http.createServer((req, res) => {
     res.end(JSON.stringify(body));
   };
   if (url.pathname === '/_last-user-agent') return json({ userAgent: lastUserAgent });
+  if (url.pathname.startsWith('/_pushes/')) return json({ count: pushes[url.pathname.slice(9)] || 0 });
+  if (url.pathname.startsWith('/push/') && req.method === 'POST') {
+    const id = url.pathname.slice(6);
+    pushes[id] = (pushes[id] || 0) + 1;
+    req.resume();
+    res.writeHead(id.startsWith('gone-') ? 410 : 201);
+    return res.end();
+  }
   lastUserAgent = req.headers['user-agent'] || null;
   if (url.pathname === '/search') {
     const q = url.searchParams.get('q') || '';
