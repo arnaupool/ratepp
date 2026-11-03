@@ -8,7 +8,7 @@ test('guardar una puntuación como plantilla y usarla en otra', async ({ page })
   await signedInViaApi(page);
   await page.goto('/nueva');
   // No templates yet: no dropdown.
-  await expect(page.getByLabel('Plantilla', { exact: true })).toHaveCount(0);
+  await expect(page.getByRole('group', { name: 'Plantillas' })).toHaveCount(0);
 
   // A restaurant with criteria and a price, saved as a template.
   await page.getByPlaceholder('Título *').fill('Casa Pepe');
@@ -30,20 +30,23 @@ test('guardar una puntuación como plantilla y usarla en otra', async ({ page })
 
   // A new note starts empty; picking the template brings its shape.
   await page.goto('/nueva');
-  const picker = page.getByLabel('Plantilla', { exact: true });
-  await expect(picker).toHaveValue('');
+  const card = page.getByRole('button', { name: 'Plantilla Restaurante' });
+  await expect(card).toHaveAttribute('aria-pressed', 'false');
   // Something already written stays.
   await page.getByPlaceholder('Título *').fill('Otro sitio');
   await chip(page, 'Texto').click();
-  await picker.selectOption({ label: '🍽️ Restaurante' });
+  await card.click();
+  await expect(card).toHaveAttribute('aria-pressed', 'true');
   await expect(page.getByPlaceholder('Título *')).toHaveValue('Otro sitio');
   await expect(page.getByLabel('Etiqueta del campo Texto')).toBeVisible();
   await expect(page.getByLabel('Nombre del criterio')).toHaveValue('Sabor');
   await expect(page.getByLabel('Importe')).toHaveValue('');
   await expect(page.getByRole('button', { name: 'Restaurantes', exact: true })).toHaveAttribute('aria-pressed', 'true');
-  // Picking it again doesn't duplicate anything.
-  await picker.selectOption('');
-  await picker.selectOption({ label: '🍽️ Restaurante' });
+  // Unmarking keeps what it added; picking it again doesn't duplicate it.
+  await card.click();
+  await expect(card).toHaveAttribute('aria-pressed', 'false');
+  await expect(page.getByLabel('Nombre del criterio')).toHaveCount(1);
+  await card.click();
   await expect(page.getByLabel('Nombre del criterio')).toHaveCount(1);
   await expect(page.getByLabel('Importe')).toHaveCount(1);
 
@@ -53,10 +56,11 @@ test('guardar una puntuación como plantilla y usarla en otra', async ({ page })
   await expect(page.locator('.detail-criterion')).toContainText('Sabor');
 });
 
-test('pantalla Plantillas: editar nombre y emoticono, y borrar', async ({ page }) => {
+test('pantalla Plantillas: editar la plantilla entera y borrarla', async ({ page }) => {
   const { token } = await signedInViaApi(page);
+  const auth = { Authorization: `Bearer ${token}` };
   await page.request.post('/api/templates', {
-    headers: { Authorization: `Bearer ${token}` },
+    headers: auth,
     data: { name: 'Receta', emoji: '🍳', categories: ['Recetas'], fields: [{ type: 'steps', label: 'Pasos', value: [''] }] },
   });
   await page.goto('/');
@@ -66,12 +70,28 @@ test('pantalla Plantillas: editar nombre y emoticono, y borrar', async ({ page }
   await expect(page.getByText('1 campo · Recetas')).toBeVisible();
 
   await page.getByRole('button', { name: 'Editar Receta' }).click();
-  const sheet = page.getByRole('dialog', { name: 'Editar plantilla' });
-  await sheet.getByLabel('Nombre de la plantilla').fill('Receta base');
-  await sheet.getByLabel('Otro emoticono').fill('🥘');
-  await sheet.getByRole('button', { name: 'Guardar', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Editar plantilla' })).toBeVisible();
+  await page.getByLabel('Nombre de la plantilla').fill('Receta base');
+  await page.getByLabel('Otro emoticono').fill('🥘');
+  // Fields show only their shape: no step inputs, criteria without scores.
+  await expect(page.getByText('Se rellena en cada puntuación.')).toBeVisible();
+  await page.locator('.quick-chip', { hasText: /Criterios$/ }).click();
+  await page.getByLabel('Nombre del criterio').fill('Sabor');
+  await expect(page.locator('.fe-criterion .num-pill')).toHaveCount(0);
+  await page.getByLabel('Añadir persona').fill('Bea');
+  await page.keyboard.press('Enter');
+  await expect(page.getByRole('button', { name: 'Quitar a Bea' })).toBeVisible();
+  await page.getByRole('button', { name: 'Guardar plantilla' }).click();
+
+  await expect(page.getByRole('heading', { name: 'Plantillas' })).toBeVisible();
   await expect(page.getByText('Receta base')).toBeVisible();
   await expect(page.locator('.template-row-emoji')).toHaveText('🥘');
+  await expect(page.getByText('2 campos · Recetas · con Bea')).toBeVisible();
+  const { templates } = await (await page.request.get('/api/templates', { headers: auth })).json();
+  expect(templates[0].fields).toEqual([
+    { type: 'steps', label: 'Pasos', value: [''] },
+    { type: 'criteria', label: 'Criterios', value: [{ name: 'Sabor', value: null }] },
+  ]);
 
   await page.getByRole('button', { name: 'Borrar Receta base' }).click();
   await page.getByRole('button', { name: 'Borrar', exact: true }).click();

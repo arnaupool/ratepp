@@ -1,18 +1,70 @@
-.template-select {
-  appearance: none;
-  -webkit-appearance: none;
-  /* Room for the chevron. */
-  padding-right: 36px;
-  background-image: linear-gradient(45deg, transparent 50%, var(--sub) 50%), linear-gradient(135deg, var(--sub) 50%, transparent 50%);
-  background-position:
-    calc(100% - 20px) 50%,
-    calc(100% - 15px) 50%;
-  background-size:
-    5px 5px,
-    5px 5px;
-  background-repeat: no-repeat;
-  font-size: 15px;
-  min-height: 46px;
+.template-cards {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  scroll-snap-type: x proximity;
+  scroll-padding-inline: 18px;
+  /* Bleed to the screen edges so cards scroll under the padding. */
+  margin: 0 -18px;
+  padding: 2px 18px 4px;
+}
+
+.template-card {
+  flex: 0 0 auto;
+  width: 104px;
+  min-height: 112px;
+  scroll-snap-align: start;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 12px 8px;
+  border-radius: 18px;
+  border: 1.5px solid var(--line);
+  background: var(--surface);
+  color: var(--ink);
+  text-align: center;
+  transition:
+    transform 140ms ease,
+    border-color 140ms ease,
+    background 140ms ease;
+}
+
+.template-card:active {
+  transform: scale(0.96);
+}
+
+.template-card.on {
+  border-color: var(--accent);
+  background: color-mix(in oklch, var(--accent) 14%, var(--surface));
+  box-shadow: 0 0 0 3px color-mix(in oklch, var(--accent) 22%, transparent);
+}
+
+.template-card-emoji {
+  font-size: 34px;
+  line-height: 1;
+}
+
+.template-card-name {
+  font-weight: 800;
+  font-size: 13px;
+  line-height: 16px;
+  overflow-wrap: anywhere;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.template-card-group {
+  font-weight: 700;
+  font-size: 10.5px;
+  color: var(--sub);
+  max-width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .template-form {

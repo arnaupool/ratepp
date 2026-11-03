@@ -51,10 +51,50 @@ interface Props {
   onPickLocation: () => void;
   onError: (message: string) => void;
   onUploadingChange?: (uploading: boolean) => void;
+  /**
+   * Editing a template: only the field's name, plus criteria names and the
+   * price's currency and per-person/total (what a template keeps).
+   */
+  shapeOnly?: boolean;
+}
+
+// Icon, editable name and move/remove buttons of a field.
+function FieldHead({
+  field,
+  isFirst,
+  isLast,
+  onChange,
+  onCommit,
+  onRemove,
+  onMove,
+}: Pick<Props, 'field' | 'isFirst' | 'isLast' | 'onChange' | 'onCommit' | 'onRemove' | 'onMove'>) {
+  return (
+    <div className="field-head">
+      <FieldIconTile type={field.type} />
+      <input
+        className="field-label-input"
+        value={field.label}
+        onChange={(e) => onChange({ label: e.target.value })}
+        onBlur={() => onCommit({ label: field.label })}
+        aria-label={`Etiqueta del campo ${field.label}`}
+      />
+      <div className="field-actions">
+        <button type="button" className="field-move" disabled={isFirst} onClick={() => onMove(-1)} aria-label={`Mover ${field.label} arriba`}>
+          ▲
+        </button>
+        <button type="button" className="field-move" disabled={isLast} onClick={() => onMove(1)} aria-label={`Mover ${field.label} abajo`}>
+          ▼
+        </button>
+        <button type="button" className="field-remove" onClick={onRemove} aria-label={`Quitar campo ${field.label}`}>
+          ✕
+        </button>
+      </div>
+    </div>
+  );
 }
 
 // One editable dynamic field, shared by Crear and Detalle's edit mode.
-export default function EditableFieldRow({ field, isFirst, isLast, onChange, onCommit, onRemove, onMove, onPickLocation, onError, onUploadingChange }: Props) {
+export default function EditableFieldRow({ field, isFirst, isLast, onChange, onCommit, onRemove, onMove, onPickLocation, onError, onUploadingChange, shapeOnly = false }: Props) {
   const def = fieldDef(field.type);
   const [uploading, setUploading] = useState(false);
   const [listRef] = useAutoAnimate<HTMLDivElement>();
@@ -82,32 +122,26 @@ export default function EditableFieldRow({ field, isFirst, isLast, onChange, onC
     }
   };
 
+  if (shapeOnly) {
+    const Editor = def.kind === 'price' || def.kind === 'criteria' ? EDITORS[def.kind] : null;
+    return (
+      <div className="field-row">
+        <FieldHead field={field} isFirst={isFirst} isLast={isLast} onChange={onChange} onCommit={onCommit} onRemove={onRemove} onMove={onMove} />
+        {Editor ? (
+          <Editor value={field.value} onChange={(value) => onChange({ value })} onCommit={(value) => onCommit({ value })} shapeOnly />
+        ) : (
+          <p className="field-shape-hint">Se rellena en cada puntuación.</p>
+        )}
+      </div>
+    );
+  }
+
   const listItems = Array.isArray(field.value) ? (field.value as unknown[]).map((v) => (typeof v === 'string' ? v : '')) : [''];
   const location = asLocation(field.value);
 
   return (
     <div className="field-row">
-      <div className="field-head">
-        <FieldIconTile type={field.type} />
-        <input
-          className="field-label-input"
-          value={field.label}
-          onChange={(e) => onChange({ label: e.target.value })}
-          onBlur={() => onCommit({ label: field.label })}
-          aria-label={`Etiqueta del campo ${field.label}`}
-        />
-        <div className="field-actions">
-          <button type="button" className="field-move" disabled={isFirst} onClick={() => onMove(-1)} aria-label={`Mover ${field.label} arriba`}>
-            ▲
-          </button>
-          <button type="button" className="field-move" disabled={isLast} onClick={() => onMove(1)} aria-label={`Mover ${field.label} abajo`}>
-            ▼
-          </button>
-          <button type="button" className="field-remove" onClick={onRemove} aria-label={`Quitar campo ${field.label}`}>
-            ✕
-          </button>
-        </div>
-      </div>
+      <FieldHead field={field} isFirst={isFirst} isLast={isLast} onChange={onChange} onCommit={onCommit} onRemove={onRemove} onMove={onMove} />
 
       {def.kind === 'simple' && field.type === 'text_long' && (
         <AutoTextarea

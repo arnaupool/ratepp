@@ -39,18 +39,13 @@
     margin: 0 auto;
   }
 
-  .create-screen,
-  .detail-edit,
-  .admin-screen {
+  /* Every single-column screen (forms, lists, settings, groups, admin)
+     shares one centered width, so moving between them doesn't jump. Only
+     Principal (a grid) and the map use the whole window. */
+  .screen:not(.home-screen):not(.locations-screen):not(.login-screen),
+  .detail-edit {
     width: 100%;
     max-width: 760px;
-    margin: 0 auto;
-  }
-
-  .settings-screen,
-  .labels-screen {
-    width: 100%;
-    max-width: 640px;
     margin: 0 auto;
   }
 
@@ -101,6 +96,18 @@
   .detail-media {
     position: sticky;
     top: 24px;
+  }
+
+  /* The photo frame takes the photo's proportions (--hero-ratio, set once
+     it loads): the column's width, or narrower and centered when the photo
+     is too tall for the window. */
+  .detail-hero-wrap:has(img.detail-hero) {
+    width: min(100%, calc((100dvh - 120px) * var(--hero-ratio, 1.333)));
+    margin: 0 auto;
+  }
+
+  img.detail-hero {
+    max-height: calc(100dvh - 120px);
   }
 
   .detail-hero-wrap {

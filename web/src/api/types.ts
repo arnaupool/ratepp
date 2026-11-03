@@ -4,6 +4,8 @@ export interface User {
   name: string;
   /** Site admin: sees Administración in the side menu. */
   isAdmin?: boolean;
+  /** The ADMIN_EMAIL account: Ajustes can't change its email or delete it. */
+  isProtected?: boolean;
 }
 
 export interface AuthResponse {

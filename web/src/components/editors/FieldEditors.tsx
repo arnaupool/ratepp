@@ -21,6 +21,8 @@ interface EditorProps {
   value: unknown;
   onChange: (v: unknown) => void;
   onCommit: (v: unknown) => void;
+  /** Editing a template: only what a template keeps (docs/plantillas.md). */
+  shapeOnly?: boolean;
 }
 
 const digits = (s: string) => s.replace(/[^\d]/g, '');
@@ -44,7 +46,7 @@ function ToggleChips<T extends string | number | boolean>({ options, value, onPi
   );
 }
 
-export function PriceEditor({ value, onChange, onCommit }: EditorProps) {
+export function PriceEditor({ value, onChange, onCommit, shapeOnly }: EditorProps) {
   const p = asPrice(value);
   const set = (patch: Partial<typeof p>, commit: boolean) => {
     const next = { ...p, ...patch };
@@ -54,15 +56,17 @@ export function PriceEditor({ value, onChange, onCommit }: EditorProps) {
   return (
     <div className="fe-stack">
       <div className="fe-row">
-        <input
-          className="fe-input fe-amount"
-          inputMode="decimal"
-          placeholder="0,00"
-          aria-label="Importe"
-          value={p.amount}
-          onChange={(e) => set({ amount: e.target.value.replace(/[^\d.,]/g, '') }, false)}
-          onBlur={() => onCommit(p)}
-        />
+        {!shapeOnly && (
+          <input
+            className="fe-input fe-amount"
+            inputMode="decimal"
+            placeholder="0,00"
+            aria-label="Importe"
+            value={p.amount}
+            onChange={(e) => set({ amount: e.target.value.replace(/[^\d.,]/g, '') }, false)}
+            onBlur={() => onCommit(p)}
+          />
+        )}
         <select className="fe-input fe-select" aria-label="Moneda" value={p.currency} onChange={(e) => set({ currency: e.target.value }, true)}>
           {CURRENCIES.map((c) => (
             <option key={c} value={c}>
@@ -80,7 +84,7 @@ export function PriceEditor({ value, onChange, onCommit }: EditorProps) {
           value={p.per}
           onPick={(v) => set({ per: v ?? p.per }, true)}
         />
-        {p.per === 'total' && (
+        {p.per === 'total' && !shapeOnly && (
           <input
             className="fe-input fe-small"
             inputMode="numeric"
@@ -96,7 +100,7 @@ export function PriceEditor({ value, onChange, onCommit }: EditorProps) {
   );
 }
 
-export function CriteriaEditor({ value, onChange, onCommit }: EditorProps) {
+export function CriteriaEditor({ value, onChange, onCommit, shapeOnly }: EditorProps) {
   const list = asCriteria(value);
   const [ref] = useAutoAnimate<HTMLDivElement>();
   const update = (idx: number, patch: Partial<(typeof list)[number]>, commit: boolean) => {
@@ -126,7 +130,7 @@ export function CriteriaEditor({ value, onChange, onCommit }: EditorProps) {
               ✕
             </button>
           </div>
-          <NumberPillRow value={c.value} onSelect={(n) => update(idx, { value: n }, true)} />
+          {!shapeOnly && <NumberPillRow value={c.value} onSelect={(n) => update(idx, { value: n }, true)} />}
         </div>
       ))}
       <button type="button" className="link-btn" onClick={() => onChange([...list, { name: '', value: null }])}>

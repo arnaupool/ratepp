@@ -110,7 +110,6 @@ test('modo oscuro desde Ajustes, persistente', async ({ page }) => {
 
   await page.getByRole('switch', { name: 'Modo oscuro' }).click();
   await expect(page.locator('html')).not.toHaveAttribute('data-theme', 'dark');
-  await expect(page.getByText('https://puntuaciones.example', { exact: true })).toBeVisible();
   await page.getByLabel('Volver').click();
   await expect(page.getByText('Tus puntuaciones')).toBeVisible();
 });

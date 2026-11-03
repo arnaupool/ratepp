@@ -1,3 +1,4 @@
+import zlib from 'node:zlib';
 import { test, expect, signedInViaApi } from './fixtures';
 import { Seeder } from './seed';
 
@@ -131,4 +132,42 @@ test('Detalle de una puntuación ajena o inexistente', async ({ page, consoleErr
   await page.getByLabel('Volver').click();
   await expect(page.getByText('Tus puntuaciones')).toBeVisible();
   consoleErrors.length = 0; // the 404 response itself is logged by the browser
+});
+
+// A plain RGB PNG of the given size (a tall "poster" for the test below).
+function solidPng(width: number, height: number) {
+  const chunk = (type: string, data: Buffer) => {
+    const len = Buffer.alloc(4);
+    len.writeUInt32BE(data.length);
+    const body = Buffer.concat([Buffer.from(type, 'ascii'), data]);
+    const crc = Buffer.alloc(4);
+    crc.writeUInt32BE(zlib.crc32(body));
+    return Buffer.concat([len, body, crc]);
+  };
+  const ihdr = Buffer.alloc(13);
+  ihdr.writeUInt32BE(width, 0);
+  ihdr.writeUInt32BE(height, 4);
+  ihdr[8] = 8; // bit depth
+  ihdr[9] = 2; // RGB
+  const row = Buffer.concat([Buffer.from([0]), Buffer.alloc(width * 3, 0xcc)]);
+  const raw = Buffer.concat(Array.from({ length: height }, () => row));
+  return Buffer.concat([Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]), chunk('IHDR', ihdr), chunk('IDAT', zlib.deflateSync(raw)), chunk('IEND', Buffer.alloc(0))]);
+}
+
+// The photo keeps its proportions instead of a fixed 4:3 crop.
+test('Detalle: la foto se ve entera con sus proporciones', async ({ page }) => {
+  const { token } = await signedInViaApi(page);
+  const up = await page.request.post('/api/uploads', {
+    headers: { Authorization: `Bearer ${token}` },
+    multipart: { photo: { name: 'poster.png', mimeType: 'image/png', buffer: solidPng(250, 300) } },
+  });
+  const { url } = await up.json();
+  const score = await new Seeder(page.request, token).score({ title: 'Póster', ownerValue: 8, photoUrls: [url] });
+  await page.goto(`/p/${score.id}`);
+  const hero = page.locator('img.detail-hero');
+  await expect(hero).toBeVisible();
+  await expect.poll(() => hero.evaluate((img: HTMLImageElement) => img.naturalWidth)).toBe(250);
+  const { w, h } = await hero.evaluate((img) => ({ w: img.clientWidth, h: img.clientHeight }));
+  // 6:5, taller than the old fixed 4:3 frame (0.75).
+  expect(h / w).toBeCloseTo(1.2, 1);
 });
