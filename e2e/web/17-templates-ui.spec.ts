@@ -42,10 +42,35 @@ test('guardar una puntuación como plantilla y usarla en otra', async ({ page })
   await expect(page.getByLabel('Nombre del criterio')).toHaveValue('Sabor');
   await expect(page.getByLabel('Importe')).toHaveValue('');
   await expect(page.getByRole('button', { name: 'Restaurantes', exact: true })).toHaveAttribute('aria-pressed', 'true');
-  // Unmarking keeps what it added; picking it again doesn't duplicate it.
+  // Unmarking it untouched takes out what it added, and only that.
   await card.click();
   await expect(card).toHaveAttribute('aria-pressed', 'false');
-  await expect(page.getByLabel('Nombre del criterio')).toHaveCount(1);
+  await expect(page.getByLabel('Nombre del criterio')).toHaveCount(0);
+  await expect(page.getByLabel('Importe')).toHaveCount(0);
+  await expect(page.getByLabel('Etiqueta del campo Texto')).toBeVisible();
+  await page.getByLabel('Ver todas las categorías').click();
+  await expect(page.getByRole('button', { name: 'Restaurantes', exact: true })).toHaveAttribute('aria-pressed', 'false');
+  await page.getByLabel('Ocultar categorías').click();
+
+  // Filled in: it asks. Cancelar keeps it marked; Borrar campos takes them out.
+  const unpick = page.getByRole('dialog', { name: '¿Quitar la plantilla?' });
+  await card.click();
+  await page.getByLabel('Importe').fill('25');
+  await card.click();
+  await unpick.getByRole('button', { name: 'Cancelar' }).click();
+  await expect(card).toHaveAttribute('aria-pressed', 'true');
+  await card.click();
+  await unpick.getByRole('button', { name: 'Borrar campos' }).click();
+  await expect(card).toHaveAttribute('aria-pressed', 'false');
+  await expect(page.getByLabel('Importe')).toHaveCount(0);
+
+  // Dejarlos keeps them (to derive another template); picking it again doesn't duplicate them.
+  await card.click();
+  await page.getByLabel('Importe').fill('25');
+  await card.click();
+  await unpick.getByRole('button', { name: 'Dejarlos' }).click();
+  await expect(card).toHaveAttribute('aria-pressed', 'false');
+  await expect(page.getByLabel('Importe')).toHaveValue('25');
   await card.click();
   await expect(page.getByLabel('Nombre del criterio')).toHaveCount(1);
   await expect(page.getByLabel('Importe')).toHaveCount(1);

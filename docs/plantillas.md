@@ -23,6 +23,10 @@ Nueva puntuación y en el modo edición, pantalla Plantillas en `/plantillas`).
    tipo y nombre), las personas que falten (con un 5, como al añadir una a
    mano), las categorías que falten, y el color solo si no se había elegido.
    Aplicarla dos veces no duplica nada.
+   Al desmarcarla se quita lo que añadió (campos, personas, categorías y el
+   color si sigue siendo el suyo). Si ya se había rellenado alguno de esos
+   campos o puntuado a alguna de esas personas, pregunta antes: "Borrar
+   campos" o "Dejarlos" (por ejemplo, para guardar una plantilla derivada).
 5. **Emoticono**: cuadrícula de 40 habituales y un campo "Otro" para escribir
    cualquiera.
 6. **Diferido**: sugerir una plantilla al marcar su categoría.
