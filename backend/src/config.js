@@ -55,6 +55,12 @@ const config = {
   // Used to build links meant for other people (group invitations), so they
   // work even when the sender opened the app through a LAN address.
   publicUrl: parsePublicUrl(process.env.PUBLIC_URL),
+  // Extra origins push subscriptions may point at, besides the browsers'
+  // push services (push.js). Only the e2e suite sets it, for its stub.
+  pushExtraOrigins: (process.env.PUSH_EXTRA_ORIGINS || '')
+    .split(',')
+    .map((s) => s.trim().replace(/\/+$/, ''))
+    .filter(Boolean),
   mapTileUrl: (process.env.MAP_TILE_URL || '').trim() || DEFAULT_TILE_URL,
   geocoderUrl: ((process.env.GEOCODER_URL || '').trim() || DEFAULT_GEOCODER_URL).replace(/\/+$/, ''),
   uploadsDir: path.resolve(process.env.UPLOADS_DIR || path.join(__dirname, '../uploads')),

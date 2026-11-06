@@ -9,6 +9,29 @@ const { getSetting, setSetting } = require('./settings');
 
 let keys = null;
 
+// Browsers only hand out subscriptions on these push services. Anything else
+// is refused: the server POSTs to the endpoint, so a free URL would let any
+// account make it call services on its own network (SSRF).
+const PUSH_HOSTS = [
+  'fcm.googleapis.com', // Chrome, Edge, Android
+  'push.services.mozilla.com', // Firefox (updates.push.services.mozilla.com)
+  'push.apple.com', // Safari, iOS (web.push.apple.com)
+  'notify.windows.com', // old Edge (*.notify.windows.com)
+];
+
+/** Whether the server may send to this endpoint (config.pushExtraOrigins: e2e only). */
+function isPushEndpoint(raw) {
+  let u;
+  try {
+    u = new URL(raw);
+  } catch {
+    return false;
+  }
+  if (config.pushExtraOrigins.includes(u.origin)) return true;
+  if (u.protocol !== 'https:' || u.port || u.username || u.password) return false;
+  return PUSH_HOSTS.some((h) => u.hostname === h || u.hostname.endsWith(`.${h}`));
+}
+
 async function vapidKeys() {
   if (keys) return keys;
   let stored = await getSetting('vapidKeys');
@@ -48,11 +71,22 @@ async function sendToUsers(userIds, payload) {
     const body = JSON.stringify(payload);
     await Promise.all(
       subs.rows.map(async (s) => {
+        // Saved before the check existed, or the rules changed: never sent.
+        if (!isPushEndpoint(s.endpoint)) {
+          await pool.query('DELETE FROM push_subscriptions WHERE id = $1', [s.id]);
+          return;
+        }
         try {
           // web-push encrypts and signs; the request itself goes through
           // fetch, which also reaches the e2e suite's plain-http stub.
           const r = webpush.generateRequestDetails({ endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } }, body, options);
-          const sent = await fetch(r.endpoint, { method: r.method, headers: r.headers, body: r.body, signal: AbortSignal.timeout(10000) });
+          const sent = await fetch(r.endpoint, {
+            method: r.method,
+            headers: r.headers,
+            body: r.body,
+            redirect: 'error',
+            signal: AbortSignal.timeout(10000),
+          });
           if (sent.status === 404 || sent.status === 410) {
             await pool.query('DELETE FROM push_subscriptions WHERE id = $1', [s.id]);
           } else if (!sent.ok) {
@@ -96,4 +130,4 @@ async function notifyNewGroupNote(scoreId, actorId) {
   }
 }
 
-module.exports = { publicKey, sendToUsers, notifyNewGroupNote };
+module.exports = { publicKey, sendToUsers, notifyNewGroupNote, isPushEndpoint };

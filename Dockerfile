@@ -12,8 +12,9 @@ RUN npm run build
 FROM node:24-alpine
 WORKDIR /app
 
-COPY backend/package.json backend/package-lock.json* ./
-RUN npm install --omit=dev
+COPY backend/package.json backend/package-lock.json ./
+# Exactly the audited versions in the lockfile, never newer ones.
+RUN npm ci --omit=dev
 
 COPY backend/ ./
 COPY --from=web /web/dist ./public
