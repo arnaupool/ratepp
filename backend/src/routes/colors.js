@@ -35,23 +35,37 @@ function readOwnUpload(url) {
   return filePath;
 }
 
-// Basic SSRF guard for genuinely-external URLs (cover-search poster art):
-// only http(s), and reject obvious loopback/private-network hostnames so
-// an authenticated user can't use this as a probe against other services
-// in the same Docker network. Not bulletproof against DNS rebinding, but
-// reasonable for a self-hosted, low-user-count app.
-const BLOCKED_HOST_RE = /^(localhost|127\.|0\.0\.0\.0|10\.|192\.168\.|169\.254\.|172\.(1[6-9]|2\d|3[01])\.|::1$)/i;
+// External images are only fetched from the cover search's own hosts (the
+// same ones the CSP lets the app show), over https on the default port.
+// Anything else could make the server probe its own network (SSRF): a
+// blocklist of private addresses misses container names, IPv6 forms and
+// redirects, so this is an allowlist, checked again on every redirect.
+const POSTER_HOSTS = ['image.tmdb.org', 'media.rawg.io', 'covers.openlibrary.org', 'archive.org'];
+const MAX_REDIRECTS = 3;
 
-function isSafeExternalUrl(raw) {
+function isPosterUrl(raw) {
   let u;
   try {
     u = new URL(raw);
   } catch {
     return false;
   }
-  if (u.protocol !== 'http:' && u.protocol !== 'https:') return false;
-  if (BLOCKED_HOST_RE.test(u.hostname)) return false;
-  return true;
+  if (u.protocol !== 'https:' || u.port || u.username || u.password) return false;
+  // archive.org serves Open Library covers from its numbered mirrors (ia800...).
+  return POSTER_HOSTS.some((h) => u.hostname === h || (h === 'archive.org' && u.hostname.endsWith('.archive.org')));
+}
+
+async function fetchPoster(url, signal) {
+  let current = url;
+  for (let hop = 0; hop <= MAX_REDIRECTS; hop++) {
+    if (!isPosterUrl(current)) return null;
+    const response = await fetch(current, { signal, redirect: 'manual' });
+    if (response.status < 300 || response.status >= 400) return response;
+    const next = response.headers.get('location');
+    if (!next) return null;
+    current = new URL(next, current).href;
+  }
+  return null;
 }
 
 // Suggests a card tint by averaging the pixels of an image URL — either our
@@ -74,13 +88,13 @@ router.get('/', asyncHandler(async (req, res) => {
     }
   }
 
-  if (!isSafeExternalUrl(url)) return res.json({ color: null });
+  if (!isPosterUrl(url)) return res.json({ color: null });
   try {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 8000);
-    const response = await fetch(url, { signal: controller.signal });
+    const response = await fetchPoster(url, controller.signal);
     clearTimeout(timeout);
-    if (!response.ok) return res.json({ color: null });
+    if (!response || !response.ok) return res.json({ color: null });
 
     const contentType = (response.headers.get('content-type') || '').split(';')[0].trim();
     const contentLength = Number(response.headers.get('content-length') || 0);

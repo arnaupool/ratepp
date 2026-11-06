@@ -122,3 +122,26 @@ test('push: una nota nueva del grupo avisa a los demás miembros', async ({ requ
   await new Promise((r) => setTimeout(r, 500));
   expect(await pushes(beaPhone)).toBe(3);
 });
+
+test('push: solo se aceptan los servicios de push de los navegadores', async ({ request }) => {
+  const eve = await new User(request, 'Eve').register();
+  const status = async (endpoint: string) =>
+    (await request.post('/api/push/subscription', { headers: { Authorization: `Bearer ${eve.token}` }, data: fakeSubscription(endpoint) })).status();
+  // The server POSTs to the endpoint: anything on its own network is refused.
+  for (const endpoint of [
+    'http://dockersocket:2375/containers/x/stop',
+    'http://localhost:4000/api/health',
+    'http://[::1]:4000/',
+    'https://evil.example/push',
+    'https://fcm.googleapis.com.evil.example/x',
+    'https://fcm.googleapis.com:8443/x',
+    'http://fcm.googleapis.com/fcm/send/x',
+  ]) {
+    expect(await status(endpoint), endpoint).toBe(400);
+  }
+  // Real ones are (Eve is in no group, so nothing is ever sent to them).
+  for (const endpoint of ['https://fcm.googleapis.com/fcm/send/abc', 'https://web.push.apple.com/QGx', 'https://updates.push.services.mozilla.com/wpush/v2/x']) {
+    expect(await status(endpoint), endpoint).toBe(204);
+    await eve.del('/api/push/subscription', { endpoint });
+  }
+});

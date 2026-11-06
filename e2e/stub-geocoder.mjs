@@ -17,6 +17,13 @@ const server = http.createServer((req, res) => {
   };
   if (url.pathname === '/_last-user-agent') return json({ userAgent: lastUserAgent });
   if (url.pathname.startsWith('/_pushes/')) return json({ count: pushes[url.pathname.slice(9)] || 0 });
+  // Any request at all to /probe/<id> is counted: SSRF checks (21-security).
+  if (url.pathname.startsWith('/_probes/')) return json({ count: pushes[`probe-${url.pathname.slice(9)}`] || 0 });
+  if (url.pathname.startsWith('/probe/')) {
+    const key = `probe-${url.pathname.slice(7)}`;
+    pushes[key] = (pushes[key] || 0) + 1;
+    return json({});
+  }
   if (url.pathname.startsWith('/push/') && req.method === 'POST') {
     const id = url.pathname.slice(6);
     pushes[id] = (pushes[id] || 0) + 1;
